@@ -1,0 +1,8 @@
+node_modules/
+backend/dist/
+backend/.env
+frontend/dist/
+frontend/.env
+backend/storage/contracts/*
+!backend/storage/contracts/.gitkeep
+frontend/.vite-cache/
