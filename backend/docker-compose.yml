@@ -4,24 +4,13 @@ networks:
 
 services:
   backend:
+    env_file:
+      - .env
     build:
       context: .
       dockerfile: Dockerfile
     container_name: purchase_dashboard_backend
     restart: always
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-admin123}@${POSTGRES_HOST:-purchase_dashboard_postgres}:5432/${POSTGRES_DB:-purchase_dashboard}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-change-this-secret-before-running}
-      HOST: 0.0.0.0
-      PORT: 4000
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://localhost:80,http://127.0.0.1,http://127.0.0.1:80}
-      SHOP_NAME: ${SHOP_NAME:-Sceleria}
-      SHOP_ADDRESS: ${SHOP_ADDRESS:-Your shop address}
-      SHOP_PHONE: ${SHOP_PHONE:-Your shop phone}
-      SHOP_EMAIL: ${SHOP_EMAIL:-Your shop email}
-      SHOP_OWNER_NAME: ${SHOP_OWNER_NAME:-Your owner / manager name}
-      SHOP_LOGO_PATH: ${SHOP_LOGO_PATH:-}
-      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-20}
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     volumes:
