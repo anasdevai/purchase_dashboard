@@ -1,4 +1,6 @@
-version: "3.8"
+networks:
+  devicePurcahsedNet:
+    external: true
 
 services:
   postgres:
@@ -6,13 +8,20 @@ services:
     container_name: purchase_dashboard_postgres
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin123
-      POSTGRES_DB: purchase_dashboard
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      POSTGRES_DB: ${POSTGRES_DB:-purchase_dashboard}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-purchase_dashboard}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - devicePurcahsedNet
 
 volumes:
   postgres_data:
