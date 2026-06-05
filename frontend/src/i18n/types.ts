@@ -1,10 +1,52 @@
 export type Language = 'de' | 'en'
 
+export type OptionLabels = {
+  Smartphone: string
+  Tablet: string
+  Laptop: string
+  'Desktop PC': string
+  Smartwatch: string
+  'Gaming console': string
+  Other: string
+  'Like new': string
+  'Very good': string
+  Good: string
+  Used: string
+  Defective: string
+  Cash: string
+  'Bank transfer': string
+  Card: string
+}
+
 export type TranslationSchema = {
   app: {
     nameLine1: string
     nameLine2: string
     footer: string
+  }
+  common: {
+    loading: string
+    pleaseWait: string
+    remove: string
+    closeMenu: string
+    openMenu: string
+    dismissNotification: string
+    defaultStaffUser: string
+    ok: string
+    confirm: string
+    cancel: string
+    somethingWentWrong: string
+    dash: string
+    errors: {
+      dashboardFailed: string
+      contractsFailed: string
+      searchFailed: string
+      contractFailed: string
+      pdfFailed: string
+      settingsSaveFailed: string
+      authFailed: string
+      requestFailed: string
+    }
   }
   nav: {
     dashboard: string
@@ -29,8 +71,10 @@ export type TranslationSchema = {
   dashboard: {
     contractsToday: string
     contractsTodayDelta: string
+    contractsTodaySub: string
     totalPurchaseToday: string
     totalPurchaseTodayDelta: string
+    totalPurchaseTodaySub: string
     currentContracts: string
     viewCurrentContracts: string
     draftContracts: string
@@ -61,6 +105,10 @@ export type TranslationSchema = {
     allContracts: string
     noResults: string
     resultCount: string
+    phone: string
+    address: string
+    condition: string
+    payment: string
   }
   status: {
     completed: string
@@ -79,34 +127,148 @@ export type TranslationSchema = {
       reviewSave: string
     }
     customerInformation: string
+    deviceInformation: string
+    ownershipConfirmations: string
+    photosAndDocuments: string
+    checkAndSave: string
     fullName: string
     fullNamePlaceholder: string
     fullNameRequired: string
-    emailOptional: string
+    email: string
     emailPlaceholder: string
+    emailRequired: string
+    emailOptional: string
+    emailInvalid: string
     phone: string
     phonePlaceholder: string
     phoneRequired: string
+    phoneTooShort: string
+    dob: string
     dobOptional: string
+    dobRequired: string
     address: string
     addressPlaceholder: string
     addressRequired: string
+    idDocument: string
+    idDocumentPlaceholder: string
+    idDocumentRequired: string
     idOptional: string
     idPlaceholder: string
     idPhoto: string
     uploadHint: string
     uploadFormats: string
+    uploadFormatsLarge: string
     idPhotoInvalidType: string
     idPhotoTooLarge: string
+    uploadTooLarge: string
     removeFile: string
     replaceFile: string
+    savedUploadReplace: string
     customerSignature: string
+    shopkeeperSignature: string
+    customerSignatureTitle: string
+    shopkeeperSignatureTitle: string
+    savedSignatureReplace: string
     clear: string
     saveSignature: string
     nextDeviceInfo: string
     back: string
     next: string
+    saveDraft: string
+    completeAndPdf: string
+    saving: string
+    draftSaved: string
     stepPlaceholder: string
+    deviceType: string
+    brand: string
+    brandPlaceholder: string
+    brandRequired: string
+    model: string
+    modelPlaceholder: string
+    modelRequired: string
+    imei: string
+    imeiPlaceholder: string
+    imeiRequired: string
+    imeiInvalid: string
+    serialNumber: string
+    serialNumberPlaceholder: string
+    serialNumberRequired: string
+    imeiOrSerialRequired: string
+    imeiOrSerialExists: string
+    condition: string
+    conditionRequired: string
+    purchasePrice: string
+    purchasePricePlaceholder: string
+    purchasePriceRequired: string
+    priceMin: string
+    paymentMethod: string
+    paymentMethodRequired: string
+    storage: string
+    storagePlaceholder: string
+    storageRequired: string
+    color: string
+    colorPlaceholder: string
+    colorRequired: string
+    accessories: string
+    accessoriesPlaceholder: string
+    accessoriesRequired: string
+    batteryHealth: string
+    batteryHealthPlaceholder: string
+    batteryHealthRequired: string
+    damageNotes: string
+    damageNotesPlaceholder: string
+    damageNotesRequired: string
+    internalNotes: string
+    internalNotesPlaceholder: string
+    internalNotesRequired: string
+    deviceTypeRequired: string
+    confirmations: {
+      ownershipConfirmed: string
+      notStolenConfirmed: string
+      icloudRemoved: string
+      googleLockRemoved: string
+      otherLockRemoved: string
+      factoryResetConfirmed: string
+    }
+    photos: {
+      idFront: string
+      idBack: string
+      deviceFront: string
+      deviceBack: string
+      imeiPhoto: string
+      damagePhoto: string
+      accessoriesPhoto: string
+    }
+    review: {
+      customer: string
+      device: string
+      filesAndSignatures: string
+      name: string
+      phone: string
+      email: string
+      address: string
+      imeiSerial: string
+      condition: string
+      price: string
+      requiredFiles: string
+      customerSignature: string
+      shopkeeperSignature: string
+      pdf: string
+      captured: string
+      missing: string
+      pdfAfterCompletion: string
+    }
+    errors: {
+      customerSignatureRequired: string
+      shopkeeperSignatureRequired: string
+      bothSignaturesRequired: string
+      uploadsMissing: string
+      loginRequired: string
+      draftSaveFailed: string
+      completeFailed: string
+      documentTypeInvalid: string
+    }
+    options: OptionLabels
   }
   contractsPage: {
     title: string
@@ -130,23 +292,43 @@ export type TranslationSchema = {
     customerSignature: string
     shopRepresentative: string
     backToContracts: string
+    loading: string
+    continueDraft: string
+    continueDraftHint: string
+    draftBanner: string
+    cancelDelete: string
+    openPdf: string
+    pdfIframeTitle: string
+    pdfPending: string
   }
   login: {
     subtitle: string
+    signupSubtitle: string
+    name: string
+    namePlaceholder: string
     email: string
+    emailPlaceholder: string
     password: string
+    passwordPlaceholder: string
     showPassword: string
     hidePassword: string
     login: string
+    signup: string
+    createAccount: string
     mvpNote: string
     continue: string
+    alreadyHaveAccount: string
+    needAccount: string
   }
   settings: {
     description: string
     shopDetails: string
     shopName: string
+    shopNamePlaceholder: string
     shopAddress: string
+    shopAddressPlaceholder: string
     shopPhone: string
+    shopPhonePlaceholder: string
     shopEmail: string
     shopEmailPlaceholder: string
     ownerName: string

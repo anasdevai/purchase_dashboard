@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
+import { useLanguage } from '../../i18n/LanguageProvider'
 import { Modal, useModalTitleId } from './Modal'
 
 export type ConfirmDialogProps = {
@@ -20,17 +21,21 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   variant = 'primary',
   isLoading = false,
-  loadingLabel = 'Please wait...',
+  loadingLabel,
   error,
   onConfirm,
   onCancel,
   closeOnBackdrop = true,
 }: ConfirmDialogProps) {
+  const { t } = useLanguage()
   const titleId = useModalTitleId('confirm-dialog')
+  const resolvedConfirmLabel = confirmLabel ?? t.common.confirm
+  const resolvedCancelLabel = cancelLabel ?? t.common.cancel
+  const resolvedLoadingLabel = loadingLabel ?? t.common.pleaseWait
 
   return (
     <Modal
@@ -69,7 +74,7 @@ export function ConfirmDialog({
               disabled={isLoading}
               onClick={onCancel}
             >
-              {cancelLabel}
+              {resolvedCancelLabel}
             </button>
             <button
               type="button"
@@ -81,7 +86,7 @@ export function ConfirmDialog({
               disabled={isLoading}
               onClick={onConfirm}
             >
-              {isLoading ? loadingLabel : confirmLabel}
+              {isLoading ? resolvedLoadingLabel : resolvedConfirmLabel}
             </button>
           </div>
         </div>

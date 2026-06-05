@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { useLanguage } from '../../i18n/LanguageProvider'
 import { AppToast, type ToastState } from './AppToast'
 import { AlertModal } from './AlertModal'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -38,6 +39,7 @@ const ConfirmDialogContext = createContext<ConfirmDialogContextValue | null>(nul
 const TOAST_DURATION_MS = 4000
 
 export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
+  const { t } = useLanguage()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [confirmError, setConfirmError] = useState<string | null>(null)
@@ -91,11 +93,11 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
       setConfirmOpen(false)
       setConfirmOptions(null)
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : 'Something went wrong')
+      setConfirmError(err instanceof Error ? err.message : t.common.somethingWentWrong)
     } finally {
       setConfirmLoading(false)
     }
-  }, [confirmOptions])
+  }, [confirmOptions, t.common.somethingWentWrong])
 
   const alert = useCallback((options: AlertOptions) => {
     setAlertOptions(options)

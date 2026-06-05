@@ -29,7 +29,20 @@ export function clearToken() {
 
 async function readError(response: Response) {
   try {
-    const body = await response.json()
+    const body = (await response.json()) as {
+      message?: string
+      errors?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
+    }
+    const fieldMessages = body.errors?.fieldErrors
+      ? Object.entries(body.errors.fieldErrors).flatMap(([field, messages]) =>
+          messages.map((message) => `${field}: ${message}`),
+        )
+      : []
+    const formMessages = body.errors?.formErrors ?? []
+    const details = [...formMessages, ...fieldMessages]
+    if (details.length > 0) {
+      return `${body.message || 'Request failed'} (${details.join('; ')})`
+    }
     return body.message || 'Request failed'
   } catch {
     return 'Request failed'

@@ -72,7 +72,7 @@ export function SettingsPage() {
       setTimeout(() => setSuccessMessage(null), 4000)
     } catch (err) {
       setSuccessMessage(null)
-      setSaveError(err instanceof Error ? err.message : 'Settings could not be saved')
+      setSaveError(err instanceof Error ? err.message : t.common.errors.settingsSaveFailed)
     }
   }
 
@@ -138,42 +138,33 @@ export function SettingsPage() {
 
         <div className="card-body space-y-5">
           <div>
-            <label className="label">
-              {t.settings.shopName} <span className="text-red-500">*</span>
-            </label>
-            <input className="input h-12 text-sm" {...register('shopName')} />
-            {mapValidationMessage('shopName') ? (
-              <p className="mt-1 text-xs font-medium text-red-600">{mapValidationMessage('shopName')}</p>
-            ) : null}
+            <label className="label">{t.settings.shopName}</label>
+            <input
+              className="input h-12 text-sm"
+              placeholder={t.settings.shopNamePlaceholder}
+              {...register('shopName')}
+            />
           </div>
 
           <div>
-            <label className="label">
-              {t.settings.shopAddress} <span className="text-red-500">*</span>
-            </label>
+            <label className="label">{t.settings.shopAddress}</label>
             <textarea
               className="input min-h-[88px] resize-y py-3 text-sm"
               rows={3}
+              placeholder={t.settings.shopAddressPlaceholder}
               {...register('shopAddress')}
             />
-            {mapValidationMessage('shopAddress') ? (
-              <p className="mt-1 text-xs font-medium text-red-600">
-                {mapValidationMessage('shopAddress')}
-              </p>
-            ) : null}
           </div>
 
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <div>
-              <label className="label">
-                {t.settings.shopPhone} <span className="text-red-500">*</span>
-              </label>
-              <input className="input h-12 text-sm" type="tel" {...register('shopPhone')} />
-              {mapValidationMessage('shopPhone') ? (
-                <p className="mt-1 text-xs font-medium text-red-600">
-                  {mapValidationMessage('shopPhone')}
-                </p>
-              ) : null}
+              <label className="label">{t.settings.shopPhone}</label>
+              <input
+                className="input h-12 text-sm"
+                type="tel"
+                placeholder={t.settings.shopPhonePlaceholder}
+                {...register('shopPhone')}
+              />
             </div>
             <div>
               <label className="label">{t.settings.shopEmail}</label>

@@ -15,8 +15,9 @@ import {
   type ContractDraftPayload,
 } from '../../api/contracts'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import type { OptionLabels } from '../../i18n/types'
 import { useAuth } from '../../auth/AuthContext'
-import { loadShopSettings, hasRequiredShopSettings } from '../../services/shopSettings'
+import { loadShopSettings } from '../../services/shopSettings'
 import type { ApiContract } from '../../types/contract'
 
 type FormValues = {
@@ -57,7 +58,7 @@ type FileField =
   | 'damage_photo'
   | 'accessories_photo'
 
-const deviceTypes = [
+const DEVICE_TYPES = [
   'Smartphone',
   'Tablet',
   'Laptop',
@@ -65,10 +66,11 @@ const deviceTypes = [
   'Smartwatch',
   'Gaming console',
   'Other',
-]
+] as const
 
-const conditions = ['Like new', 'Very good', 'Good', 'Used', 'Defective']
-const paymentMethods = ['Cash', 'Bank transfer', 'Card', 'Other']
+const CONDITIONS = ['Like new', 'Very good', 'Good', 'Used', 'Defective'] as const
+const PAYMENT_METHODS = ['Cash', 'Bank transfer', 'Card', 'Other'] as const
+
 const requiredFileFields: FileField[] = [
   'id_front',
   'id_back',
@@ -119,19 +121,6 @@ function isDocumentFile(file: File) {
   return file.type === 'image/png' || file.type === 'image/svg+xml'
 }
 
-const requiredText = (message: string) => ({
-  required: message,
-  validate: (value?: string) => Boolean(value?.trim()) || message,
-})
-
-const imeiValidation = {
-  ...requiredText('IMEI is required.'),
-  pattern: {
-    value: /^\d{15}$/,
-    message: 'IMEI must be exactly 15 digits.',
-  },
-}
-
 function dataUrlToBlob(dataUrl: string) {
   const [meta, content] = dataUrl.split(',')
   const mime = meta.match(/data:(.*);base64/)?.[1] ?? 'image/png'
@@ -161,12 +150,18 @@ function cleanPayload(values: Partial<FormValues>): ContractDraftPayload {
   return payload
 }
 
+function optionLabel(value: string, labels: OptionLabels) {
+  return labels[value as keyof OptionLabels] ?? value
+}
+
 export function ContractWizard(props: {
   defaultStep?: number
   compact?: boolean
   initialContract?: ApiContract
+  onCompleted?: (contract: ApiContract) => void
 }) {
-  const { t } = useLanguage()
+  const { t, interpolate } = useLanguage()
+  const w = t.contractWizard
   const { user } = useAuth()
   const navigate = useNavigate()
   const customerSigRef = useRef<SignatureCanvas | null>(null)
@@ -182,16 +177,61 @@ export function ContractWizard(props: {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const requiredText = useMemo(
+    () => (message: string) => ({
+      required: message,
+      validate: (value?: string) => Boolean(value?.trim()) || message,
+    }),
+    [],
+  )
+
+  const imeiValidation = useMemo(
+    () => ({
+      ...requiredText(w.imeiRequired),
+      pattern: {
+        value: /^\d{15}$/,
+        message: w.imeiInvalid,
+      },
+    }),
+    [w.imeiInvalid, w.imeiRequired, requiredText],
+  )
+
+  const photoFieldLabels = useMemo(
+    (): Record<FileField, string> => ({
+      id_front: w.photos.idFront,
+      id_back: w.photos.idBack,
+      device_front: w.photos.deviceFront,
+      device_back: w.photos.deviceBack,
+      imei_photo: w.photos.imeiPhoto,
+      damage_photo: w.photos.damagePhoto,
+      accessories_photo: w.photos.accessoriesPhoto,
+    }),
+    [w.photos],
+  )
+
+  const confirmationFields = useMemo(
+    () =>
+      [
+        ['ownershipConfirmed', w.confirmations.ownershipConfirmed],
+        ['notStolenConfirmed', w.confirmations.notStolenConfirmed],
+        ['icloudRemoved', w.confirmations.icloudRemoved],
+        ['googleLockRemoved', w.confirmations.googleLockRemoved],
+        ['otherLockRemoved', w.confirmations.otherLockRemoved],
+        ['factoryResetConfirmed', w.confirmations.factoryResetConfirmed],
+      ] as const,
+    [w.confirmations],
+  )
+
   const steps = useMemo(
     () => [
-      t.contractWizard.steps.customerInfo,
-      t.contractWizard.steps.deviceInfo,
-      t.contractWizard.steps.confirmations,
-      t.contractWizard.steps.photos,
-      t.contractWizard.steps.signature,
-      t.contractWizard.steps.reviewSave,
+      w.steps.customerInfo,
+      w.steps.deviceInfo,
+      w.steps.confirmations,
+      w.steps.photos,
+      w.steps.signature,
+      w.steps.reviewSave,
     ],
-    [t],
+    [w.steps],
   )
 
   const {
@@ -220,9 +260,7 @@ export function ContractWizard(props: {
   })
 
   const values = watch()
-  const title = props.compact
-    ? t.contractWizard.titleCompact
-    : t.contractWizard.titleFull
+  const title = props.compact ? w.titleCompact : w.titleFull
   const savedFileTypes = new Set(props.initialContract?.files?.map((file) => file.fileType) ?? [])
   const hasRequiredFile = (field: FileField) => Boolean(files[field]) || savedFileTypes.has(field)
   const getLiveSignatureDataUrl = (ref: SignatureCanvas | null) =>
@@ -239,11 +277,11 @@ export function ContractWizard(props: {
   const setFile = (field: FileField, file: File | null) => {
     setError(null)
     if (file && !isDocumentFile(file)) {
-      setError('Only PNG and SVG document images are allowed.')
+      setError(w.errors.documentTypeInvalid)
       return
     }
     if (file && file.size > maxDocumentUploadMb * 1024 * 1024) {
-      setError(`Upload is too large. Maximum size is ${maxDocumentUploadMb}MB per file.`)
+      setError(interpolate(w.uploadTooLarge, { maxMb: maxDocumentUploadMb }))
       return
     }
     setFiles((current) => {
@@ -284,8 +322,8 @@ export function ContractWizard(props: {
       if (required) {
         throw new Error(
           role === 'customer'
-            ? 'Customer seller signature is required.'
-            : 'Shopkeeper buyer signature is required.',
+            ? w.errors.customerSignatureRequired
+            : w.errors.shopkeeperSignatureRequired,
         )
       }
       return
@@ -322,7 +360,7 @@ export function ContractWizard(props: {
       const draft = await persistDraft(getValues())
       await uploadSelectedFiles(draft.id)
       await uploadSignatures(draft.id, false)
-      setMessage(`Draft saved: ${draft.contractNumber}`)
+      setMessage(interpolate(w.draftSaved, { contractNumber: draft.contractNumber }))
     } catch (err) {
       if (draftId && err instanceof Error && err.message.includes('Only draft contracts')) {
         try {
@@ -335,7 +373,7 @@ export function ContractWizard(props: {
           // Keep the original backend message below.
         }
       }
-      setError(err instanceof Error ? err.message : 'Draft could not be saved')
+      setError(err instanceof Error ? err.message : w.errors.draftSaveFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -357,31 +395,35 @@ export function ContractWizard(props: {
           excludeId: draftId,
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'IMEI or serial number already exists.')
+        setError(err instanceof Error ? err.message : w.imeiOrSerialExists)
         return false
       }
     }
 
     if (step === 1 && !getValues('imei')?.trim() && !getValues('serialNumber')?.trim()) {
-      setError('IMEI and serial number are required.')
+      setError(w.imeiOrSerialRequired)
       return false
     }
 
     if (step === 3) {
       const missingFiles = requiredFileFields.filter((field) => !hasRequiredFile(field))
       if (missingFiles.length > 0) {
-        setError(`Required uploads missing: ${missingFiles.join(', ')}`)
+        setError(
+          interpolate(w.errors.uploadsMissing, {
+            fields: missingFiles.map((f) => photoFieldLabels[f]).join(', '),
+          }),
+        )
         return false
       }
     }
 
     if (step === 4) {
       if (!hasCustomerSignature) {
-        setError('Customer seller signature is required.')
+        setError(w.errors.customerSignatureRequired)
         return false
       }
       if (!hasShopkeeperSignature) {
-        setError('Shopkeeper buyer signature is required.')
+        setError(w.errors.shopkeeperSignatureRequired)
         return false
       }
     }
@@ -401,34 +443,34 @@ export function ContractWizard(props: {
 
     if (!(await trigger())) return
     if (!formValues.imei?.trim() || !formValues.serialNumber?.trim()) {
-      setError('IMEI and serial number are required.')
+      setError(w.imeiOrSerialRequired)
       setStep(1)
       return
     }
 
     const missingFiles = requiredFileFields.filter((field) => !hasRequiredFile(field))
     if (missingFiles.length > 0) {
-      setError(`Required uploads missing: ${missingFiles.join(', ')}`)
+      setError(
+        interpolate(w.errors.uploadsMissing, {
+          fields: missingFiles.map((f) => photoFieldLabels[f]).join(', '),
+        }),
+      )
       setStep(3)
       return
     }
 
     if (!hasCustomerSignature || !hasShopkeeperSignature) {
-      setError('Both customer seller and shopkeeper buyer signatures are required.')
+      setError(w.errors.bothSignaturesRequired)
       setStep(4)
       return
     }
 
     if (!user?.id) {
-      setError('You must be logged in to complete a contract.')
+      setError(w.errors.loginRequired)
       return
     }
 
     const shopSettings = await loadShopSettings(user.id)
-    if (!hasRequiredShopSettings(shopSettings)) {
-      setError(t.settings.errors.missingForPdf)
-      return
-    }
 
     setIsSubmitting(true)
     try {
@@ -436,12 +478,14 @@ export function ContractWizard(props: {
       await uploadSelectedFiles(draft.id)
       await uploadSignatures(draft.id, true)
       const completed = await completeContract(draft.id, {}, shopSettings)
-      navigate(`/contracts/${completed.id}`)
+      props.onCompleted?.(completed)
+      navigate(`/contracts/${completed.id}`, { replace: true })
     } catch (err) {
       if (draftId && err instanceof Error && err.message.includes('Only draft contracts')) {
         try {
           const latest = await fetchContract(draftId)
           if (latest.status === 'Completed') {
+            props.onCompleted?.(latest)
             navigate(`/contracts/${latest.id}`, { replace: true })
             return
           }
@@ -449,7 +493,7 @@ export function ContractWizard(props: {
           // Keep the original backend message below.
         }
       }
-      setError(err instanceof Error ? err.message : 'Contract could not be completed')
+      setError(err instanceof Error ? err.message : w.errors.completeFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -514,35 +558,43 @@ export function ContractWizard(props: {
         {step === 0 ? (
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
-              {t.contractWizard.customerInformation}
+              {w.customerInformation}
             </div>
-            <Field label={t.contractWizard.fullName} error={errors.customerName?.message || (errors.customerName && t.contractWizard.fullNameRequired)}>
-              <input className="input" {...register('customerName', requiredText('Full name is required.'))} />
+            <Field label={w.fullName} error={errors.customerName?.message || (errors.customerName && w.fullNameRequired)}>
+              <input className="input" placeholder={w.fullNamePlaceholder} {...register('customerName', requiredText(w.fullNameRequired))} />
             </Field>
-            <Field label="E-Mail *" error={errors.customerEmail?.message}>
+            <Field label={w.email} error={errors.customerEmail?.message}>
               <input
                 className="input"
                 type="email"
+                placeholder={w.emailPlaceholder}
                 {...register('customerEmail', {
-                  ...requiredText('Email is required.'),
+                  ...requiredText(w.emailRequired),
                   pattern: {
                     value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Enter a valid email address.',
+                    message: w.emailInvalid,
                   },
                 })}
               />
             </Field>
-            <Field label={t.contractWizard.phone} error={errors.customerPhone?.message || (errors.customerPhone && t.contractWizard.phoneRequired)}>
-              <input className="input" {...register('customerPhone', { ...requiredText('Phone number is required.'), minLength: { value: 5, message: 'Phone number is too short.' } })} />
+            <Field label={w.phone} error={errors.customerPhone?.message || (errors.customerPhone && w.phoneRequired)}>
+              <input
+                className="input"
+                placeholder={w.phonePlaceholder}
+                {...register('customerPhone', {
+                  ...requiredText(w.phoneRequired),
+                  minLength: { value: 5, message: w.phoneTooShort },
+                })}
+              />
             </Field>
-            <Field label="Date of birth *" error={errors.customerDateOfBirth?.message}>
-              <input className="input" type="date" {...register('customerDateOfBirth', requiredText('Date of birth is required.'))} />
+            <Field label={w.dob} error={errors.customerDateOfBirth?.message}>
+              <input className="input" type="date" {...register('customerDateOfBirth', requiredText(w.dobRequired))} />
             </Field>
-            <Field label={t.contractWizard.address} error={errors.customerAddress?.message || (errors.customerAddress && t.contractWizard.addressRequired)} wide>
-              <textarea className="input min-h-24 py-2" {...register('customerAddress', requiredText('Address is required.'))} />
+            <Field label={w.address} error={errors.customerAddress?.message || (errors.customerAddress && w.addressRequired)} wide>
+              <textarea className="input min-h-24 py-2" placeholder={w.addressPlaceholder} {...register('customerAddress', requiredText(w.addressRequired))} />
             </Field>
-            <Field label="ID document number *" error={errors.idDocumentNumber?.message} wide>
-              <input className="input" {...register('idDocumentNumber', requiredText('ID document number is required.'))} />
+            <Field label={w.idDocument} error={errors.idDocumentNumber?.message} wide>
+              <input className="input" placeholder={w.idDocumentPlaceholder} {...register('idDocumentNumber', requiredText(w.idDocumentRequired))} />
             </Field>
           </section>
         ) : null}
@@ -550,43 +602,67 @@ export function ContractWizard(props: {
         {step === 1 ? (
           <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="md:col-span-3 text-xs font-semibold text-slate-700">
-              Device Information
+              {w.deviceInformation}
             </div>
-            <SelectField label="Device Type *" options={deviceTypes} register={register('deviceType', { required: 'Device type is required.' })} />
-            <Field label="Brand *" error={errors.brand?.message || (errors.brand && 'Brand is required.')}>
-              <input className="input" {...register('brand', requiredText('Brand is required.'))} />
+            <SelectField
+              label={w.deviceType}
+              options={DEVICE_TYPES}
+              optionLabels={w.options}
+              register={register('deviceType', { required: w.deviceTypeRequired })}
+            />
+            <Field label={w.brand} error={errors.brand?.message || (errors.brand && w.brandRequired)}>
+              <input className="input" placeholder={w.brandPlaceholder} {...register('brand', requiredText(w.brandRequired))} />
             </Field>
-            <Field label="Model *" error={errors.model?.message || (errors.model && 'Model is required.')}>
-              <input className="input" {...register('model', requiredText('Model is required.'))} />
+            <Field label={w.model} error={errors.model?.message || (errors.model && w.modelRequired)}>
+              <input className="input" placeholder={w.modelPlaceholder} {...register('model', requiredText(w.modelRequired))} />
             </Field>
-            <Field label="IMEI *" error={errors.imei?.message}>
-              <input className="input" inputMode="numeric" maxLength={15} {...register('imei', imeiValidation)} />
+            <Field label={w.imei} error={errors.imei?.message}>
+              <input className="input" inputMode="numeric" maxLength={15} placeholder={w.imeiPlaceholder} {...register('imei', imeiValidation)} />
             </Field>
-            <Field label="Serial Number *" error={errors.serialNumber?.message}>
-              <input className="input" {...register('serialNumber', requiredText('Serial number is required.'))} />
+            <Field label={w.serialNumber} error={errors.serialNumber?.message}>
+              <input className="input" placeholder={w.serialNumberPlaceholder} {...register('serialNumber', requiredText(w.serialNumberRequired))} />
             </Field>
-            <SelectField label="Condition *" options={conditions} register={register('condition', { required: 'Condition is required.' })} />
-            <Field label="Purchase Price *" error={errors.purchasePrice?.message || (errors.purchasePrice && 'Price must be greater than zero.')}>
-              <input className="input" type="number" step="0.01" {...register('purchasePrice', { required: 'Purchase price is required.', min: { value: 0.01, message: 'Price must be greater than zero.' } })} />
+            <SelectField
+              label={w.condition}
+              options={CONDITIONS}
+              optionLabels={w.options}
+              register={register('condition', { required: w.conditionRequired })}
+            />
+            <Field label={w.purchasePrice} error={errors.purchasePrice?.message || (errors.purchasePrice && w.priceMin)}>
+              <input
+                className="input"
+                type="number"
+                step="0.01"
+                placeholder={w.purchasePricePlaceholder}
+                {...register('purchasePrice', {
+                  required: w.purchasePriceRequired,
+                  min: { value: 0.01, message: w.priceMin },
+                })}
+              />
             </Field>
-            <SelectField label="Payment Method *" options={paymentMethods} register={register('paymentMethod', { required: 'Payment method is required.' })} />
-            <Field label="Storage *" error={errors.storage?.message}>
-              <input className="input" {...register('storage', requiredText('Storage is required.'))} />
+            <SelectField
+              label={w.paymentMethod}
+              options={PAYMENT_METHODS}
+              optionLabels={w.options}
+              register={register('paymentMethod', { required: w.paymentMethodRequired })}
+            />
+            <Field label={w.storage} error={errors.storage?.message}>
+              <input className="input" placeholder={w.storagePlaceholder} {...register('storage', requiredText(w.storageRequired))} />
             </Field>
-            <Field label="Color *" error={errors.color?.message}>
-              <input className="input" {...register('color', requiredText('Color is required.'))} />
+            <Field label={w.color} error={errors.color?.message}>
+              <input className="input" placeholder={w.colorPlaceholder} {...register('color', requiredText(w.colorRequired))} />
             </Field>
-            <Field label="Accessories *" error={errors.accessories?.message}>
-              <input className="input" {...register('accessories', requiredText('Accessories are required.'))} />
+            <Field label={w.accessories} error={errors.accessories?.message}>
+              <input className="input" placeholder={w.accessoriesPlaceholder} {...register('accessories', requiredText(w.accessoriesRequired))} />
             </Field>
-            <Field label="Battery Health *" error={errors.batteryHealth?.message}>
-              <input className="input" {...register('batteryHealth', requiredText('Battery health is required.'))} />
+            <Field label={w.batteryHealth} error={errors.batteryHealth?.message}>
+              <input className="input" placeholder={w.batteryHealthPlaceholder} {...register('batteryHealth', requiredText(w.batteryHealthRequired))} />
             </Field>
-            <Field label="Visible Damage Notes *" error={errors.damageNotes?.message} wide>
-              <textarea className="input min-h-20 py-2" {...register('damageNotes', requiredText('Visible damage notes are required.'))} />
+            <Field label={w.damageNotes} error={errors.damageNotes?.message} wide>
+              <textarea className="input min-h-20 py-2" placeholder={w.damageNotesPlaceholder} {...register('damageNotes', requiredText(w.damageNotesRequired))} />
             </Field>
-            <Field label="Internal Notes *" error={errors.internalNotes?.message} wide>
-              <textarea className="input min-h-20 py-2" {...register('internalNotes', requiredText('Internal notes are required.'))} />
+            <Field label={w.internalNotes} error={errors.internalNotes?.message} wide>
+              <textarea className="input min-h-20 py-2" placeholder={w.internalNotesPlaceholder} {...register('internalNotes', requiredText(w.internalNotesRequired))} />
             </Field>
           </section>
         ) : null}
@@ -594,21 +670,14 @@ export function ContractWizard(props: {
         {step === 2 ? (
           <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
-              Ownership and Lock Confirmations
+              {w.ownershipConfirmations}
             </div>
-            {[
-              ['ownershipConfirmed', 'Customer confirms ownership of the device'],
-              ['notStolenConfirmed', 'Customer confirms the device is not stolen'],
-              ['icloudRemoved', 'iCloud lock removed'],
-              ['googleLockRemoved', 'Google lock removed'],
-              ['otherLockRemoved', 'Samsung / Microsoft / other lock removed'],
-              ['factoryResetConfirmed', 'Device has been factory reset'],
-            ].map(([name, label]) => (
+            {confirmationFields.map(([name, label]) => (
               <label key={name} className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
                 <input
                   type="checkbox"
                   className="h-4 w-4 rounded border-slate-300 text-primary"
-                  {...register(name as keyof FormValues, { required: true })}
+                  {...register(name, { required: true })}
                 />
                 {label} *
               </label>
@@ -619,22 +688,24 @@ export function ContractWizard(props: {
         {step === 3 ? (
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
-              Photos and Documents
+              {w.photosAndDocuments}
             </div>
-            <FileInput label="ID Card / Passport Photo *" field="id_front" files={files} saved={savedFileTypes.has('id_front')} onChange={setFile} />
-            <FileInput label="ID Back Photo *" field="id_back" files={files} saved={savedFileTypes.has('id_back')} onChange={setFile} />
-            <FileInput label="Device Front Photo *" field="device_front" files={files} saved={savedFileTypes.has('device_front')} onChange={setFile} />
-            <FileInput label="Device Back Photo *" field="device_back" files={files} saved={savedFileTypes.has('device_back')} onChange={setFile} />
-            <FileInput label="IMEI / Serial Photo *" field="imei_photo" files={files} saved={savedFileTypes.has('imei_photo')} onChange={setFile} />
-            <FileInput label="Damage Photo *" field="damage_photo" files={files} saved={savedFileTypes.has('damage_photo')} onChange={setFile} />
-            <FileInput label="Accessories Photo *" field="accessories_photo" files={files} saved={savedFileTypes.has('accessories_photo')} onChange={setFile} />
+            <FileInput label={w.photos.idFront} field="id_front" files={files} saved={savedFileTypes.has('id_front')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput label={w.photos.idBack} field="id_back" files={files} saved={savedFileTypes.has('id_back')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput label={w.photos.deviceFront} field="device_front" files={files} saved={savedFileTypes.has('device_front')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput label={w.photos.deviceBack} field="device_back" files={files} saved={savedFileTypes.has('device_back')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput label={w.photos.imeiPhoto} field="imei_photo" files={files} saved={savedFileTypes.has('imei_photo')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput label={w.photos.damagePhoto} field="damage_photo" files={files} saved={savedFileTypes.has('damage_photo')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput label={w.photos.accessoriesPhoto} field="accessories_photo" files={files} saved={savedFileTypes.has('accessories_photo')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
           </section>
         ) : null}
 
         {step === 4 ? (
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <SignatureBox
-              title="Customer / seller signature *"
+              title={w.customerSignatureTitle}
+              clearLabel={w.clear}
+              savedHint={w.savedSignatureReplace}
               refSetter={(ref) => {
                 customerSigRef.current = ref
               }}
@@ -650,7 +721,9 @@ export function ContractWizard(props: {
               saved={Boolean(props.initialContract?.signaturePath)}
             />
             <SignatureBox
-              title="Shopkeeper / buyer signature *"
+              title={w.shopkeeperSignatureTitle}
+              clearLabel={w.clear}
+              savedHint={w.savedSignatureReplace}
               refSetter={(ref) => {
                 shopkeeperSigRef.current = ref
               }}
@@ -670,33 +743,36 @@ export function ContractWizard(props: {
 
         {step === 5 ? (
           <section className="space-y-4">
-            <div className="text-xs font-semibold text-slate-700">Check and save</div>
+            <div className="text-xs font-semibold text-slate-700">{w.checkAndSave}</div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <ReviewCard
-                title="Customer"
+                title={w.review.customer}
+                dash={t.common.dash}
                 rows={[
-                  ['Name', values.customerName],
-                  ['Phone', values.customerPhone],
-                  ['Email', values.customerEmail || '-'],
-                  ['Address', values.customerAddress],
+                  [w.review.name, values.customerName],
+                  [w.review.phone, values.customerPhone],
+                  [w.review.email, values.customerEmail],
+                  [w.review.address, values.customerAddress],
                 ]}
               />
               <ReviewCard
-                title="Device"
+                title={w.review.device}
+                dash={t.common.dash}
                 rows={[
-                  ['Device', [values.brand, values.model].filter(Boolean).join(' ')],
-                  ['IMEI / Serial', values.imei || values.serialNumber || '-'],
-                  ['Condition', values.condition],
-                  ['Price', values.purchasePrice ? String(values.purchasePrice) : '-'],
+                  [w.review.device, [values.brand, values.model].filter(Boolean).join(' ')],
+                  [w.review.imeiSerial, values.imei || values.serialNumber],
+                  [w.review.condition, values.condition ? optionLabel(values.condition, w.options) : undefined],
+                  [w.review.price, values.purchasePrice ? String(values.purchasePrice) : undefined],
                 ]}
               />
               <ReviewCard
-                title="Files and signatures"
+                title={w.review.filesAndSignatures}
+                dash={t.common.dash}
                 rows={[
-                  ['Required files', `${requiredFileFields.filter((field) => hasRequiredFile(field)).length}/${requiredFileFields.length}`],
-                  ['Customer signature', hasCustomerSignature ? 'Captured' : 'Missing'],
-                  ['Shopkeeper signature', hasShopkeeperSignature ? 'Captured' : 'Missing'],
-                  ['PDF', 'Generated after completion'],
+                  [w.review.requiredFiles, `${requiredFileFields.filter((field) => hasRequiredFile(field)).length}/${requiredFileFields.length}`],
+                  [w.review.customerSignature, hasCustomerSignature ? w.review.captured : w.review.missing],
+                  [w.review.shopkeeperSignature, hasShopkeeperSignature ? w.review.captured : w.review.missing],
+                  [w.review.pdf, w.review.pdfAfterCompletion],
                 ]}
               />
             </div>
@@ -710,7 +786,7 @@ export function ContractWizard(props: {
             onClick={saveDraft}
             className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Draft
+            {w.saveDraft}
           </button>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
@@ -719,7 +795,7 @@ export function ContractWizard(props: {
               onClick={() => setStep((current) => Math.max(0, current - 1))}
               className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Back
+              {w.back}
             </button>
             {step < steps.length - 1 ? (
               <button
@@ -728,7 +804,7 @@ export function ContractWizard(props: {
                 onClick={goNext}
                 className="btn btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Next
+                {w.next}
               </button>
             ) : (
               <button
@@ -736,7 +812,7 @@ export function ContractWizard(props: {
                 disabled={isSubmitting}
                 className="btn btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isSubmitting ? 'Saving...' : 'Complete and Generate PDF'}
+                {isSubmitting ? w.saving : w.completeAndPdf}
               </button>
             )}
           </div>
@@ -763,7 +839,8 @@ function Field(props: {
 
 function SelectField(props: {
   label: string
-  options: string[]
+  options: readonly string[]
+  optionLabels: OptionLabels
   register: UseFormRegisterReturn
 }) {
   return (
@@ -771,7 +848,7 @@ function SelectField(props: {
       <select className="input" {...props.register}>
         {props.options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {optionLabel(option, props.optionLabels)}
           </option>
         ))}
       </select>
@@ -785,6 +862,9 @@ function FileInput(props: {
   files: Partial<Record<FileField, File>>
   saved?: boolean
   onChange: (field: FileField, file: File | null) => void
+  removeLabel: string
+  savedHint: string
+  formatHint: string
 }) {
   const file = props.files[props.field]
 
@@ -805,15 +885,13 @@ function FileInput(props: {
             className="font-semibold text-red-600"
             onClick={() => props.onChange(props.field, null)}
           >
-            Remove
+            {props.removeLabel}
           </button>
         </div>
       ) : props.saved ? (
-        <div className="mt-1 text-xs font-semibold text-emerald-700">
-          Saved upload exists. Choose a new PNG/SVG to replace it.
-        </div>
+        <div className="mt-1 text-xs font-semibold text-emerald-700">{props.savedHint}</div>
       ) : (
-        <div className="mt-1 text-xs text-slate-500">PNG or SVG up to 20MB.</div>
+        <div className="mt-1 text-xs text-slate-500">{props.formatHint}</div>
       )}
     </div>
   )
@@ -821,6 +899,8 @@ function FileInput(props: {
 
 function SignatureBox(props: {
   title: string
+  clearLabel: string
+  savedHint: string
   refSetter: (ref: SignatureCanvas | null) => void
   onChange: () => void
   onClear: () => void
@@ -830,9 +910,7 @@ function SignatureBox(props: {
     <div>
       <div className="text-xs font-semibold text-slate-700">{props.title}</div>
       {props.saved ? (
-        <div className="mt-1 text-xs font-semibold text-emerald-700">
-          Saved signature exists. Draw again only to replace it.
-        </div>
+        <div className="mt-1 text-xs font-semibold text-emerald-700">{props.savedHint}</div>
       ) : null}
       <div className="mt-3 rounded-xl border border-slate-200 bg-white">
         <div className="h-[180px] overflow-hidden rounded-t-xl bg-white">
@@ -844,7 +922,7 @@ function SignatureBox(props: {
         </div>
         <div className="flex justify-end border-t border-slate-200 px-4 py-3">
           <button type="button" className="btn btn-ghost h-9 px-3" onClick={props.onClear}>
-            Clear
+            {props.clearLabel}
           </button>
         </div>
       </div>
@@ -852,7 +930,11 @@ function SignatureBox(props: {
   )
 }
 
-function ReviewCard(props: { title: string; rows: Array<[string, string | number | undefined]> }) {
+function ReviewCard(props: {
+  title: string
+  dash: string
+  rows: Array<[string, string | number | undefined]>
+}) {
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
       <div className="text-sm font-semibold text-slate-900">{props.title}</div>
@@ -861,7 +943,7 @@ function ReviewCard(props: { title: string; rows: Array<[string, string | number
           <div key={label} className="flex items-start justify-between gap-3">
             <span className="text-slate-500">{label}</span>
             <span className="max-w-[60%] text-right font-semibold text-slate-900">
-              {value || '-'}
+              {value || props.dash}
             </span>
           </div>
         ))}

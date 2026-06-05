@@ -16,13 +16,16 @@ purchase_dashboard/
 
 ### 1. Backend
 
+1. Create a database in **pgAdmin**.
+2. Configure the backend:
+
 ```powershell
 cd backend
 Copy-Item .env.example .env
-# Edit .env: DATABASE_URL, JWT_SECRET, shop fields, CORS_ORIGINS
+# Edit .env: DATABASE_URL (pgAdmin connection), JWT_SECRET, CORS_ORIGINS
 npm install
 npm run prisma:generate
-npm run db:setup
+npm run prisma:migrate
 npm run dev
 ```
 
@@ -49,6 +52,20 @@ npm run install:all
 npm run dev:backend    # terminal 1
 npm run dev:frontend   # terminal 2
 ```
+
+## Server deployment
+
+1. Create the database in pgAdmin on your server.
+2. Set `DATABASE_URL` and other variables in `backend/.env`.
+3. On the server:
+   ```powershell
+   cd backend
+   npm install
+   npm run prisma:generate
+   npm run prisma:migrate
+   npm run build
+   npm start
+   ```
 
 ## API overview
 

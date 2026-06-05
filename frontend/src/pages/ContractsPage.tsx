@@ -31,7 +31,7 @@ export function ContractsPage() {
         if (alive) setContracts(data.map(mapContract))
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : 'Contracts failed to load')
+        if (alive) setError(err instanceof Error ? err.message : t.common.errors.contractsFailed)
       })
 
     return () => {

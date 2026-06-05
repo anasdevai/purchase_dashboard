@@ -20,7 +20,7 @@ export function DashboardPage() {
         if (alive) setDashboard(data)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : 'Dashboard failed to load')
+        if (alive) setError(err instanceof Error ? err.message : t.common.errors.dashboardFailed)
       })
   }
 
@@ -49,14 +49,14 @@ export function DashboardPage() {
           icon={<ClipboardList className="h-5 w-5 text-primary" />}
           title={t.dashboard.contractsToday}
           value={String(dashboard?.todayCompletedCount ?? 0)}
-          subtext="Completed today"
+          subtext={t.dashboard.contractsTodaySub}
           subtextTone="up"
         />
         <StatCard
           icon={<Receipt className="h-5 w-5 text-emerald-600" />}
           title={t.dashboard.totalPurchaseToday}
           value={formatMoney(Number(dashboard?.todayPurchaseTotal ?? 0))}
-          subtext="From completed contracts"
+          subtext={t.dashboard.totalPurchaseTodaySub}
           subtextTone="up"
         />
         <StatCard

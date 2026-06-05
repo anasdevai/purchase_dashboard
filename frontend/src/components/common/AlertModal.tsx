@@ -1,3 +1,4 @@
+import { useLanguage } from '../../i18n/LanguageProvider'
 import { Modal, useModalTitleId } from './Modal'
 
 export type AlertModalProps = {
@@ -12,10 +13,12 @@ export function AlertModal({
   open,
   title,
   message,
-  confirmLabel = 'OK',
+  confirmLabel,
   onClose,
 }: AlertModalProps) {
+  const { t } = useLanguage()
   const titleId = useModalTitleId('alert-modal')
+  const resolvedConfirmLabel = confirmLabel ?? t.common.ok
 
   return (
     <Modal open={open} onClose={onClose} titleId={titleId}>
@@ -29,7 +32,7 @@ export function AlertModal({
           </div>
           <div className="flex justify-end">
             <button type="button" className="btn btn-primary h-11 w-full sm:w-auto" onClick={onClose}>
-              {confirmLabel}
+              {resolvedConfirmLabel}
             </button>
           </div>
         </div>

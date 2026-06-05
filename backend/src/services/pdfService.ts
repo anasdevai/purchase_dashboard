@@ -197,7 +197,7 @@ export const generateContractPdf = async (
   const shopAddress = shopSettings?.address?.trim() || env.SHOP_ADDRESS || "We buy used devices";
   const shopPhone = shopSettings?.phone?.trim() || env.SHOP_PHONE;
   const shopEmail = shopSettings?.email?.trim() || env.SHOP_EMAIL;
-  const shopOwner = shopSettings?.ownerName?.trim();
+  const shopOwner = shopSettings?.ownerName?.trim() || env.SHOP_OWNER_NAME;
   const storageDir = getContractStorageDir(contract.userId, contract.contractNumber);
   await ensureDirectory(storageDir);
 

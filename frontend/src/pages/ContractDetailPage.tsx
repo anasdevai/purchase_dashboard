@@ -13,7 +13,7 @@ export function ContractDetailPage() {
   const { contractId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { t, formatMoney, formatDate } = useLanguage()
+  const { t, formatMoney, formatDate, interpolate } = useLanguage()
   const [apiContract, setApiContract] = useState<ApiContract | null>(null)
   const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +29,7 @@ export function ContractDetailPage() {
         if (alive) setApiContract(contract)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : 'Contract failed to load')
+        if (alive) setError(err instanceof Error ? err.message : t.common.errors.contractFailed)
       })
 
     return () => {
@@ -51,7 +51,7 @@ export function ContractDetailPage() {
         if (alive) setPdfObjectUrl(objectUrl)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : 'PDF failed to load')
+        if (alive) setError(err instanceof Error ? err.message : t.common.errors.pdfFailed)
       })
 
     return () => {
@@ -69,7 +69,7 @@ export function ContractDetailPage() {
   }
 
   if (!apiContract) {
-    return <div className="text-sm font-semibold text-slate-600">Loading contract...</div>
+    return <div className="text-sm font-semibold text-slate-600">{t.contractDetail.loading}</div>
   }
 
   const contract = mapContract(apiContract)
@@ -89,11 +89,11 @@ export function ContractDetailPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="text-lg font-semibold text-slate-900">
-              Continue Draft {contract.contractNumber}
+              {interpolate(t.contractDetail.continueDraft, {
+                contractNumber: contract.contractNumber,
+              })}
             </div>
-            <div className="mt-1 text-sm text-slate-600">
-              Complete missing fields, upload required PNG/SVG documents, capture both signatures, then generate the PDF.
-            </div>
+            <div className="mt-1 text-sm text-slate-600">{t.contractDetail.continueDraftHint}</div>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <button
@@ -102,19 +102,25 @@ export function ContractDetailPage() {
               className="btn w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto"
             >
               <Trash2 className="h-4 w-4" />
-              Cancel / Delete
+              {t.contractDetail.cancelDelete}
             </button>
             <Link to="/contracts" className="btn btn-secondary w-full sm:w-auto">
-              Back to Contracts
+              {t.contractDetail.backToContracts}
             </Link>
           </div>
         </div>
 
         <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 ring-1 ring-amber-100">
-          This record is saved as a draft. It will become downloadable after completion.
+          {t.contractDetail.draftBanner}
         </div>
 
-        <ContractWizard initialContract={apiContract} />
+        <ContractWizard
+          initialContract={apiContract}
+          onCompleted={(completed) => {
+            setError(null)
+            setApiContract(completed)
+          }}
+        />
       </div>
     )
   }
@@ -145,7 +151,7 @@ export function ContractDetailPage() {
             className="btn w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
-            Cancel / Delete
+            {t.contractDetail.cancelDelete}
           </button>
           {apiContract.pdfPath ? (
             <button
@@ -173,12 +179,26 @@ export function ContractDetailPage() {
               {[
                 [t.table.contractNumber, contract.contractNumber],
                 [t.table.customer, apiContract.customerName || '-'],
-                ['Phone', apiContract.customerPhone || '-'],
-                ['Address', apiContract.customerAddress || '-'],
+                [t.table.phone, apiContract.customerPhone || t.common.dash],
+                [t.table.address, apiContract.customerAddress || t.common.dash],
                 [t.table.device, contract.device],
                 [t.table.imeiSerial, contract.imeiOrSerial],
-                ['Condition', apiContract.condition || '-'],
-                ['Payment', apiContract.paymentMethod || '-'],
+                [
+                  t.table.condition,
+                  apiContract.condition
+                    ? t.contractWizard.options[
+                        apiContract.condition as keyof typeof t.contractWizard.options
+                      ] ?? apiContract.condition
+                    : t.common.dash,
+                ],
+                [
+                  t.table.payment,
+                  apiContract.paymentMethod
+                    ? t.contractWizard.options[
+                        apiContract.paymentMethod as keyof typeof t.contractWizard.options
+                      ] ?? apiContract.paymentMethod
+                    : t.common.dash,
+                ],
                 [t.table.price, formatMoney(contract.price)],
                 [t.table.date, formatDate(contract.dateISO)],
               ].map(([label, value]) => (
@@ -210,20 +230,20 @@ export function ContractDetailPage() {
               </div>
               {pdfObjectUrl ? (
                 <a href={pdfObjectUrl} target="_blank" rel="noreferrer" className="text-xs font-semibold text-primary hover:text-primary-hover">
-                  Open PDF
+                  {t.contractDetail.openPdf}
                 </a>
               ) : null}
             </div>
             <div className="p-5">
               {apiContract.pdfPath && pdfObjectUrl ? (
                 <iframe
-                  title="Contract PDF"
+                  title={t.contractDetail.pdfIframeTitle}
                   src={pdfObjectUrl}
                   className="h-[720px] w-full rounded-lg border border-slate-200 bg-white"
                 />
               ) : (
                 <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-                  PDF will appear here after the contract is completed.
+                  {t.contractDetail.pdfPending}
                 </div>
               )}
             </div>

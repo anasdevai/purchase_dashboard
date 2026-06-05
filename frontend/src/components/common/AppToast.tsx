@@ -1,5 +1,6 @@
 import { CheckCircle2, X, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { useLanguage } from '../../i18n/LanguageProvider'
 
 export type ToastState = {
   type: 'success' | 'error'
@@ -12,6 +13,7 @@ type AppToastProps = {
 }
 
 export function AppToast({ toast, onDismiss }: AppToastProps) {
+  const { t } = useLanguage()
   if (!toast) return null
 
   const isSuccess = toast.type === 'success'
@@ -44,7 +46,7 @@ export function AppToast({ toast, onDismiss }: AppToastProps) {
           type="button"
           onClick={onDismiss}
           className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-          aria-label="Dismiss notification"
+          aria-label={t.common.dismissNotification}
         >
           <X className="h-4 w-4" />
         </button>

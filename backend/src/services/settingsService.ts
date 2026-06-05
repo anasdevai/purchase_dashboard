@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { shopSettingsSchema, type ShopSettingsInput } from "../validators/shopSettingsValidators.js";
+import { shopSettingsSchema } from "../validators/shopSettingsValidators.js";
 
 const toResponse = (settings: {
   shopName: string;

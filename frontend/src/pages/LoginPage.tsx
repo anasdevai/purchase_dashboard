@@ -34,13 +34,13 @@ export function LoginPage() {
     setIsSubmitting(true)
     try {
       if (mode === 'signup') {
-        await signup(values.name?.trim() || 'Staff User', values.email, values.password)
+        await signup(values.name?.trim() || t.common.defaultStaffUser, values.email, values.password)
       } else {
         await login(values.email, values.password)
       }
       navigate(destination, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      setError(err instanceof Error ? err.message : t.common.errors.authFailed)
     } finally {
       setIsSubmitting(false)
     }
@@ -63,7 +63,7 @@ export function LoginPage() {
                 {t.app.nameLine1} {t.app.nameLine2}
               </div>
               <div className="mt-0.5 text-sm text-slate-500">
-                {mode === 'signup' ? 'Create a staff account' : t.login.subtitle}
+                {mode === 'signup' ? t.login.signupSubtitle : t.login.subtitle}
               </div>
             </div>
           </div>
@@ -71,10 +71,10 @@ export function LoginPage() {
           <form className="mt-8 space-y-5" onSubmit={handleSubmit(onSubmit)}>
             {mode === 'signup' ? (
               <div>
-                <label className="label">Name</label>
+                <label className="label">{t.login.name}</label>
                 <input
                   className="input h-12 text-sm"
-                  placeholder="Staff name"
+                  placeholder={t.login.namePlaceholder}
                   {...register('name', { required: mode === 'signup' })}
                 />
               </div>
@@ -84,7 +84,7 @@ export function LoginPage() {
               <label className="label">{t.login.email}</label>
               <input
                 className="input h-12 text-sm"
-                placeholder="admin@shop.com"
+                placeholder={t.login.emailPlaceholder}
                 {...register('email', { required: true })}
               />
             </div>
@@ -94,7 +94,7 @@ export function LoginPage() {
                 <input
                   className="input h-12 pr-11 text-sm"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Minimum 8 characters"
+                  placeholder={t.login.passwordPlaceholder}
                   autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   {...register('password', { required: true, minLength: 8 })}
                 />
@@ -125,15 +125,15 @@ export function LoginPage() {
               className="btn btn-primary mt-2 h-12 w-full text-base font-medium disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting
-                ? 'Please wait...'
+                ? t.common.pleaseWait
                 : mode === 'signup'
-                  ? 'Create account'
+                  ? t.login.createAccount
                   : t.login.login}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-slate-500">
-            {mode === 'signup' ? 'Already have an account?' : 'Need an account?'}{' '}
+            {mode === 'signup' ? t.login.alreadyHaveAccount : t.login.needAccount}{' '}
             <button
               type="button"
               onClick={() => {
@@ -144,7 +144,7 @@ export function LoginPage() {
               }}
               className="font-semibold text-primary hover:text-primary-hover"
             >
-              {mode === 'signup' ? 'Login' : 'Sign up'}
+              {mode === 'signup' ? t.login.login : t.login.signup}
             </button>
           </div>
         </div>

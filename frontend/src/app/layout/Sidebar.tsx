@@ -86,6 +86,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
 }
 
 export function Sidebar() {
+  const { t } = useLanguage()
   const { sidebarOpen, setSidebarOpen } = useLayout()
   const closeDrawer = () => setSidebarOpen(false)
 
@@ -94,7 +95,7 @@ export function Sidebar() {
       {sidebarOpen ? (
         <button
           type="button"
-          aria-label="Close menu"
+          aria-label={t.common.closeMenu}
           className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
           onClick={closeDrawer}
         />
@@ -111,7 +112,7 @@ export function Sidebar() {
             type="button"
             onClick={closeDrawer}
             className="grid h-9 w-9 place-items-center rounded-lg text-white/90 hover:bg-white/10"
-            aria-label="Close menu"
+            aria-label={t.common.closeMenu}
           >
             <X className="h-5 w-5" />
           </button>

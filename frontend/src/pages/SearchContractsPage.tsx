@@ -31,7 +31,7 @@ export function SearchContractsPage() {
           setError(null)
         })
         .catch((err) => {
-          setError(err instanceof Error ? err.message : 'Search failed')
+          setError(err instanceof Error ? err.message : t.common.errors.searchFailed)
         })
     }, 250)
 

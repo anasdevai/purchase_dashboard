@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { completeContractSchema, draftContractSchema, searchContractsSchema } from "../validators/contractValidators.js";
 import { requiredCompletionFileTypes } from "../validators/fileValidators.js";
@@ -246,11 +247,11 @@ export const completeContract = async (
 
   const pdfShopSettings: PdfShopSettings | undefined = shopSettings
     ? {
-        name: shopSettings.shopName,
-        address: shopSettings.shopAddress,
-        phone: shopSettings.shopPhone,
-        email: shopSettings.shopEmail ?? "",
-        ownerName: shopSettings.ownerName,
+        name: shopSettings.shopName?.trim() || env.SHOP_NAME,
+        address: shopSettings.shopAddress?.trim() || env.SHOP_ADDRESS,
+        phone: shopSettings.shopPhone?.trim() || env.SHOP_PHONE,
+        email: shopSettings.shopEmail?.trim() || env.SHOP_EMAIL,
+        ownerName: shopSettings.ownerName?.trim() || env.SHOP_OWNER_NAME,
         logoDataUrl: shopSettings.logoDataUrl
       }
     : undefined;

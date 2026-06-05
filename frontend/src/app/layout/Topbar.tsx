@@ -34,7 +34,7 @@ export function Topbar() {
           type="button"
           onClick={toggleSidebar}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 lg:hidden"
-          aria-label="Open menu"
+          aria-label={t.common.openMenu}
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -73,7 +73,7 @@ export function Topbar() {
             <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-gradient-to-br from-slate-200 to-slate-300" />
             <div className="hidden min-w-0 leading-tight lg:block">
               <div className="truncate text-sm font-semibold text-slate-900">
-                {user?.name ?? 'Staff User'}
+                {user?.name ?? t.common.defaultStaffUser}
               </div>
               <div className="text-xs text-slate-500">{t.topbar.roleAdmin}</div>
             </div>

@@ -12,7 +12,7 @@ export function useDeleteContractConfirm() {
       deleteAction: () => Promise<void>,
       onSuccess?: () => void,
     ) => {
-      const message = t.confirmDelete.message.replace('{contractNumber}', contractNumber)
+      const message = t.confirmDelete.message.replaceAll('{contractNumber}', contractNumber)
 
       confirm({
         title: t.confirmDelete.title,

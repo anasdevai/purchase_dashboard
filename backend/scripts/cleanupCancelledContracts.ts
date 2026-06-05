@@ -1,5 +1,7 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+/// <reference types="node" />
+
+import fs from 'fs/promises'
+import path from 'path'
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();

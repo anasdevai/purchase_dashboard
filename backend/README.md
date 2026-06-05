@@ -6,28 +6,27 @@ Backend API for the Device Purchase Contract Management System. It implements op
 
 Run all commands from the `backend/` directory (or use `npm run <script> --prefix backend` from the repo root).
 
-1. Start PostgreSQL (this project expects port **5433** on a default PostgreSQL 18 install). In an elevated PowerShell:
-   ```powershell
-   Start-Service postgresql-x64-18
+1. In **pgAdmin**, create a PostgreSQL database (any name you prefer).
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` to your pgAdmin connection, for example:
+   ```text
+   postgresql://postgres:yourpassword@localhost:5432/your_database?schema=public
    ```
-2. Create the database and apply migrations:
+   Also set `JWT_SECRET`, shop fields, and `CORS_ORIGINS` as needed.
+3. Install dependencies:
    ```powershell
-   npm.cmd run db:setup
+   npm install
    ```
-   Or create `purchase_dashboard` manually in pgAdmin (`scripts/create-database.sql`) then run `npm.cmd run prisma:migrate`.
-3. Copy `.env.example` to `.env` and fill `DATABASE_URL`, `JWT_SECRET`, shop fields, etc.
-4. Install dependencies:
+4. Generate Prisma client and apply migrations:
    ```powershell
-   npm.cmd install
+   npm run prisma:generate
+   npm run prisma:migrate
    ```
-5. Generate Prisma client (if not already done):
+5. Start the server:
    ```powershell
-   npm.cmd run prisma:generate
+   npm run dev
    ```
-6. Start development server:
-   ```powershell
-   npm.cmd run dev
-   ```
+
+For local schema changes during development, use `npm run prisma:migrate:dev` instead of `prisma:migrate`.
 
 ## Main API
 

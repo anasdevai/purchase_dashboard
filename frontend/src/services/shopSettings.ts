@@ -1,5 +1,11 @@
 import { fetchShopSettings, saveShopSettingsApi, type ShopSettingsPayload } from '../api/settings'
 
+export const DEFAULT_SHOP_NAME = 'Sceleria'
+export const DEFAULT_SHOP_ADDRESS = 'Your shop address'
+export const DEFAULT_SHOP_PHONE = 'Your shop phone'
+export const DEFAULT_SHOP_EMAIL = 'Your shop email'
+export const DEFAULT_OWNER_NAME = 'Your owner / manager name'
+
 export type ShopSettings = {
   shopName: string
   shopAddress: string
@@ -11,8 +17,28 @@ export type ShopSettings = {
 
 const storageKeyForUser = (userId: string) => `purchase-dashboard.shop-settings.${userId}`
 
+export function resolveShopName(shopName: string): string {
+  return shopName.trim() || DEFAULT_SHOP_NAME
+}
+
+export function resolveShopAddress(shopAddress: string): string {
+  return shopAddress.trim() || DEFAULT_SHOP_ADDRESS
+}
+
+export function resolveShopPhone(shopPhone: string): string {
+  return shopPhone.trim() || DEFAULT_SHOP_PHONE
+}
+
+export function resolveShopEmail(shopEmail: string): string {
+  return shopEmail.trim() || DEFAULT_SHOP_EMAIL
+}
+
+export function resolveOwnerName(ownerName: string): string {
+  return ownerName.trim() || DEFAULT_OWNER_NAME
+}
+
 export const defaultShopSettings = (): ShopSettings => ({
-  shopName: '',
+  shopName: DEFAULT_SHOP_NAME,
   shopAddress: '',
   shopPhone: '',
   shopEmail: '',
@@ -75,29 +101,10 @@ export function clearUserLocalData(userId?: string) {
     .forEach((key) => localStorage.removeItem(key))
 }
 
-export function hasRequiredShopSettings(settings: ShopSettings): boolean {
-  return Boolean(
-    settings.shopName.trim() &&
-      settings.shopAddress.trim() &&
-      settings.shopPhone.trim(),
-  )
-}
-
-export type ShopSettingsValidationErrors = Partial<
-  Record<'shopName' | 'shopAddress' | 'shopPhone' | 'shopEmail', string>
->
+export type ShopSettingsValidationErrors = Partial<Record<'shopEmail', string>>
 
 export function validateShopSettings(settings: ShopSettings): ShopSettingsValidationErrors {
   const errors: ShopSettingsValidationErrors = {}
-  if (!settings.shopName.trim()) {
-    errors.shopName = 'required'
-  }
-  if (!settings.shopAddress.trim()) {
-    errors.shopAddress = 'required'
-  }
-  if (!settings.shopPhone.trim()) {
-    errors.shopPhone = 'required'
-  }
   const email = settings.shopEmail.trim()
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     errors.shopEmail = 'invalid'

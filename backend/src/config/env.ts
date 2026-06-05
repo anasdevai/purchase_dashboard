@@ -11,10 +11,11 @@ const envSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .default("http://localhost:5173,http://127.0.0.1:5173,http://192.168.100.29:5173"),
-  SHOP_NAME: z.string().min(1).default("Your Shop Name"),
-  SHOP_ADDRESS: z.string().min(1).default("Your Shop Address"),
-  SHOP_PHONE: z.string().default(""),
-  SHOP_EMAIL: z.string().default(""),
+  SHOP_NAME: z.string().min(1).default("Sceleria"),
+  SHOP_ADDRESS: z.string().min(1).default("Your shop address"),
+  SHOP_PHONE: z.string().default("Your shop phone"),
+  SHOP_EMAIL: z.string().default("Your shop email"),
+  SHOP_OWNER_NAME: z.string().default("Your owner / manager name"),
   SHOP_LOGO_PATH: z.string().default(""),
   MAX_UPLOAD_SIZE_MB: z.coerce.number().positive().default(5)
 });
