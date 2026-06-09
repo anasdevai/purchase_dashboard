@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import * as contractService from "../services/contractService.js";
+import * as dashboardService from "../services/dashboardService.js";
 import * as fileService from "../services/fileService.js";
 import { HttpError } from "../utils/httpError.js";
 import { toAbsolutePath } from "../utils/paths.js";
@@ -67,7 +68,7 @@ export const validateIdentifiers = async (req: Request, res: Response) => {
 };
 
 export const dashboard = async (req: Request, res: Response) => {
-  const dashboardSummary = await contractService.getDashboardSummary(userId(req));
+  const dashboardSummary = await dashboardService.getDashboardSummary(userId(req));
   res.json(dashboardSummary);
 };
 

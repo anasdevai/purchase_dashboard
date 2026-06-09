@@ -19,6 +19,7 @@ import type { OptionLabels } from '../../i18n/types'
 import { useAuth } from '../../auth/AuthContext'
 import { loadShopSettings } from '../../services/shopSettings'
 import type { ApiContract } from '../../types/contract'
+import { DOCUMENT_IMAGE_ACCEPT, isAcceptedDocumentImage } from '../../utils/imageUpload'
 
 type FormValues = {
   customerName: string
@@ -58,28 +59,38 @@ type FileField =
   | 'damage_photo'
   | 'accessories_photo'
 
-const DEVICE_TYPES = [
-  'Smartphone',
-  'Tablet',
-  'Laptop',
-  'Desktop PC',
-  'Smartwatch',
-  'Gaming console',
+const DEVICE_TYPE_PRESETS = [
+  'iPhone',
+  'Samsung phone',
+  'iPad',
+  'Android tablet',
+  'MacBook',
+  'Windows laptop',
+  'PlayStation',
+  'Xbox',
+  'Nintendo Switch',
+  'Other',
+] as const
+
+const BRAND_PRESETS = [
+  'Apple',
+  'Samsung',
+  'Xiaomi',
+  'Huawei',
+  'Lenovo',
+  'HP',
+  'Dell',
+  'Sony',
+  'Microsoft',
+  'Nintendo',
   'Other',
 ] as const
 
 const CONDITIONS = ['Like new', 'Very good', 'Good', 'Used', 'Defective'] as const
 const PAYMENT_METHODS = ['Cash', 'Bank transfer', 'Card', 'Other'] as const
+const ACCESSORY_OPTIONS = ['Ladegerät', 'Netzteil', 'Controller', 'Kabel', 'Tragetasche', 'Sonstiges'] as const
 
-const requiredFileFields: FileField[] = [
-  'id_front',
-  'id_back',
-  'device_front',
-  'device_back',
-  'imei_photo',
-  'damage_photo',
-  'accessories_photo',
-]
+const requiredFileFields: FileField[] = ['id_front', 'device_front', 'device_back']
 const maxDocumentUploadMb = 20
 
 const stepFields: Record<number, Array<keyof FormValues>> = {
@@ -104,8 +115,6 @@ const stepFields: Record<number, Array<keyof FormValues>> = {
     'paymentMethod',
     'accessories',
     'batteryHealth',
-    'damageNotes',
-    'internalNotes',
   ],
   2: [
     'ownershipConfirmed',
@@ -115,10 +124,6 @@ const stepFields: Record<number, Array<keyof FormValues>> = {
     'otherLockRemoved',
     'factoryResetConfirmed',
   ],
-}
-
-function isDocumentFile(file: File) {
-  return file.type === 'image/png' || file.type === 'image/svg+xml'
 }
 
 function dataUrlToBlob(dataUrl: string) {
@@ -239,14 +244,17 @@ export function ContractWizard(props: {
     handleSubmit,
     getValues,
     watch,
+    setValue,
     trigger,
     formState: { errors },
   } = useForm<FormValues>({
+    shouldUnregister: false,
     defaultValues: {
       customerName: '',
       customerPhone: '',
       customerAddress: '',
-      deviceType: 'Smartphone',
+      deviceType: 'iPhone',
+      brand: 'Apple',
       condition: 'Good',
       paymentMethod: 'Cash',
       ownershipConfirmed: false,
@@ -262,6 +270,17 @@ export function ContractWizard(props: {
   const values = watch()
   const title = props.compact ? w.titleCompact : w.titleFull
   const savedFileTypes = new Set(props.initialContract?.files?.map((file) => file.fileType) ?? [])
+
+  const deviceTypePreset = (DEVICE_TYPE_PRESETS as readonly string[]).includes(values.deviceType ?? '')
+    ? values.deviceType
+    : 'Other'
+  const brandPreset = (BRAND_PRESETS as readonly string[]).includes(values.brand ?? '') ? values.brand : 'Other'
+  const accessoryPreset = (ACCESSORY_OPTIONS as readonly string[]).includes(values.accessories ?? '')
+    ? values.accessories
+    : values.accessories
+      ? 'Sonstiges'
+      : ''
+
   const hasRequiredFile = (field: FileField) => Boolean(files[field]) || savedFileTypes.has(field)
   const getLiveSignatureDataUrl = (ref: SignatureCanvas | null) =>
     ref && !ref.isEmpty() ? ref.toDataURL('image/png') : null
@@ -276,7 +295,7 @@ export function ContractWizard(props: {
 
   const setFile = (field: FileField, file: File | null) => {
     setError(null)
-    if (file && !isDocumentFile(file)) {
+    if (file && !isAcceptedDocumentImage(file)) {
       setError(w.errors.documentTypeInvalid)
       return
     }
@@ -500,7 +519,7 @@ export function ContractWizard(props: {
   }
 
   return (
-    <div className="card min-w-0 overflow-hidden">
+    <div className="card min-w-0 overflow-hidden" data-testid="contract-wizard">
       <div className="card-header">
         <div className="text-sm font-semibold text-slate-900 sm:text-base">{title}</div>
       </div>
@@ -545,12 +564,18 @@ export function ContractWizard(props: {
 
       <form onSubmit={handleSubmit(complete)} className="space-y-6 p-4 sm:p-5">
         {error ? (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">
+          <div
+            data-testid="wizard-error"
+            className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100"
+          >
             {error}
           </div>
         ) : null}
         {message ? (
-          <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100">
+          <div
+            data-testid="wizard-message"
+            className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100"
+          >
             {message}
           </div>
         ) : null}
@@ -561,12 +586,13 @@ export function ContractWizard(props: {
               {w.customerInformation}
             </div>
             <Field label={w.fullName} error={errors.customerName?.message || (errors.customerName && w.fullNameRequired)}>
-              <input className="input" placeholder={w.fullNamePlaceholder} {...register('customerName', requiredText(w.fullNameRequired))} />
+              <input className="input" data-testid="wizard-customer-name" placeholder={w.fullNamePlaceholder} {...register('customerName', requiredText(w.fullNameRequired))} />
             </Field>
             <Field label={w.email} error={errors.customerEmail?.message}>
               <input
                 className="input"
                 type="email"
+                data-testid="wizard-customer-email"
                 placeholder={w.emailPlaceholder}
                 {...register('customerEmail', {
                   ...requiredText(w.emailRequired),
@@ -580,6 +606,7 @@ export function ContractWizard(props: {
             <Field label={w.phone} error={errors.customerPhone?.message || (errors.customerPhone && w.phoneRequired)}>
               <input
                 className="input"
+                data-testid="wizard-customer-phone"
                 placeholder={w.phonePlaceholder}
                 {...register('customerPhone', {
                   ...requiredText(w.phoneRequired),
@@ -588,13 +615,13 @@ export function ContractWizard(props: {
               />
             </Field>
             <Field label={w.dob} error={errors.customerDateOfBirth?.message}>
-              <input className="input" type="date" {...register('customerDateOfBirth', requiredText(w.dobRequired))} />
+              <input className="input" type="date" data-testid="wizard-customer-dob" {...register('customerDateOfBirth', requiredText(w.dobRequired))} />
             </Field>
             <Field label={w.address} error={errors.customerAddress?.message || (errors.customerAddress && w.addressRequired)} wide>
-              <textarea className="input min-h-24 py-2" placeholder={w.addressPlaceholder} {...register('customerAddress', requiredText(w.addressRequired))} />
+              <textarea className="input min-h-24 py-2" data-testid="wizard-customer-address" placeholder={w.addressPlaceholder} {...register('customerAddress', requiredText(w.addressRequired))} />
             </Field>
             <Field label={w.idDocument} error={errors.idDocumentNumber?.message} wide>
-              <input className="input" placeholder={w.idDocumentPlaceholder} {...register('idDocumentNumber', requiredText(w.idDocumentRequired))} />
+              <input className="input" data-testid="wizard-id-document" placeholder={w.idDocumentPlaceholder} {...register('idDocumentNumber', requiredText(w.idDocumentRequired))} />
             </Field>
           </section>
         ) : null}
@@ -604,23 +631,85 @@ export function ContractWizard(props: {
             <div className="md:col-span-3 text-xs font-semibold text-slate-700">
               {w.deviceInformation}
             </div>
-            <SelectField
-              label={w.deviceType}
-              options={DEVICE_TYPES}
-              optionLabels={w.options}
-              register={register('deviceType', { required: w.deviceTypeRequired })}
-            />
+            <Field label={w.deviceType} error={errors.deviceType?.message}>
+              {/* Keep form validation in react-hook-form, while UI is a preset dropdown + optional custom input. */}
+              <input type="hidden" {...register('deviceType', requiredText(w.deviceTypeRequired))} />
+              <select
+                className="input"
+                value={deviceTypePreset}
+                onChange={(event) => {
+                  const nextPreset = event.target.value
+                  const isCustomCurrently = deviceTypePreset === 'Other'
+
+                  // If the user switches from a preset to "Other", start with empty input only when they
+                  // were not already entering a custom value.
+                  if (nextPreset === 'Other' && !isCustomCurrently) {
+                    setValue('deviceType', '', { shouldValidate: true, shouldDirty: true })
+                  } else if (nextPreset !== 'Other') {
+                    setValue('deviceType', nextPreset, { shouldValidate: true, shouldDirty: true })
+                  }
+                }}
+              >
+                {(DEVICE_TYPE_PRESETS as readonly string[]).filter((x) => x !== 'Other').map((preset) => (
+                  <option key={preset} value={preset}>
+                    {preset}
+                  </option>
+                ))}
+                <option value="Other">Sonstiges</option>
+              </select>
+              {deviceTypePreset === 'Other' ? (
+                <input
+                  className="input mt-2"
+                  placeholder="Gerätetyp manuell eingeben"
+                  value={values.deviceType ?? ''}
+                  onChange={(event) => {
+                    setValue('deviceType', event.target.value, { shouldValidate: true, shouldDirty: true })
+                  }}
+                />
+              ) : null}
+            </Field>
             <Field label={w.brand} error={errors.brand?.message || (errors.brand && w.brandRequired)}>
-              <input className="input" placeholder={w.brandPlaceholder} {...register('brand', requiredText(w.brandRequired))} />
+              <input type="hidden" {...register('brand', requiredText(w.brandRequired))} />
+              <select
+                className="input"
+                value={brandPreset}
+                onChange={(event) => {
+                  const nextPreset = event.target.value
+                  const isCustomCurrently = brandPreset === 'Other'
+
+                  if (nextPreset === 'Other' && !isCustomCurrently) {
+                    setValue('brand', '', { shouldValidate: true, shouldDirty: true })
+                  } else if (nextPreset !== 'Other') {
+                    setValue('brand', nextPreset, { shouldValidate: true, shouldDirty: true })
+                  }
+                }}
+              >
+                {(BRAND_PRESETS as readonly string[]).filter((x) => x !== 'Other').map((preset) => (
+                  <option key={preset} value={preset}>
+                    {preset}
+                  </option>
+                ))}
+                <option value="Other">Sonstiges</option>
+              </select>
+              {brandPreset === 'Other' ? (
+                <input
+                  className="input mt-2"
+                  placeholder="Marke manuell eingeben"
+                  value={values.brand ?? ''}
+                  onChange={(event) => {
+                    setValue('brand', event.target.value, { shouldValidate: true, shouldDirty: true })
+                  }}
+                />
+              ) : null}
             </Field>
             <Field label={w.model} error={errors.model?.message || (errors.model && w.modelRequired)}>
-              <input className="input" placeholder={w.modelPlaceholder} {...register('model', requiredText(w.modelRequired))} />
+              <input className="input" data-testid="wizard-model" placeholder={w.modelPlaceholder} {...register('model', requiredText(w.modelRequired))} />
             </Field>
             <Field label={w.imei} error={errors.imei?.message}>
-              <input className="input" inputMode="numeric" maxLength={15} placeholder={w.imeiPlaceholder} {...register('imei', imeiValidation)} />
+              <input className="input" data-testid="wizard-imei" inputMode="numeric" maxLength={15} placeholder={w.imeiPlaceholder} {...register('imei', imeiValidation)} />
             </Field>
             <Field label={w.serialNumber} error={errors.serialNumber?.message}>
-              <input className="input" placeholder={w.serialNumberPlaceholder} {...register('serialNumber', requiredText(w.serialNumberRequired))} />
+              <input className="input" data-testid="wizard-serial" placeholder={w.serialNumberPlaceholder} {...register('serialNumber', requiredText(w.serialNumberRequired))} />
             </Field>
             <SelectField
               label={w.condition}
@@ -633,6 +722,7 @@ export function ContractWizard(props: {
                 className="input"
                 type="number"
                 step="0.01"
+                data-testid="wizard-purchase-price"
                 placeholder={w.purchasePricePlaceholder}
                 {...register('purchasePrice', {
                   required: w.purchasePriceRequired,
@@ -647,22 +737,54 @@ export function ContractWizard(props: {
               register={register('paymentMethod', { required: w.paymentMethodRequired })}
             />
             <Field label={w.storage} error={errors.storage?.message}>
-              <input className="input" placeholder={w.storagePlaceholder} {...register('storage', requiredText(w.storageRequired))} />
+              <input className="input" data-testid="wizard-storage" placeholder={w.storagePlaceholder} {...register('storage', requiredText(w.storageRequired))} />
             </Field>
             <Field label={w.color} error={errors.color?.message}>
-              <input className="input" placeholder={w.colorPlaceholder} {...register('color', requiredText(w.colorRequired))} />
+              <input className="input" data-testid="wizard-color" placeholder={w.colorPlaceholder} {...register('color', requiredText(w.colorRequired))} />
             </Field>
             <Field label={w.accessories} error={errors.accessories?.message}>
-              <input className="input" placeholder={w.accessoriesPlaceholder} {...register('accessories', requiredText(w.accessoriesRequired))} />
+              <input type="hidden" {...register('accessories', requiredText(w.accessoriesRequired))} />
+              <select
+                className="input"
+                data-testid="wizard-accessories"
+                value={accessoryPreset}
+                onChange={(event) => {
+                  const nextAccessory = event.target.value
+                  setValue('accessories', nextAccessory === 'Sonstiges' ? '' : nextAccessory, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }}
+              >
+                <option value="">Zubehör auswählen</option>
+                {ACCESSORY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              {accessoryPreset === 'Sonstiges' ? (
+                <input
+                  className="input mt-2"
+                  placeholder="Zubehör manuell eingeben"
+                  value={values.accessories ?? ''}
+                  onChange={(event) => {
+                    setValue('accessories', event.target.value, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }}
+                />
+              ) : null}
             </Field>
             <Field label={w.batteryHealth} error={errors.batteryHealth?.message}>
-              <input className="input" placeholder={w.batteryHealthPlaceholder} {...register('batteryHealth', requiredText(w.batteryHealthRequired))} />
+              <input className="input" data-testid="wizard-battery" placeholder={w.batteryHealthPlaceholder} {...register('batteryHealth', requiredText(w.batteryHealthRequired))} />
             </Field>
             <Field label={w.damageNotes} error={errors.damageNotes?.message} wide>
-              <textarea className="input min-h-20 py-2" placeholder={w.damageNotesPlaceholder} {...register('damageNotes', requiredText(w.damageNotesRequired))} />
+              <textarea className="input min-h-20 py-2" placeholder={w.damageNotesPlaceholder} {...register('damageNotes')} />
             </Field>
             <Field label={w.internalNotes} error={errors.internalNotes?.message} wide>
-              <textarea className="input min-h-20 py-2" placeholder={w.internalNotesPlaceholder} {...register('internalNotes', requiredText(w.internalNotesRequired))} />
+              <textarea className="input min-h-20 py-2" placeholder={w.internalNotesPlaceholder} {...register('internalNotes')} />
             </Field>
           </section>
         ) : null}
@@ -676,8 +798,15 @@ export function ContractWizard(props: {
               <label key={name} className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
                 <input
                   type="checkbox"
+                  data-testid={`wizard-confirm-${name}`}
                   className="h-4 w-4 rounded border-slate-300 text-primary"
-                  {...register(name, { required: true })}
+                  checked={Boolean(values[name])}
+                  onChange={(event) => {
+                    setValue(name, event.target.checked, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }}
                 />
                 {label} *
               </label>
@@ -690,10 +819,11 @@ export function ContractWizard(props: {
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
               {w.photosAndDocuments}
             </div>
-            <FileInput label={w.photos.idFront} field="id_front" files={files} saved={savedFileTypes.has('id_front')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
-            <FileInput label={w.photos.idBack} field="id_back" files={files} saved={savedFileTypes.has('id_back')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
-            <FileInput label={w.photos.deviceFront} field="device_front" files={files} saved={savedFileTypes.has('device_front')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
-            <FileInput label={w.photos.deviceBack} field="device_back" files={files} saved={savedFileTypes.has('device_back')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <p className="md:col-span-2 text-xs text-slate-500">{w.photosRequiredHint}</p>
+            <FileInput testId="wizard-upload-id_front" label={w.photos.idFront} field="id_front" files={files} saved={savedFileTypes.has('id_front')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput testId="wizard-upload-id_back" label={w.photos.idBack} field="id_back" files={files} saved={savedFileTypes.has('id_back')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput testId="wizard-upload-device_front" label={w.photos.deviceFront} field="device_front" files={files} saved={savedFileTypes.has('device_front')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
+            <FileInput testId="wizard-upload-device_back" label={w.photos.deviceBack} field="device_back" files={files} saved={savedFileTypes.has('device_back')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
             <FileInput label={w.photos.imeiPhoto} field="imei_photo" files={files} saved={savedFileTypes.has('imei_photo')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
             <FileInput label={w.photos.damagePhoto} field="damage_photo" files={files} saved={savedFileTypes.has('damage_photo')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
             <FileInput label={w.photos.accessoriesPhoto} field="accessories_photo" files={files} saved={savedFileTypes.has('accessories_photo')} onChange={setFile} removeLabel={t.common.remove} savedHint={w.savedUploadReplace} formatHint={w.uploadFormatsLarge} />
@@ -703,6 +833,7 @@ export function ContractWizard(props: {
         {step === 4 ? (
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <SignatureBox
+              testId="wizard-signature-customer"
               title={w.customerSignatureTitle}
               clearLabel={w.clear}
               savedHint={w.savedSignatureReplace}
@@ -721,6 +852,7 @@ export function ContractWizard(props: {
               saved={Boolean(props.initialContract?.signaturePath)}
             />
             <SignatureBox
+              testId="wizard-signature-shopkeeper"
               title={w.shopkeeperSignatureTitle}
               clearLabel={w.clear}
               savedHint={w.savedSignatureReplace}
@@ -782,6 +914,7 @@ export function ContractWizard(props: {
         <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
+            data-testid="wizard-save-draft"
             disabled={isSubmitting}
             onClick={saveDraft}
             className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
@@ -791,6 +924,7 @@ export function ContractWizard(props: {
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
+              data-testid="wizard-back"
               disabled={isSubmitting || step === 0}
               onClick={() => setStep((current) => Math.max(0, current - 1))}
               className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
@@ -800,6 +934,7 @@ export function ContractWizard(props: {
             {step < steps.length - 1 ? (
               <button
                 type="button"
+                data-testid="wizard-next"
                 disabled={isSubmitting}
                 onClick={goNext}
                 className="btn btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
@@ -809,6 +944,7 @@ export function ContractWizard(props: {
             ) : (
               <button
                 type="submit"
+                data-testid="wizard-complete"
                 disabled={isSubmitting}
                 className="btn btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -857,6 +993,7 @@ function SelectField(props: {
 }
 
 function FileInput(props: {
+  testId?: string
   label: string
   field: FileField
   files: Partial<Record<FileField, File>>
@@ -873,9 +1010,13 @@ function FileInput(props: {
       <label className="label">{props.label}</label>
       <input
         type="file"
-        accept="image/png,image/svg+xml,.png,.svg"
+        data-testid={props.testId ?? `wizard-upload-${props.field}`}
+        accept={DOCUMENT_IMAGE_ACCEPT}
         className="input py-2"
-        onChange={(event) => props.onChange(props.field, event.target.files?.[0] ?? null)}
+        onChange={(event) => {
+          props.onChange(props.field, event.target.files?.[0] ?? null)
+          event.target.value = ''
+        }}
       />
       {file ? (
         <div className="mt-1 flex items-center justify-between gap-3 text-xs text-slate-500">
@@ -898,6 +1039,7 @@ function FileInput(props: {
 }
 
 function SignatureBox(props: {
+  testId?: string
   title: string
   clearLabel: string
   savedHint: string
@@ -917,7 +1059,10 @@ function SignatureBox(props: {
           <SignatureCanvas
             ref={props.refSetter}
             onEnd={props.onChange}
-            canvasProps={{ className: 'h-[180px] w-full' }}
+            canvasProps={{
+              className: 'h-[180px] w-full',
+              'data-testid': props.testId,
+            }}
           />
         </div>
         <div className="flex justify-end border-t border-slate-200 px-4 py-3">

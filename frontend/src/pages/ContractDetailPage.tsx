@@ -156,6 +156,7 @@ export function ContractDetailPage() {
           {apiContract.pdfPath ? (
             <button
               type="button"
+              data-testid="contract-detail-download-pdf"
               onClick={() => downloadPdf(apiContract.id, `${apiContract.contractNumber}.pdf`)}
               className="btn btn-primary w-full sm:w-auto"
             >
@@ -168,7 +169,7 @@ export function ContractDetailPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-4">
-          <div className="card min-w-0 overflow-hidden">
+          <div className="card min-w-0 overflow-hidden" data-testid="contract-detail-info">
             <div className="card-header">
               <div className="text-sm font-semibold text-slate-900">
                 {t.contractDetail.details}

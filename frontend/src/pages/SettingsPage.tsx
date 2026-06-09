@@ -116,7 +116,10 @@ export function SettingsPage() {
       <p className="max-w-2xl text-sm text-slate-600">{t.settings.description}</p>
 
       {successMessage ? (
-        <div className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-100">
+        <div
+          data-testid="settings-success"
+          className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-100"
+        >
           {successMessage}
         </div>
       ) : null}
@@ -128,6 +131,7 @@ export function SettingsPage() {
       ) : null}
 
       <form
+        data-testid="settings-form"
         className="card mx-auto w-full max-w-2xl overflow-hidden"
         onSubmit={handleSubmit(onSubmit)}
         noValidate
@@ -140,6 +144,7 @@ export function SettingsPage() {
           <div>
             <label className="label">{t.settings.shopName}</label>
             <input
+              data-testid="settings-shop-name"
               className="input h-12 text-sm"
               placeholder={t.settings.shopNamePlaceholder}
               {...register('shopName')}
@@ -149,6 +154,7 @@ export function SettingsPage() {
           <div>
             <label className="label">{t.settings.shopAddress}</label>
             <textarea
+              data-testid="settings-shop-address"
               className="input min-h-[88px] resize-y py-3 text-sm"
               rows={3}
               placeholder={t.settings.shopAddressPlaceholder}
@@ -160,6 +166,7 @@ export function SettingsPage() {
             <div>
               <label className="label">{t.settings.shopPhone}</label>
               <input
+                data-testid="settings-shop-phone"
                 className="input h-12 text-sm"
                 type="tel"
                 placeholder={t.settings.shopPhonePlaceholder}
@@ -169,6 +176,7 @@ export function SettingsPage() {
             <div>
               <label className="label">{t.settings.shopEmail}</label>
               <input
+                data-testid="settings-shop-email"
                 className="input h-12 text-sm"
                 type="email"
                 placeholder={t.settings.shopEmailPlaceholder}
@@ -185,6 +193,7 @@ export function SettingsPage() {
           <div>
             <label className="label">{t.settings.ownerName}</label>
             <input
+              data-testid="settings-owner-name"
               className="input h-12 text-sm"
               placeholder={t.settings.ownerNamePlaceholder}
               {...register('ownerName')}
@@ -207,6 +216,7 @@ export function SettingsPage() {
               <div className="flex flex-wrap gap-2">
                 <input
                   ref={fileInputRef}
+                  data-testid="settings-logo-upload"
                   type="file"
                   accept="image/png,image/jpeg,image/jpg"
                   className="hidden"
@@ -233,6 +243,7 @@ export function SettingsPage() {
 
           <button
             type="submit"
+            data-testid="settings-save"
             className="btn btn-primary h-12 w-full text-base font-medium sm:w-auto sm:min-w-[200px]"
           >
             {t.settings.save}

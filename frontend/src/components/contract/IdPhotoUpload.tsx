@@ -2,18 +2,12 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import clsx from 'clsx'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import {
+  DOCUMENT_IMAGE_ACCEPT,
+  isAcceptedDocumentImage,
+} from '../../utils/imageUpload'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024
-const ACCEPTED_MIME_TYPES = ['image/png', 'image/svg+xml'] as const
-const ACCEPT_ATTRIBUTE = 'image/png,image/svg+xml,.png,.svg'
-
-function isAcceptedImage(file: File): boolean {
-  if (ACCEPTED_MIME_TYPES.includes(file.type as (typeof ACCEPTED_MIME_TYPES)[number])) {
-    return true
-  }
-  const name = file.name.toLowerCase()
-  return name.endsWith('.png') || name.endsWith('.svg')
-}
 
 type IdPhotoUploadProps = {
   value: File | null
@@ -36,7 +30,7 @@ export function IdPhotoUpload({ value, onChange }: IdPhotoUploadProps) {
         return
       }
 
-      if (!isAcceptedImage(file)) {
+      if (!isAcceptedDocumentImage(file)) {
         setError(t.contractWizard.idPhotoInvalidType)
         onChange(null)
         return
@@ -85,7 +79,7 @@ export function IdPhotoUpload({ value, onChange }: IdPhotoUploadProps) {
         ref={inputRef}
         id={inputId}
         type="file"
-        accept={ACCEPT_ATTRIBUTE}
+        accept={DOCUMENT_IMAGE_ACCEPT}
         className="sr-only"
         onChange={(e) => {
           handleFiles(e.target.files)

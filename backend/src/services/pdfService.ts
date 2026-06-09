@@ -1,7 +1,15 @@
 import fs from "node:fs";
+import path from "node:path";
 import PDFDocument from "pdfkit";
 import { env } from "../config/env.js";
-import { ensureDirectory, getContractStorageDir, toAbsolutePath, toRelativeStoragePath } from "../utils/paths.js";
+import {
+  ensureDirectory,
+  getContractStorageDir,
+  getInvoiceStorageDir,
+  getRepairOrderStorageDir,
+  toAbsolutePath,
+  toRelativeStoragePath
+} from "../utils/paths.js";
 
 type ContractWithFiles = {
   userId: string;
@@ -158,7 +166,9 @@ const addImage = (
   const absolutePath = toAbsolutePath(storedPath);
   if (!fs.existsSync(absolutePath)) return;
 
-  if (!absolutePath.toLowerCase().endsWith(".png")) {
+  const extension = path.extname(absolutePath).toLowerCase();
+  const supportedImageExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+  if (!supportedImageExtensions.includes(extension)) {
     doc.font("Helvetica").fontSize(6.6).fillColor(colors.muted).text(fallbackLabel, x + 4, y + height / 2 - 4, {
       width: width - 8,
       align: "center"
@@ -331,6 +341,344 @@ export const generateContractPdf = async (
 
   doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.blue).text("Thank you for your business!", left, 793, {
     width: contentWidth,
+    align: "center",
+    lineBreak: false
+  });
+
+  doc.end();
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+
+  return toRelativeStoragePath(absolutePdfPath);
+};
+
+type MoneyLike = { toString: () => string } | number | null | undefined;
+
+type RepairOrderForPdf = {
+  userId: string;
+  repairOrderNumber: string;
+  createdAt: Date;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  customerAddress: string | null;
+  deviceType: string;
+  brand: string | null;
+  model: string;
+  imeiOrSerial: string | null;
+  passwordPin: string | null;
+  accessoriesReceived: string | null;
+  problemDescription: string;
+  visibleDamage: string | null;
+  technicianNotes: string | null;
+  estimatedPrice: MoneyLike;
+  depositAmount: MoneyLike;
+  expectedCompletionDate: Date | null;
+  status: string;
+};
+
+type InvoiceForPdf = {
+  userId: string;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  customerName: string;
+  customerAddress: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  deviceSummary: string | null;
+  repairSummary: string | null;
+  paymentMethod: string | null;
+  paymentStatus: string | null;
+  calculatedNetAmount: MoneyLike;
+  calculatedVatAmount: MoneyLike;
+  calculatedGrossTotal: MoneyLike;
+  netAmountOverride: MoneyLike;
+  vatAmountOverride: MoneyLike;
+  grossTotalOverride: MoneyLike;
+  notes: string | null;
+  items: Array<{
+    description: string;
+    quantity: MoneyLike;
+    unitPrice: MoneyLike;
+    vatPercent: MoneyLike;
+    lineNet: MoneyLike;
+    lineVat: MoneyLike;
+    lineTotal: MoneyLike;
+  }>;
+};
+
+const moneyValue = (input: MoneyLike) => {
+  if (input === null || input === undefined || input === "") return "$0.00";
+  return `$${Number(input.toString()).toFixed(2)}`;
+};
+
+const numericValue = (input: MoneyLike) => {
+  if (input === null || input === undefined || input === "") return "0";
+  return Number(input.toString()).toFixed(2).replace(/\.00$/, "");
+};
+
+const repairAccessoryLabels: Record<string, string> = {
+  charger: "Charger",
+  powerSupply: "Power Supply",
+  controller: "Controller",
+  cable: "Cable",
+  carryingCase: "Carrying Case",
+  other: "Other"
+};
+
+const formatAccessoriesReceived = (value: string | null | undefined) => {
+  if (!value?.trim()) return "-";
+
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      if (part.startsWith("other:")) {
+        return part.slice(6).trim() || repairAccessoryLabels.other;
+      }
+      return repairAccessoryLabels[part] ?? part;
+    })
+    .join(", ");
+};
+
+const addDocumentHeader = (
+  doc: PDFKit.PDFDocument,
+  title: string,
+  numberLabel: string,
+  numberValue: string,
+  date: Date,
+  shopSettings?: PdfShopSettings
+) => {
+  const shopName = shopSettings?.name?.trim() || env.SHOP_NAME;
+  const shopAddress = shopSettings?.address?.trim() || env.SHOP_ADDRESS;
+  const shopPhone = shopSettings?.phone?.trim() || env.SHOP_PHONE;
+  const shopEmail = shopSettings?.email?.trim() || env.SHOP_EMAIL;
+  const shopOwner = shopSettings?.ownerName?.trim() || env.SHOP_OWNER_NAME;
+  const left = page.margin;
+  const right = page.width - page.margin;
+  const contentWidth = right - left;
+
+  doc.roundedRect(left, 30, contentWidth, 782, 10).fillAndStroke("#ffffff", colors.border);
+  if (shopSettings) {
+    addShopLogo(doc, left + 20, 54, shopSettings);
+  } else {
+    addPhoneIcon(doc, left + 20, 54);
+  }
+
+  doc.font("Helvetica-Bold").fontSize(18).fillColor(colors.ink).text(shopName, left + 56, 56);
+  doc.font("Helvetica").fontSize(8).fillColor(colors.muted).text(shopAddress || "Repair service", left + 56, 78, {
+    width: 260
+  });
+  const contactLine = [shopPhone, shopEmail].filter(Boolean).join(" | ");
+  if (contactLine) {
+    doc.fontSize(7).text(contactLine, left + 56, 91, { width: 260 });
+  }
+  if (shopOwner) {
+    doc.fontSize(7).text(`Owner / Manager: ${shopOwner}`, left + 56, 103, {
+      width: 260
+    });
+  }
+
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text(numberLabel, right - 140, 58, {
+    width: 120,
+    align: "right"
+  });
+  doc.fontSize(10).fillColor(colors.ink).text(numberValue, right - 140, 70, {
+    width: 120,
+    align: "right"
+  });
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text("Date", right - 140, 88, {
+    width: 120,
+    align: "right"
+  });
+  doc.font("Helvetica").fontSize(7.5).fillColor(colors.ink).text(formatDate(date), right - 140, 99, {
+    width: 120,
+    align: "right"
+  });
+
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(colors.ink).text(title, left, 126, {
+    width: contentWidth,
+    align: "center"
+  });
+};
+
+export const generateRepairOrderPdf = async (
+  repairOrder: RepairOrderForPdf,
+  shopSettings?: PdfShopSettings
+) => {
+  const storageDir = getRepairOrderStorageDir(repairOrder.userId, repairOrder.repairOrderNumber);
+  await ensureDirectory(storageDir);
+
+  const absolutePdfPath = `${storageDir}/repair-order.pdf`;
+  const doc = new PDFDocument({ margin: page.margin, size: "A4" });
+  const stream = fs.createWriteStream(absolutePdfPath);
+  doc.pipe(stream);
+
+  const left = page.margin;
+  const innerX = left + 20;
+  const right = page.width - page.margin;
+  const sectionWidth = right - left - 40;
+
+  addDocumentHeader(doc, "REPAIR ORDER", "Repair Order No.", repairOrder.repairOrderNumber, repairOrder.createdAt, shopSettings);
+
+  sectionTitle(doc, "Customer Information", innerX, 156, sectionWidth);
+  row(doc, "Name:", repairOrder.customerName, innerX, 182, 235);
+  row(doc, "Phone:", repairOrder.customerPhone, innerX + 255, 182, 220);
+  row(doc, "Email:", repairOrder.customerEmail, innerX, 200, 235);
+  row(doc, "Address:", repairOrder.customerAddress, innerX, 218, 475);
+
+  sectionTitle(doc, "Device Information", innerX, 252, sectionWidth);
+  row(doc, "Device Type:", repairOrder.deviceType, innerX, 278, 235);
+  row(doc, "Brand:", repairOrder.brand, innerX + 255, 278, 220);
+  row(doc, "Model:", repairOrder.model, innerX, 296, 235);
+  row(doc, "IMEI/Serial:", repairOrder.imeiOrSerial, innerX + 255, 296, 220);
+  row(doc, "Password/PIN:", repairOrder.passwordPin, innerX, 314, 235);
+  row(doc, "Accessories:", formatAccessoriesReceived(repairOrder.accessoriesReceived), innerX, 332, 475);
+
+  sectionTitle(doc, "Repair Details", innerX, 368, sectionWidth);
+  row(doc, "Problem:", repairOrder.problemDescription, innerX, 394, 475);
+  row(doc, "Damage:", repairOrder.visibleDamage, innerX, 428, 475);
+  row(doc, "Notes:", repairOrder.technicianNotes, innerX, 462, 475);
+  row(doc, "Expected:", repairOrder.expectedCompletionDate ? formatDate(repairOrder.expectedCompletionDate) : "-", innerX, 496, 235);
+  row(doc, "Status:", repairOrder.status, innerX + 255, 496, 220);
+
+  addPanel(doc, innerX, 536, sectionWidth, 74);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Estimate", innerX + 14, 552);
+  doc.font("Helvetica").fontSize(7.5).fillColor(colors.muted).text("Estimated Price", innerX + 14, 576);
+  doc.font("Helvetica").fontSize(7.5).text("Deposit / Advance", innerX + 14, 592);
+  doc.font("Helvetica-Bold").fontSize(21).fillColor(colors.ink).text(moneyValue(repairOrder.estimatedPrice), innerX + 302, 558, {
+    width: 156,
+    align: "right"
+  });
+  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(moneyValue(repairOrder.depositAmount), innerX + 302, 590, {
+    width: 156,
+    align: "right"
+  });
+
+  addPanel(doc, innerX, 642, sectionWidth, 92);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Customer Signature", innerX + 14, 660);
+  doc.strokeColor(colors.border).lineWidth(0.8).moveTo(innerX + 14, 706).lineTo(innerX + 226, 706).stroke();
+  doc.font("Helvetica").fontSize(7).fillColor(colors.muted).text("Signature", innerX + 14, 714);
+  doc.strokeColor(colors.border).lineWidth(0.8).moveTo(innerX + 282, 706).lineTo(innerX + 458, 706).stroke();
+  doc.font("Helvetica").fontSize(7).fillColor(colors.muted).text("Date", innerX + 282, 714);
+
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.blue).text("Thank you for your business!", left, 793, {
+    width: right - left,
+    align: "center",
+    lineBreak: false
+  });
+
+  doc.end();
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+
+  return toRelativeStoragePath(absolutePdfPath);
+};
+
+export const generateInvoicePdf = async (
+  invoice: InvoiceForPdf,
+  shopSettings?: PdfShopSettings
+) => {
+  const storageDir = getInvoiceStorageDir(invoice.userId, invoice.invoiceNumber);
+  await ensureDirectory(storageDir);
+
+  const absolutePdfPath = `${storageDir}/invoice.pdf`;
+  const doc = new PDFDocument({ margin: page.margin, size: "A4" });
+  const stream = fs.createWriteStream(absolutePdfPath);
+  doc.pipe(stream);
+
+  const left = page.margin;
+  const innerX = left + 20;
+  const right = page.width - page.margin;
+  const sectionWidth = right - left - 40;
+
+  addDocumentHeader(doc, "INVOICE", "Invoice No.", invoice.invoiceNumber, invoice.invoiceDate, shopSettings);
+
+  sectionTitle(doc, "Customer Information", innerX, 156, sectionWidth);
+  row(doc, "Name:", invoice.customerName, innerX, 182, 235);
+  row(doc, "Phone:", invoice.customerPhone, innerX + 255, 182, 220);
+  row(doc, "Address:", invoice.customerAddress, innerX, 200, 475);
+  row(doc, "Email:", invoice.customerEmail, innerX, 218, 235);
+  row(doc, "Payment:", invoice.paymentMethod, innerX + 255, 218, 220);
+  row(doc, "Status:", invoice.paymentStatus, innerX + 255, 236, 220);
+
+  if (invoice.deviceSummary || invoice.repairSummary) {
+    sectionTitle(doc, "Repair Reference", innerX, 268, sectionWidth);
+    row(doc, "Device:", invoice.deviceSummary, innerX, 294, 475);
+    row(doc, "Repair:", invoice.repairSummary, innerX, 312, 475);
+  }
+
+  const tableY = 354;
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink);
+  doc.text("Description", innerX, tableY, { width: 210 });
+  doc.text("Qty", innerX + 220, tableY, { width: 38, align: "right" });
+  doc.text("Unit", innerX + 268, tableY, { width: 62, align: "right" });
+  doc.text("VAT %", innerX + 340, tableY, { width: 48, align: "right" });
+  doc.text("Total", innerX + 398, tableY, { width: 76, align: "right" });
+  doc.strokeColor(colors.border).moveTo(innerX, tableY + 16).lineTo(innerX + sectionWidth, tableY + 16).stroke();
+
+  let y = tableY + 26;
+  invoice.items.slice(0, 14).forEach((item) => {
+    doc.font("Helvetica").fontSize(7.4).fillColor(colors.ink);
+    doc.text(value(item.description), innerX, y, { width: 210, ellipsis: true });
+    doc.text(numericValue(item.quantity), innerX + 220, y, { width: 38, align: "right" });
+    doc.text(moneyValue(item.unitPrice), innerX + 268, y, { width: 62, align: "right" });
+    doc.text(numericValue(item.vatPercent), innerX + 340, y, { width: 48, align: "right" });
+    doc.text(moneyValue(item.lineTotal), innerX + 398, y, { width: 76, align: "right" });
+    y += 20;
+  });
+
+  doc.strokeColor(colors.border).moveTo(innerX, y + 4).lineTo(innerX + sectionWidth, y + 4).stroke();
+  y += 22;
+
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink).text("VAT Breakdown", innerX, y);
+  y += 16;
+  const vatBreakdown = new Map<string, { net: number; vat: number }>();
+  invoice.items.forEach((item) => {
+    const key = numericValue(item.vatPercent);
+    const current = vatBreakdown.get(key) ?? { net: 0, vat: 0 };
+    current.net += Number(item.lineNet?.toString() ?? 0);
+    current.vat += Number(item.lineVat?.toString() ?? 0);
+    vatBreakdown.set(key, current);
+  });
+  Array.from(vatBreakdown.entries()).forEach(([percent, totals]) => {
+    doc.font("Helvetica").fontSize(7.4).fillColor(colors.muted).text(`${percent}% VAT on ${moneyValue(totals.net)}: ${moneyValue(totals.vat)}`, innerX, y, {
+      width: 260
+    });
+    y += 14;
+  });
+
+  const net = invoice.netAmountOverride ?? invoice.calculatedNetAmount;
+  const vat = invoice.vatAmountOverride ?? invoice.calculatedVatAmount;
+  const gross = invoice.grossTotalOverride ?? invoice.calculatedGrossTotal;
+  const totalsX = innerX + 306;
+  addPanel(doc, totalsX, Math.max(574, y - 60), 168, 94);
+  const totalsY = Math.max(590, y - 44);
+  doc.font("Helvetica").fontSize(8).fillColor(colors.muted).text("Net Amount", totalsX + 14, totalsY);
+  doc.font("Helvetica").fontSize(8).text("VAT Amount", totalsX + 14, totalsY + 20);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Gross Total", totalsX + 14, totalsY + 44);
+  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(moneyValue(net), totalsX + 86, totalsY, { width: 62, align: "right" });
+  doc.text(moneyValue(vat), totalsX + 86, totalsY + 20, { width: 62, align: "right" });
+  doc.font("Helvetica-Bold").fontSize(10).text(moneyValue(gross), totalsX + 86, totalsY + 44, { width: 62, align: "right" });
+
+  if (invoice.notes) {
+    sectionTitle(doc, "Notes", innerX, 704, sectionWidth);
+    doc.font("Helvetica").fontSize(7.5).fillColor(colors.ink).text(invoice.notes, innerX, 730, {
+      width: sectionWidth,
+      height: 42,
+      ellipsis: true
+    });
+  }
+
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.blue).text("Thank you for your business!", left, 793, {
+    width: right - left,
     align: "center",
     lineBreak: false
   });

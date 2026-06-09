@@ -1,9 +1,11 @@
 import cors from "cors";
 import express from "express";
-import { env } from "./config/env.js";
+import { isCorsOriginAllowed } from "./utils/cors.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { contractRouter } from "./routes/contractRoutes.js";
 import { dashboardRouter } from "./routes/dashboardRoutes.js";
+import { invoiceRouter } from "./routes/invoiceRoutes.js";
+import { repairOrderRouter } from "./routes/repairOrderRoutes.js";
 import { settingsRouter } from "./routes/settingsRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 
@@ -12,11 +14,7 @@ export const app = express();
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || env.corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(null, false);
+      callback(null, isCorsOriginAllowed(origin));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -33,6 +31,8 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/contracts", contractRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/repair-orders", repairOrderRouter);
+app.use("/api/invoices", invoiceRouter);
 app.use("/api/settings", settingsRouter);
 
 app.use(notFoundHandler);

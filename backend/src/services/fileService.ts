@@ -3,12 +3,25 @@ import path from "node:path";
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/httpError.js";
 import { ensureDirectory, getContractStorageDir, toRelativeStoragePath } from "../utils/paths.js";
-import { fileTypeSchema } from "../validators/fileValidators.js";
+import { allowedDocumentExtensions, fileTypeSchema } from "../validators/fileValidators.js";
 
 const extensionByMimeType: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
   "image/png": ".png",
-  "image/svg+xml": ".svg"
+  "image/webp": ".webp"
 };
+
+const resolveDocumentExtension = (file: Express.Multer.File) => {
+  const fromMime = extensionByMimeType[file.mimetype];
+  if (fromMime) {
+    return fromMime;
+  }
+
+  const lowerName = file.originalname.toLowerCase();
+  return allowedDocumentExtensions.find((ext) => lowerName.endsWith(ext)) ?? null;
+};
+
 
 const getOwnedContract = async (contractId: string, userId: string) => {
   const contract = await prisma.contract.findFirst({
@@ -36,9 +49,9 @@ export const saveContractUpload = async (
     throw new HttpError(409, "Files can only be uploaded to draft contracts");
   }
 
-  const extension = extensionByMimeType[file.mimetype];
+  const extension = resolveDocumentExtension(file);
   if (!extension) {
-    throw new HttpError(400, "Document uploads must be PNG or SVG");
+    throw new HttpError(400, "Document uploads must be JPG, JPEG, PNG, or WEBP");
   }
 
   const storageDir = getContractStorageDir(userId, contract.contractNumber);

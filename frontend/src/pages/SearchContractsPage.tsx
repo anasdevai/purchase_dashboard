@@ -69,6 +69,7 @@ export function SearchContractsPage() {
             <div className="relative w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
+                data-testid="contract-search-input"
                 className="input pl-9"
                 placeholder={t.search.placeholder}
                 value={query}
@@ -81,7 +82,7 @@ export function SearchContractsPage() {
           </div>
 
           <div className="table-scroll mt-4">
-            <table className={`w-full ${contractTableMinWidthClass}`}>
+            <table data-testid="contract-search-table" className={`w-full ${contractTableMinWidthClass}`}>
               <thead>
                 <tr className="text-left text-xs font-semibold text-slate-500">
                   <th className="w-12 whitespace-nowrap py-2 pr-4">{t.table.serialNo}</th>
@@ -97,7 +98,7 @@ export function SearchContractsPage() {
               </thead>
               <tbody className="text-sm">
                 {results.map((c, index) => (
-                  <tr key={c.id} className="border-t border-slate-200">
+                  <tr key={c.id} data-testid={`contract-search-row-${c.id}`} className="border-t border-slate-200">
                     <td className="whitespace-nowrap py-3 pr-4 text-slate-600">{index + 1}</td>
                     <td className="whitespace-nowrap py-3 pr-4">{c.contractNumber}</td>
                     <td className="py-3 pr-4">{c.customerName}</td>

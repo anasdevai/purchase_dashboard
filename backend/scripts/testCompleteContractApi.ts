@@ -69,7 +69,7 @@ const run = async () => {
     })
   }, login.token);
 
-  for (const fileType of ["id_front", "device_front", "device_back", "imei_photo"]) {
+  for (const fileType of ["id_front", "device_front", "device_back"]) {
     await uploadPng(draft.contract.id, login.token, fileType, "files");
   }
   await uploadPng(draft.contract.id, login.token, "customer", "signature");

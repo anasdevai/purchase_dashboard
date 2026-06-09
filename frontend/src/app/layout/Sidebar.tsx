@@ -4,14 +4,18 @@ import {
   LayoutDashboard,
   LogOut,
   PlusSquare,
+  ReceiptText,
   Search,
   Settings,
+  Wrench,
   X,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../auth/AuthContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { useLayout } from './LayoutContext'
+
+const LOGO_SRC = '/company_logo.png'
 
 function SidebarNav(props: { onNavigate?: () => void }) {
   const navigate = useNavigate()
@@ -20,35 +24,37 @@ function SidebarNav(props: { onNavigate?: () => void }) {
   const { onNavigate } = props
 
   const navItems = [
-    { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard },
-    { to: '/contracts/new', label: t.nav.newContract, icon: PlusSquare },
-    { to: '/contracts', label: t.nav.contracts, icon: FileText },
-    { to: '/contracts/search', label: t.nav.searchContracts, icon: Search },
-    { to: '/settings', label: t.nav.settings, icon: Settings },
+    { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
+    { to: '/contracts/new', label: t.nav.newContract, icon: PlusSquare, testId: 'nav-new-contract' },
+    { to: '/contracts', label: t.nav.contracts, icon: FileText, testId: 'nav-contracts' },
+    { to: '/contracts/search', label: t.nav.searchContracts, icon: Search, testId: 'nav-search-contracts' },
+    { to: '/repair-orders/new', label: t.nav.newRepairOrder, icon: Wrench, testId: 'nav-new-repair-order' },
+    { to: '/repair-orders', label: t.nav.repairOrders, icon: Wrench, testId: 'nav-repair-orders' },
+    { to: '/invoices/new', label: t.nav.newInvoice, icon: ReceiptText, testId: 'nav-new-invoice' },
+    { to: '/invoices', label: t.nav.invoices, icon: ReceiptText, testId: 'nav-invoices' },
+    { to: '/settings', label: t.nav.settings, icon: Settings, testId: 'nav-settings' },
   ]
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-3 px-5 py-5">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/20 text-white shadow-sm">
-          <FileText className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 leading-tight">
-          <div className="truncate text-sm font-semibold text-white">
-            {t.app.nameLine1}
-          </div>
-          <div className="truncate text-sm font-semibold text-white">
-            {t.app.nameLine2}
-          </div>
-        </div>
+      <div className="flex shrink-0 flex-col items-center border-b border-white/10 px-5 pb-5 pt-4 text-center">
+        <img
+          src={LOGO_SRC}
+          alt=""
+          className="h-[72px] w-auto max-w-[180px] object-contain mix-blend-screen"
+        />
+        <p className="mt-3 text-[11px] font-medium leading-snug text-white/90">
+          {t.app.nameLine1} {t.app.nameLine2}
+        </p>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-3">
         <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {navItems.map(({ to, label, icon: Icon, testId }) => (
             <li key={to}>
               <NavLink
                 to={to}
+                data-testid={testId}
                 onClick={onNavigate}
                 className={({ isActive }) =>
                   clsx(
@@ -70,6 +76,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       <div className="shrink-0 px-3 pb-4 pt-2">
         <button
           type="button"
+          data-testid="nav-logout"
           onClick={() => {
             logout()
             onNavigate?.()
@@ -95,6 +102,7 @@ export function Sidebar() {
       {sidebarOpen ? (
         <button
           type="button"
+          data-testid="sidebar-overlay"
           aria-label={t.common.closeMenu}
           className="fixed inset-0 z-40 bg-slate-900/50 lg:hidden"
           onClick={closeDrawer}
@@ -102,6 +110,7 @@ export function Sidebar() {
       ) : null}
 
       <aside
+        data-testid="sidebar"
         className={clsx(
           'fixed left-0 top-0 z-50 flex h-screen w-sidebar max-w-[min(260px,85vw)] flex-col bg-sidebar text-white transition-transform duration-300 ease-in-out lg:z-30 lg:max-w-none lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
@@ -110,6 +119,7 @@ export function Sidebar() {
         <div className="flex shrink-0 items-center justify-end px-3 pt-3 lg:hidden">
           <button
             type="button"
+            data-testid="sidebar-close"
             onClick={closeDrawer}
             className="grid h-9 w-9 place-items-center rounded-lg text-white/90 hover:bg-white/10"
             aria-label={t.common.closeMenu}

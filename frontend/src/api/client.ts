@@ -1,6 +1,24 @@
-const rawApiUrl = import.meta.env.VITE_API_URL ?? import.meta.env.VITE_API_BASE_URL
+const API_PORT = '4000'
 
-const API_BASE_URL = rawApiUrl
+function resolveApiBaseUrl() {
+  const fromEnv =
+    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+    (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
+
+    // When opened from another device via LAN IP, target the API on the same host.
+    if (!isLocalHost) {
+      return `${protocol}//${hostname}:${API_PORT}`
+    }
+  }
+
+  return fromEnv || `http://localhost:${API_PORT}`
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 const TOKEN_KEY = 'device-contract-auth-token'
 
@@ -79,4 +97,3 @@ export async function apiRequest<T>(
 
   return response.json() as Promise<T>
 }
-

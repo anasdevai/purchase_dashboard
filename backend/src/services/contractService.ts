@@ -14,6 +14,12 @@ const includeFiles = {
   files: true
 };
 
+const decimalToNumber = (value: { toString: () => string } | number | null | undefined) => {
+  if (value === null || value === undefined) return 0;
+  const parsed = Number(value.toString());
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const toContractData = (input: Record<string, unknown>) => {
   const parsed = draftContractSchema.parse(input);
   return parsed;
@@ -367,40 +373,3 @@ export const getRecentContracts = async (userId: string) =>
     }
   });
 
-export const getDashboardSummary = async (userId: string) => {
-  const range = getDayRange();
-
-  if (!range) {
-    throw new HttpError(500, "Unable to calculate today range");
-  }
-
-  const [todayCompletedCount, aggregate, allContractsCount, draftContractsCount, recentContracts] =
-    await Promise.all([
-      prisma.contract.count({
-        where: {
-          userId,
-          status: "Completed",
-          createdAt: { gte: range.start, lt: range.end }
-        }
-      }),
-      prisma.contract.aggregate({
-        where: {
-          userId,
-          status: "Completed",
-          createdAt: { gte: range.start, lt: range.end }
-        },
-        _sum: { purchasePrice: true }
-      }),
-      prisma.contract.count({ where: { userId, status: { not: "Cancelled" } } }),
-      prisma.contract.count({ where: { userId, status: "Draft" } }),
-      getRecentContracts(userId)
-    ]);
-
-  return {
-    todayCompletedCount,
-    todayPurchaseTotal: aggregate._sum?.purchasePrice ?? 0,
-    allContractsCount,
-    draftContractsCount,
-    recentContracts
-  };
-};

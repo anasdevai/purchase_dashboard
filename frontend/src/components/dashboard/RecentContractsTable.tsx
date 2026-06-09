@@ -45,7 +45,10 @@ export function RecentContractsTable(props: { contracts: ApiContract[]; onDelete
       </div>
 
       <div className="table-scroll">
-        <table className={`w-full ${contractTableMinWidthClass} border-separate border-spacing-0`}>
+        <table
+          data-testid="recent-contracts-table"
+          className={`w-full ${contractTableMinWidthClass} border-separate border-spacing-0`}
+        >
           <thead>
             <tr className="text-left text-xs font-semibold text-slate-500">
               <th className="w-12 whitespace-nowrap px-3 py-3 sm:px-5">{t.table.serialNo}</th>
@@ -61,7 +64,7 @@ export function RecentContractsTable(props: { contracts: ApiContract[]; onDelete
           </thead>
           <tbody className="text-sm text-slate-700">
             {contracts.map((c, index) => (
-              <tr key={c.id} className="border-t border-slate-200">
+              <tr key={c.id} data-testid={`recent-contract-row-${c.id}`} className="border-t border-slate-200">
                 <td className="whitespace-nowrap px-5 py-3 text-slate-600">{index + 1}</td>
                 <td className="whitespace-nowrap px-5 py-3">{c.contractNumber}</td>
                 <td className="px-5 py-3">{c.customerName}</td>

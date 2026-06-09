@@ -6,8 +6,12 @@ import { AppLayout } from './app/layout/AppLayout'
 import { ContractDetailPage } from './pages/ContractDetailPage'
 import { ContractsPage } from './pages/ContractsPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { InvoiceDetailPage, NewInvoicePage } from './pages/InvoiceDetailPage'
+import { InvoicesPage } from './pages/InvoicesPage'
 import { LoginPage } from './pages/LoginPage'
 import { NewContractPage } from './pages/NewContractPage'
+import { NewRepairOrderPage, RepairOrderDetailPage } from './pages/RepairOrderDetailPage'
+import { RepairOrdersPage } from './pages/RepairOrdersPage'
 import { SearchContractsPage } from './pages/SearchContractsPage'
 import { SettingsPage } from './pages/SettingsPage'
 
@@ -27,6 +31,12 @@ export default function App() {
                 <Route path="/contracts" element={<ContractsPage />} />
                 <Route path="/contracts/search" element={<SearchContractsPage />} />
                 <Route path="/contracts/:contractId" element={<ContractDetailPage />} />
+                <Route path="/repair-orders/new" element={<NewRepairOrderPage />} />
+                <Route path="/repair-orders" element={<RepairOrdersPage />} />
+                <Route path="/repair-orders/:repairOrderId" element={<RepairOrderDetailPage />} />
+                <Route path="/invoices/new" element={<NewInvoicePage />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Route>

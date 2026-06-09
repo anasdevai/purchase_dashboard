@@ -10,7 +10,11 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGINS: z
     .string()
-    .default("http://localhost:5173,http://127.0.0.1:5173,http://192.168.100.29:5173"),
+    .default("http://localhost:5173,http://127.0.0.1:5173"),
+  CORS_ALLOW_LAN: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   SHOP_NAME: z.string().min(1).default("Sceleria"),
   SHOP_ADDRESS: z.string().min(1).default("Your shop address"),
   SHOP_PHONE: z.string().default("Your shop phone"),

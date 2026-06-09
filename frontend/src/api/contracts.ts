@@ -19,10 +19,15 @@ type CancelContractResponse = {
 }
 
 export type DashboardSummary = {
-  todayCompletedCount: number
+  contractsToday: number
   todayPurchaseTotal: string | number
-  allContractsCount: number
-  draftContractsCount: number
+  currentContracts: number
+  draftContracts: number
+  repairOrdersToday: number
+  readyForPickupCount: number
+  paidInvoiceRevenueToday: string | number
+  openInvoiceAmount: string | number
+  repairRevenueToday: string | number
   recentContracts: ApiContract[]
 }
 
@@ -122,7 +127,20 @@ export async function fetchContract(id: string) {
 }
 
 export async function fetchDashboard() {
-  return apiRequest<DashboardSummary>('/api/dashboard')
+  const response = await apiRequest<DashboardSummary>('/api/dashboard')
+  return {
+    ...response,
+    contractsToday: Number(response.contractsToday ?? 0),
+    todayPurchaseTotal: Number(response.todayPurchaseTotal ?? 0),
+    currentContracts: Number(response.currentContracts ?? 0),
+    draftContracts: Number(response.draftContracts ?? 0),
+    repairOrdersToday: Number(response.repairOrdersToday ?? 0),
+    readyForPickupCount: Number(response.readyForPickupCount ?? 0),
+    paidInvoiceRevenueToday: Number(response.paidInvoiceRevenueToday ?? 0),
+    openInvoiceAmount: Number(response.openInvoiceAmount ?? 0),
+    repairRevenueToday: Number(response.repairRevenueToday ?? 0),
+    recentContracts: response.recentContracts ?? [],
+  }
 }
 
 export async function validateDeviceIdentifiers(params: {

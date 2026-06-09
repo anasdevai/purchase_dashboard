@@ -38,6 +38,16 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
     });
   }
 
+  if (
+    error instanceof Prisma.PrismaClientInitializationError ||
+    error instanceof Prisma.PrismaClientRustPanicError
+  ) {
+    console.error(error);
+    return res.status(503).json({
+      message: "Database is unavailable. Start PostgreSQL and try again."
+    });
+  }
+
   console.error(error);
   return res.status(500).json({ message: "Internal server error" });
 };

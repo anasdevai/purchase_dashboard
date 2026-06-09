@@ -1,6 +1,6 @@
 import multer from "multer";
 import { env } from "../config/env.js";
-import { allowedUploadMimeTypes } from "../validators/fileValidators.js";
+import { isAllowedUpload } from "../validators/fileValidators.js";
 import { HttpError } from "../utils/httpError.js";
 
 export const upload = multer({
@@ -9,8 +9,13 @@ export const upload = multer({
     fileSize: env.MAX_UPLOAD_SIZE_MB * 1024 * 1024
   },
   fileFilter: (_req, file, callback) => {
-    if (!allowedUploadMimeTypes.includes(file.mimetype as (typeof allowedUploadMimeTypes)[number])) {
-      callback(new HttpError(400, "Only PNG and SVG uploads are allowed. Signatures must be PNG."));
+    if (!isAllowedUpload(file.mimetype, file.originalname)) {
+      callback(
+        new HttpError(
+          400,
+          "Only JPG, JPEG, PNG, and WEBP images are allowed. Signatures must be PNG."
+        )
+      );
       return;
     }
 

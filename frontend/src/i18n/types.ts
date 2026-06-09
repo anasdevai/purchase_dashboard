@@ -53,6 +53,10 @@ export type TranslationSchema = {
     newContract: string
     contracts: string
     searchContracts: string
+    newRepairOrder: string
+    repairOrders: string
+    newInvoice: string
+    invoices: string
     settings: string
     logout: string
   }
@@ -65,10 +69,18 @@ export type TranslationSchema = {
     newContract: string
     contracts: string
     searchContracts: string
+    newRepairOrder: string
+    repairOrders: string
+    newInvoice: string
+    invoices: string
     contractDetail: string
+    invoiceDetail: string
+    repairOrderDetail: string
     settings: string
   }
   dashboard: {
+    purchaseContractsSection: string
+    repairsInvoicesSection: string
     contractsToday: string
     contractsTodayDelta: string
     contractsTodaySub: string
@@ -79,6 +91,16 @@ export type TranslationSchema = {
     viewCurrentContracts: string
     draftContracts: string
     continueEditing: string
+    repairOrdersToday: string
+    repairOrdersTodaySub: string
+    readyForPickup: string
+    readyForPickupSub: string
+    paidInvoiceRevenueToday: string
+    paidInvoiceRevenueTodaySub: string
+    openInvoiceAmount: string
+    openInvoiceAmountSub: string
+    repairRevenueToday: string
+    repairRevenueTodaySub: string
     recentContracts: string
     viewAll: string
     quickActions: string
@@ -130,6 +152,7 @@ export type TranslationSchema = {
     deviceInformation: string
     ownershipConfirmations: string
     photosAndDocuments: string
+    photosRequiredHint: string
     checkAndSave: string
     fullName: string
     fullNamePlaceholder: string
@@ -302,6 +325,8 @@ export type TranslationSchema = {
     pdfPending: string
   }
   login: {
+    appTitle: string
+    poweredBy: string
     subtitle: string
     signupSubtitle: string
     name: string
@@ -359,6 +384,195 @@ export type TranslationSchema = {
   }
   search: {
     placeholder: string
+  }
+  invoices: {
+    title: string
+    newInvoice: string
+    searchPlaceholder: string
+    noResults: string
+    confirmDelete: string
+    validation: {
+      customerNameRequired: string
+    }
+    errors: {
+      loadFailed: string
+      paymentStatusFailed: string
+      loadDetailFailed: string
+      saveFailed: string
+      pdfFailed: string
+      deleteFailed: string
+    }
+    table: {
+      invoiceNumber: string
+      customer: string
+      phone: string
+      date: string
+      payment: string
+      grossTotal: string
+      action: string
+    }
+    paymentMethods: {
+      Cash: string
+      BankTransfer: string
+      Card: string
+      Other: string
+    }
+    paymentStatuses: {
+      Paid: string
+      Open: string
+      Cancelled: string
+    }
+    detail: {
+      loading: string
+      titleNew: string
+      titleExisting: string
+      description: string
+      backToList: string
+      generatePdf: string
+      downloadPdf: string
+      saveInvoice: string
+      saving: string
+      customerInfo: string
+      invoiceInfo: string
+      lineItems: string
+      addLine: string
+      notes: string
+      totals: string
+      customerName: string
+      customerPhone: string
+      customerEmail: string
+      customerAddress: string
+      invoiceNumber: string
+      invoiceDate: string
+      paymentMethod: string
+      paymentStatus: string
+      deviceSummary: string
+      repairSummary: string
+      descriptionCol: string
+      quantity: string
+      unitPrice: string
+      vatPercent: string
+      total: string
+      netAmount: string
+      vatAmount: string
+      grossTotal: string
+      overrideNet: string
+      overrideVat: string
+      overrideGross: string
+      selectPaymentMethod: string
+      selectStatus: string
+      vatOtherOption: string
+      vatCustomPlaceholder: string
+      viewRepairOrder: string
+      sourceRepairOrder: string
+      pdfGenerated: string
+      pdfOutdated: string
+    }
+  }
+  repairOrders: {
+    title: string
+    newRepairOrder: string
+    searchPlaceholder: string
+    allStatuses: string
+    noResults: string
+    confirmDelete: string
+    errors: {
+      loadFailed: string
+      statusFailed: string
+      loadDetailFailed: string
+      saveFailed: string
+      invoiceCreateFailed: string
+      pdfFailed: string
+    }
+    validation: {
+      customerNameRequired: string
+      customerPhoneRequired: string
+      emailInvalid: string
+      deviceTypeRequired: string
+      brandRequired: string
+      modelRequired: string
+      problemDescriptionRequired: string
+      visibleDamageRequired: string
+      priceInvalid: string
+      depositInvalid: string
+      dateInvalid: string
+      otherAccessoryRequired: string
+    }
+    table: {
+      repairNumber: string
+      customer: string
+      phone: string
+      device: string
+      estimate: string
+      date: string
+      status: string
+      action: string
+    }
+    statuses: {
+      Received: string
+      InProgress: string
+      WaitingForParts: string
+      ReadyForPickup: string
+      Completed: string
+      Cancelled: string
+    }
+    accessories: {
+      charger: string
+      powerSupply: string
+      controller: string
+      cable: string
+      carryingCase: string
+      other: string
+    }
+    detail: {
+      loading: string
+      titleNew: string
+      titleExisting: string
+      description: string
+      backToList: string
+      createInvoice: string
+      generatePdf: string
+      downloadPdf: string
+      saveRepairOrder: string
+      saving: string
+      customerInfo: string
+      deviceInfo: string
+      repairDetails: string
+      customerName: string
+      customerPhone: string
+      customerEmail: string
+      customerAddress: string
+      deviceType: string
+      brand: string
+      model: string
+      otherOption: string
+      deviceTypeCustomPlaceholder: string
+      brandCustomPlaceholder: string
+      modelCustomPlaceholder: string
+      imeiOrSerial: string
+      passwordPin: string
+      accessoriesReceived: string
+      selectAccessory: string
+      accessoriesManual: string
+      problemDescription: string
+      visibleDamage: string
+      technicianNotes: string
+      estimatedPrice: string
+      depositAmount: string
+      expectedCompletionDate: string
+      status: string
+      repairOrderNumber: string
+      savedSuccess: string
+      actionsTitle: string
+      viewRepairOrder: string
+      editRepairOrder: string
+      pdfGenerated: string
+      linkedInvoice: string
+      viewInvoice: string
+      invoiceExistsTitle: string
+      invoiceExistsMessage: string
+      openExistingInvoice: string
+    }
   }
   language: {
     label: string

@@ -5,10 +5,10 @@ export default {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#2563EB',
-          hover: '#1D4ED8',
-          light: '#EFF6FF',
-          ring: '#BFDBFE',
+          DEFAULT: '#1B48AC',
+          hover: '#163d94',
+          light: '#E9EFFA',
+          ring: '#B8C9EB',
         },
         sidebar: {
           DEFAULT: '#1B48AC',

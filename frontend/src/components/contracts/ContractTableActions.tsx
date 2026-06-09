@@ -34,6 +34,7 @@ export function ContractTableActions({
     <div className="flex flex-nowrap items-center justify-end gap-2">
       <Link
         to={`/contracts/${contractId}`}
+        data-testid={`contract-action-view-${contractId}`}
         className={iconActionClass}
         aria-label={viewLabel}
         title={viewLabel}
@@ -43,6 +44,7 @@ export function ContractTableActions({
       {pdfPath ? (
         <button
           type="button"
+          data-testid={`contract-action-download-${contractId}`}
           onClick={() => downloadPdf(contractId, `${contractNumber}.pdf`)}
           className={iconActionClass}
           aria-label={t.table.download}
