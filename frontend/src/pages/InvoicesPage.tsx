@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Download, Eye, Search, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { deleteInvoice, downloadInvoicePdf, fetchInvoices, updateInvoicePaymentStatus } from '../api/invoices'
+import { formatWholeMoney } from '../utils/formatMoney'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { Invoice, InvoicePaymentStatus } from '../types/invoice'
 
 export function InvoicesPage() {
-  const { t, interpolate, formatDate, formatMoney } = useLanguage()
+  const { t, interpolate, formatDate } = useLanguage()
   const { showToast } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [date, setDate] = useState('')
@@ -145,7 +146,7 @@ export function InvoicesPage() {
                       </select>
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4">
-                      {formatMoney(Number(invoice.grossTotalOverride ?? invoice.calculatedGrossTotal ?? 0))}
+                      {formatWholeMoney(Number(invoice.calculatedGrossTotal ?? 0))}
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex justify-end gap-2">

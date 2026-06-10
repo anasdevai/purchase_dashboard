@@ -1,0 +1,14 @@
+ALTER TABLE "shop_settings" ADD COLUMN "street" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "zip_code" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "city" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "country" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "website" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "vat_number" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "company_registration_number" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "tax_number" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "account_holder" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "iban" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "bic_swift" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "bank_name" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "shop_settings" ADD COLUMN "default_vat_rate" TEXT NOT NULL DEFAULT '20';
+ALTER TABLE "shop_settings" ADD COLUMN "default_vat_custom" TEXT NOT NULL DEFAULT '';

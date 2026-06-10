@@ -6,8 +6,8 @@ export function LanguageSwitcher() {
   const { language, setLanguage, t } = useLanguage()
 
   return (
-    <div className="flex items-center gap-2">
-      <Globe className="h-4 w-4 text-slate-500" aria-hidden />
+    <div className="flex shrink-0 items-center gap-2">
+      <Globe className="hidden h-4 w-4 text-slate-500 sm:block" aria-hidden />
       <label className="sr-only" htmlFor="language-select">
         {t.language.label}
       </label>
@@ -15,7 +15,7 @@ export function LanguageSwitcher() {
         id="language-select"
         value={language}
         onChange={(e) => setLanguage(e.target.value as Language)}
-        className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm font-medium text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+        className="h-8 rounded-lg border border-slate-200 bg-white px-1.5 text-xs font-medium text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary-light sm:h-9 sm:px-2.5 sm:text-sm"
         aria-label={t.language.label}
       >
         <option value="de">{t.language.de}</option>

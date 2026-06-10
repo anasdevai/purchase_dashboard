@@ -1,14 +1,39 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Download, FileText, Plus, Save, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  ChevronRight,
+  Download,
+  ExternalLink,
+  FileText,
+  Info,
+  Plus,
+  Save,
+  ShoppingCart,
+  Store,
+  Trash2,
+} from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { downloadInvoicePdf, fetchInvoice, generateInvoicePdf, saveInvoice } from '../api/invoices'
+import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
+import {
+  defaultShopSettings,
+  loadShopSettings,
+  makeEmptyInvoiceItem,
+  type ShopSettings,
+} from '../services/shopSettings'
 import type { Invoice, InvoiceItem, InvoicePayload } from '../types/invoice'
+import { formatWholeMoney } from '../utils/formatMoney'
+import {
+  normalizeQuantityInput,
+  normalizeWholeInput,
+  parseWholeNumber,
+} from '../utils/invoiceNumbers'
 
 const VAT_PRESETS = ['0', '10', '13', '20'] as const
 
 type InvoiceForm = Omit<InvoicePayload, 'items'> & {
+  invoiceNumber?: string
   items: Array<{
     description: string
     quantity: string
@@ -17,33 +42,31 @@ type InvoiceForm = Omit<InvoicePayload, 'items'> & {
   }>
 }
 
-const emptyItem = { description: '', quantity: '1', unitPrice: '0', vatPercent: '0' }
-
 const today = () => new Date().toISOString().slice(0, 10)
 
-const emptyForm: InvoiceForm = {
-  invoiceDate: today(),
-  customerName: '',
-  customerAddress: '',
-  customerPhone: '',
-  customerEmail: '',
-  deviceSummary: '',
-  repairSummary: '',
-  paymentStatus: 'Open',
-  notes: '',
-  items: [{ ...emptyItem }],
-}
-
-function numberOrZero(value: string | number | undefined) {
-  const parsed = Number(value ?? 0)
-  return Number.isFinite(parsed) ? parsed : 0
+function createEmptyForm(shopSettings: ShopSettings): InvoiceForm {
+  return {
+    invoiceDate: today(),
+    customerName: '',
+    customerAddress: '',
+    customerPhone: '',
+    customerEmail: '',
+    deviceSummary: '',
+    repairSummary: '',
+    paymentStatus: 'Open',
+    notes: '',
+    items: [makeEmptyInvoiceItem(shopSettings)],
+  }
 }
 
 function calculate(items: InvoiceForm['items']) {
   return items.reduce(
     (totals, item) => {
-      const net = numberOrZero(item.quantity) * numberOrZero(item.unitPrice)
-      const vat = net * (numberOrZero(item.vatPercent) / 100)
+      const quantity = Math.max(1, parseWholeNumber(item.quantity, 1))
+      const unitPrice = parseWholeNumber(item.unitPrice, 0)
+      const vatPercent = parseWholeNumber(item.vatPercent, 0)
+      const net = quantity * unitPrice
+      const vat = Math.round(net * (vatPercent / 100))
       return {
         net: totals.net + net,
         vat: totals.vat + vat,
@@ -52,20 +75,6 @@ function calculate(items: InvoiceForm['items']) {
     },
     { net: 0, vat: 0, gross: 0 },
   )
-}
-
-function parseOverride(value: string | number | undefined) {
-  if (value === undefined || value === null || value === '') return undefined
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
-}
-
-function effectiveTotals(form: InvoiceForm, calculated: ReturnType<typeof calculate>) {
-  return {
-    net: parseOverride(form.netAmountOverride) ?? calculated.net,
-    vat: parseOverride(form.vatAmountOverride) ?? calculated.vat,
-    gross: parseOverride(form.grossTotalOverride) ?? calculated.gross,
-  }
 }
 
 function fromInvoice(invoice: Invoice): InvoiceForm {
@@ -81,31 +90,31 @@ function fromInvoice(invoice: Invoice): InvoiceForm {
     repairSummary: invoice.repairSummary ?? '',
     paymentMethod: invoice.paymentMethod ?? undefined,
     paymentStatus: invoice.paymentStatus ?? undefined,
-    netAmountOverride: invoice.netAmountOverride === null || invoice.netAmountOverride === undefined ? undefined : Number(invoice.netAmountOverride),
-    vatAmountOverride: invoice.vatAmountOverride === null || invoice.vatAmountOverride === undefined ? undefined : Number(invoice.vatAmountOverride),
-    grossTotalOverride: invoice.grossTotalOverride === null || invoice.grossTotalOverride === undefined ? undefined : Number(invoice.grossTotalOverride),
     notes: invoice.notes ?? '',
     items: invoice.items.map((item: InvoiceItem) => ({
       description: item.description,
-      quantity: String(item.quantity),
-      unitPrice: String(item.unitPrice),
-      vatPercent: String(item.vatPercent),
+      quantity: String(Math.max(1, parseWholeNumber(item.quantity, 1))),
+      unitPrice: String(parseWholeNumber(item.unitPrice, 0)),
+      vatPercent: String(parseWholeNumber(item.vatPercent, 0)),
     })),
   }
 }
 
 function cleanForm(form: InvoiceForm): InvoicePayload {
+  const {
+    invoiceNumber: _invoiceNumber,
+    items,
+    ...rest
+  } = form
+
   return {
-    ...form,
-    items: form.items.map((item) => ({
+    ...rest,
+    items: items.map((item) => ({
       description: item.description,
-      quantity: numberOrZero(item.quantity),
-      unitPrice: numberOrZero(item.unitPrice),
-      vatPercent: numberOrZero(item.vatPercent),
+      quantity: Math.max(1, parseWholeNumber(item.quantity, 1)),
+      unitPrice: parseWholeNumber(item.unitPrice, 0),
+      vatPercent: parseWholeNumber(item.vatPercent, 0),
     })),
-    netAmountOverride: form.netAmountOverride === undefined || Number.isNaN(Number(form.netAmountOverride)) ? undefined : Number(form.netAmountOverride),
-    vatAmountOverride: form.vatAmountOverride === undefined || Number.isNaN(Number(form.vatAmountOverride)) ? undefined : Number(form.vatAmountOverride),
-    grossTotalOverride: form.grossTotalOverride === undefined || Number.isNaN(Number(form.grossTotalOverride)) ? undefined : Number(form.grossTotalOverride),
   }
 }
 
@@ -114,20 +123,21 @@ export function NewInvoicePage() {
 }
 
 export function InvoiceDetailPage(props: { mode?: 'new' }) {
-  const { t, interpolate, formatMoney } = useLanguage()
+  const { user } = useAuth()
+  const { t, interpolate } = useLanguage()
   const { showToast } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
   const invoiceId = props.mode === 'new' ? undefined : params.invoiceId
-  const [form, setForm] = useState<InvoiceForm>(emptyForm)
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultShopSettings())
+  const [form, setForm] = useState<InvoiceForm>(() => createEmptyForm(defaultShopSettings()))
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(Boolean(invoiceId))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<{ customerName?: string }>({})
   const [pdfNeedsRegeneration, setPdfNeedsRegeneration] = useState(false)
-  const calculatedTotals = useMemo(() => calculate(form.items), [form.items])
-  const totals = useMemo(() => effectiveTotals(form, calculatedTotals), [form, calculatedTotals])
+  const totals = useMemo(() => calculate(form.items), [form.items])
 
   const paymentMethods = useMemo(
     () =>
@@ -146,6 +156,21 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       })),
     [t],
   )
+
+  useEffect(() => {
+    if (!user?.id) return
+    let alive = true
+    loadShopSettings(user.id).then((settings) => {
+      if (!alive) return
+      setShopSettings(settings)
+      if (!invoiceId) {
+        setForm(createEmptyForm(settings))
+      }
+    })
+    return () => {
+      alive = false
+    }
+  }, [user?.id, invoiceId])
 
   useEffect(() => {
     if (!invoiceId) return
@@ -184,6 +209,24 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     }))
   }
 
+  const setQuantity = (index: number, value: string) => {
+    setItem(index, 'quantity', normalizeQuantityInput(value))
+  }
+
+  const setWholeField = (index: number, name: 'unitPrice' | 'vatPercent', value: string) => {
+    setItem(index, name, normalizeWholeInput(value))
+  }
+
+  const finalizeQuantity = (index: number) => {
+    const current = form.items[index]?.quantity ?? ''
+    setItem(index, 'quantity', current.trim() ? normalizeQuantityInput(current) : '1')
+  }
+
+  const finalizeWholeField = (index: number, name: 'unitPrice' | 'vatPercent') => {
+    const current = form.items[index]?.[name] ?? ''
+    setItem(index, name, current.trim() ? normalizeWholeInput(current) : '0')
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
     if (!form.customerName.trim()) {
@@ -198,8 +241,9 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       const saved = await saveInvoice(cleanForm(form), invoiceId)
       setInvoice(saved)
       setForm(fromInvoice(saved))
-      if (invoiceId && !saved.pdfPath) {
-        setPdfNeedsRegeneration(true)
+      setPdfNeedsRegeneration(false)
+      if (saved.pdfPath) {
+        showToast('success', t.invoices.detail.pdfGenerated)
       }
       if (!invoiceId) navigate(`/invoices/${saved.id}`, { replace: true })
     } catch (err) {
@@ -227,20 +271,38 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     }
   }
 
+  const addLineItem = () => {
+    setForm((current) => ({
+      ...current,
+      items: [...current.items, makeEmptyInvoiceItem(shopSettings)],
+    }))
+  }
+
   if (loading) {
     return <div className="text-sm font-semibold text-slate-600">{t.invoices.detail.loading}</div>
   }
 
+  const pageTitle = invoice
+    ? interpolate(t.invoices.detail.titleExisting, { invoiceNumber: invoice.invoiceNumber })
+    : t.invoices.detail.titleNew
+
+  const breadcrumbCurrent = invoice
+    ? interpolate(t.invoices.detail.breadcrumbExisting, { invoiceNumber: invoice.invoiceNumber })
+    : t.invoices.detail.breadcrumbNew
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="text-lg font-semibold text-slate-900">
-            {invoice
-              ? interpolate(t.invoices.detail.titleExisting, { invoiceNumber: invoice.invoiceNumber })
-              : t.invoices.detail.titleNew}
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{pageTitle}</h1>
+          <p className="mt-1 text-sm text-slate-600">{t.invoices.detail.description}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-1 text-sm text-slate-500">
+            <Link to="/invoices" className="font-medium text-slate-600 hover:text-primary">
+              {t.invoices.detail.breadcrumbInvoices}
+            </Link>
+            <ChevronRight className="h-4 w-4 text-slate-400" />
+            <span className="font-medium text-slate-800">{breadcrumbCurrent}</span>
           </div>
-          <div className="mt-1 text-sm text-slate-600">{t.invoices.detail.description}</div>
           {invoice?.repairOrder ? (
             <div className="mt-2 text-sm text-slate-600">
               <span className="font-medium">{t.invoices.detail.sourceRepairOrder}: </span>
@@ -255,26 +317,39 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
             </div>
           ) : null}
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Link to="/invoices" className="btn btn-secondary">{t.invoices.detail.backToList}</Link>
-          {invoice ? (
-            <button type="button" data-testid="invoice-generate-pdf" className="btn btn-secondary" onClick={handleGeneratePdf} disabled={saving}>
-              <FileText className="h-4 w-4" />
-              {t.invoices.detail.generatePdf}
-            </button>
-          ) : null}
-          {invoice?.pdfPath ? (
-            <button
-              type="button"
-              data-testid="invoice-download-pdf"
-              className="btn btn-primary"
-              onClick={() => downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`)}
-            >
-              <Download className="h-4 w-4" />
-              {t.invoices.detail.downloadPdf}
-            </button>
-          ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Link to="/invoices" className="btn btn-secondary h-11 px-5">
+            {t.invoices.detail.cancel}
+          </Link>
+          <button
+            type="submit"
+            form="invoice-form"
+            data-testid="invoice-save-top"
+            className="btn btn-primary h-11 px-5"
+            disabled={saving}
+          >
+            <Save className="h-4 w-4" />
+            {saving ? t.invoices.detail.saving : t.invoices.detail.saveInvoice}
+          </button>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex items-start gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-white text-primary shadow-sm ring-1 ring-blue-100">
+            <Store className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-slate-900">
+              {t.invoices.detail.shopDetailsBannerTitle}
+            </div>
+            <p className="mt-0.5 text-sm text-slate-600">{t.invoices.detail.shopDetailsBannerText}</p>
+          </div>
+        </div>
+        <Link to="/settings" className="btn btn-secondary h-10 shrink-0 bg-white px-4">
+          <ExternalLink className="h-4 w-4" />
+          {t.invoices.detail.viewShopDetails}
+        </Link>
       </div>
 
       {error ? (
@@ -292,15 +367,14 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="card">
-          <div className="card-header">
-            <div className="text-sm font-semibold text-slate-900">{t.invoices.detail.customerInfo}</div>
-          </div>
-          <div className="card-body grid gap-4 md:grid-cols-2">
+      <form id="invoice-form" onSubmit={handleSubmit} className="space-y-5">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <InvoiceCard title={t.invoices.detail.customerInfo}>
             <Field
               testId="invoice-customer-name"
               label={t.invoices.detail.customerName}
+              placeholder={t.invoices.detail.customerNamePlaceholder}
+              required
               value={form.customerName}
               error={fieldErrors.customerName}
               onChange={(value) => {
@@ -308,80 +382,167 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 if (fieldErrors.customerName) setFieldErrors({})
               }}
             />
-            <Field testId="invoice-customer-phone" label={t.invoices.detail.customerPhone} value={form.customerPhone ?? ''} onChange={(value) => setField('customerPhone', value)} />
-            <Field label={t.invoices.detail.customerEmail} type="email" value={form.customerEmail ?? ''} onChange={(value) => setField('customerEmail', value)} />
-            <Field label={t.invoices.detail.customerAddress} value={form.customerAddress ?? ''} onChange={(value) => setField('customerAddress', value)} />
-          </div>
+            <Field
+              testId="invoice-customer-email"
+              label={t.invoices.detail.customerEmail}
+              type="email"
+              placeholder={t.invoices.detail.customerEmailPlaceholder}
+              value={form.customerEmail ?? ''}
+              onChange={(value) => setField('customerEmail', value)}
+            />
+            <Field
+              testId="invoice-customer-phone"
+              label={t.invoices.detail.customerPhone}
+              placeholder={t.invoices.detail.customerPhonePlaceholder}
+              value={form.customerPhone ?? ''}
+              onChange={(value) => setField('customerPhone', value)}
+            />
+            <Field
+              label={t.invoices.detail.customerAddress}
+              placeholder={t.invoices.detail.customerAddressPlaceholder}
+              value={form.customerAddress ?? ''}
+              onChange={(value) => setField('customerAddress', value)}
+              multiline
+            />
+          </InvoiceCard>
+
+          <InvoiceCard title={t.invoices.detail.invoiceInfo}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field
+                testId="invoice-number"
+                label={t.invoices.detail.invoiceNumber}
+                value={form.invoiceNumber ?? ''}
+                placeholder={t.invoices.detail.invoiceNumberAutoGenerated}
+                readOnly
+                onChange={() => undefined}
+              />
+              <Field
+                label={t.invoices.detail.invoiceDate}
+                type="date"
+                value={form.invoiceDate ?? today()}
+                onChange={(value) => setField('invoiceDate', value)}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label>
+                <span className="label">{t.invoices.detail.paymentMethod}</span>
+                <select
+                  className="input h-11"
+                  value={form.paymentMethod ?? ''}
+                  onChange={(event) => setField('paymentMethod', event.target.value)}
+                >
+                  <option value="">{t.invoices.detail.selectPaymentMethod}</option>
+                  {paymentMethods.map((method) => (
+                    <option key={method.value} value={method.value}>
+                      {method.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="label">{t.invoices.detail.paymentStatus}</span>
+                <select
+                  className="input h-11"
+                  value={form.paymentStatus ?? ''}
+                  onChange={(event) => setField('paymentStatus', event.target.value)}
+                >
+                  <option value="">{t.invoices.detail.selectStatus}</option>
+                  {paymentStatuses.map((status) => (
+                    <option key={status.value} value={status.value}>
+                      {status.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <Field
+              label={t.invoices.detail.deviceSummary}
+              value={form.deviceSummary ?? ''}
+              onChange={(value) => setField('deviceSummary', value)}
+            />
+            <Field
+              label={t.invoices.detail.repairSummary}
+              value={form.repairSummary ?? ''}
+              onChange={(value) => setField('repairSummary', value)}
+            />
+          </InvoiceCard>
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <div className="text-sm font-semibold text-slate-900">{t.invoices.detail.invoiceInfo}</div>
-          </div>
-          <div className="card-body grid gap-4 md:grid-cols-2">
-            <Field label={t.invoices.detail.invoiceNumber} value={form.invoiceNumber ?? ''} onChange={(value) => setField('invoiceNumber', value)} />
-            <Field label={t.invoices.detail.invoiceDate} type="date" value={form.invoiceDate ?? today()} onChange={(value) => setField('invoiceDate', value)} />
-            <label>
-              <span className="label">{t.invoices.detail.paymentMethod}</span>
-              <select className="input" value={form.paymentMethod ?? ''} onChange={(event) => setField('paymentMethod', event.target.value)}>
-                <option value="">{t.invoices.detail.selectPaymentMethod}</option>
-                {paymentMethods.map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
-              </select>
-            </label>
-            <label>
-              <span className="label">{t.invoices.detail.paymentStatus}</span>
-              <select className="input" value={form.paymentStatus ?? ''} onChange={(event) => setField('paymentStatus', event.target.value)}>
-                <option value="">{t.invoices.detail.selectStatus}</option>
-                {paymentStatuses.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-              </select>
-            </label>
-            <Field label={t.invoices.detail.deviceSummary} value={form.deviceSummary ?? ''} onChange={(value) => setField('deviceSummary', value)} />
-            <Field label={t.invoices.detail.repairSummary} value={form.repairSummary ?? ''} onChange={(value) => setField('repairSummary', value)} />
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <div className="text-sm font-semibold text-slate-900">{t.invoices.detail.lineItems}</div>
+        <section className="card overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900">{t.invoices.detail.lineItems}</h2>
+            </div>
             <button
               type="button"
               data-testid="invoice-add-line"
-              className="btn btn-secondary"
-              onClick={() => setForm((current) => ({ ...current, items: [...current.items, { ...emptyItem }] }))}
+              className="btn btn-primary h-10"
+              onClick={addLineItem}
             >
               <Plus className="h-4 w-4" />
-              {t.invoices.detail.addLine}
+              {t.invoices.detail.addLineShort}
             </button>
           </div>
-          <div className="card-body space-y-3">
-            <div className="table-scroll">
-              <table className="w-full min-w-[760px]">
-                <thead>
-                  <tr className="text-left text-xs font-semibold text-slate-500">
-                    <th className="py-2 pr-3">{t.invoices.detail.descriptionCol}</th>
-                    <th className="w-24 py-2 pr-3">{t.invoices.detail.quantity}</th>
-                    <th className="w-32 py-2 pr-3">{t.invoices.detail.unitPrice}</th>
-                    <th className="w-28 py-2 pr-3">{t.invoices.detail.vatPercent}</th>
-                    <th className="w-32 py-2 pr-3 text-right">{t.invoices.detail.total}</th>
-                    <th className="w-12 py-2 text-right"> </th>
+          <div className="px-5 py-5">
+            <div className="table-scroll rounded-xl border border-slate-200">
+              <table className="w-full min-w-[880px]">
+                <thead className="bg-slate-50">
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-12 px-4 py-3">{t.invoices.detail.rowNumber}</th>
+                    <th className="px-4 py-3">{t.invoices.detail.descriptionCol}</th>
+                    <th className="w-24 px-4 py-3">{t.invoices.detail.quantity}</th>
+                    <th className="w-32 px-4 py-3">{t.invoices.detail.unitPrice}</th>
+                    <th className="w-32 px-4 py-3">{t.invoices.detail.vatPercent}</th>
+                    <th className="w-32 px-4 py-3 text-right">{t.invoices.detail.total}</th>
+                    <th className="w-14 px-4 py-3 text-right"> </th>
                   </tr>
                 </thead>
                 <tbody>
                   {form.items.map((item, index) => {
-                    const rowNet = numberOrZero(item.quantity) * numberOrZero(item.unitPrice)
-                    const rowTotal = rowNet + rowNet * (numberOrZero(item.vatPercent) / 100)
+                    const quantity = Math.max(1, parseWholeNumber(item.quantity, 1))
+                    const unitPrice = parseWholeNumber(item.unitPrice, 0)
+                    const vatPercent = parseWholeNumber(item.vatPercent, 0)
+                    const rowNet = quantity * unitPrice
+                    const rowTotal = rowNet + Math.round(rowNet * (vatPercent / 100))
                     return (
                       <tr key={index} className="border-t border-slate-200">
-                        <td className="py-3 pr-3">
-                          <input className="input" data-testid={`invoice-line-${index}-description`} value={item.description} onChange={(event) => setItem(index, 'description', event.target.value)} />
+                        <td className="px-4 py-3 text-sm font-medium text-slate-500">{index + 1}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            className="input h-10"
+                            data-testid={`invoice-line-${index}-description`}
+                            value={item.description}
+                            onChange={(event) => setItem(index, 'description', event.target.value)}
+                          />
                         </td>
-                        <td className="py-3 pr-3">
-                          <input className="input" type="number" step="0.01" data-testid={`invoice-line-${index}-quantity`} value={item.quantity} onChange={(event) => setItem(index, 'quantity', event.target.value)} />
+                        <td className="px-4 py-3">
+                          <input
+                            className="input h-10"
+                            type="number"
+                            min={1}
+                            step={1}
+                            inputMode="numeric"
+                            data-testid={`invoice-line-${index}-quantity`}
+                            value={item.quantity}
+                            onChange={(event) => setQuantity(index, event.target.value)}
+                            onBlur={() => finalizeQuantity(index)}
+                          />
                         </td>
-                        <td className="py-3 pr-3">
-                          <input className="input" type="number" step="0.01" data-testid={`invoice-line-${index}-unit-price`} value={item.unitPrice} onChange={(event) => setItem(index, 'unitPrice', event.target.value)} />
+                        <td className="px-4 py-3">
+                          <input
+                            className="input h-10"
+                            type="number"
+                            min={0}
+                            step={1}
+                            inputMode="numeric"
+                            data-testid={`invoice-line-${index}-unit-price`}
+                            value={item.unitPrice}
+                            onChange={(event) => setWholeField(index, 'unitPrice', event.target.value)}
+                            onBlur={() => finalizeWholeField(index, 'unitPrice')}
+                          />
                         </td>
-                        <td className="py-3 pr-3">
+                        <td className="px-4 py-3">
                           <VatPercentField
                             testId={`invoice-line-${index}-vat`}
                             value={item.vatPercent}
@@ -390,12 +551,21 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                             onChange={(value) => setItem(index, 'vatPercent', value)}
                           />
                         </td>
-                        <td className="py-3 pr-3 text-right text-sm font-semibold text-slate-900">{formatMoney(rowTotal)}</td>
-                        <td className="py-3 text-right">
+                        <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                          {formatWholeMoney(rowTotal)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
                           <button
                             type="button"
                             className="btn h-8 w-8 p-0 text-red-600 hover:bg-red-50"
-                            onClick={() => setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) || [{ ...emptyItem }] }))}
+                            onClick={() =>
+                              setForm((current) => ({
+                                ...current,
+                                items:
+                                  current.items.filter((_, itemIndex) => itemIndex !== index) ||
+                                  [makeEmptyInvoiceItem(shopSettings)],
+                              }))
+                            }
                             disabled={form.items.length === 1}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -407,50 +577,96 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 </tbody>
               </table>
             </div>
+            <button
+              type="button"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-primary hover:bg-primary-light/20 hover:text-primary"
+              onClick={addLineItem}
+            >
+              <Plus className="h-4 w-4" />
+              {t.invoices.detail.addAnotherLine}
+            </button>
           </div>
-        </div>
+        </section>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="card lg:col-span-2">
-            <div className="card-header">
-              <div className="text-sm font-semibold text-slate-900">{t.invoices.detail.notes}</div>
-            </div>
-            <div className="card-body">
-              <textarea
-                data-testid="invoice-notes"
-                className="min-h-28 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
-                value={form.notes ?? ''}
-                onChange={(event) => setField('notes', event.target.value)}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <InvoiceCard title={t.invoices.detail.notes} className="lg:col-span-2">
+            <textarea
+              data-testid="invoice-notes"
+              className="min-h-32 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+              placeholder={t.invoices.detail.notesPlaceholder}
+              value={form.notes ?? ''}
+              onChange={(event) => setField('notes', event.target.value)}
+            />
+            <p className="mt-2 text-xs text-slate-500">{t.invoices.detail.notesHelper}</p>
+          </InvoiceCard>
+
+          <InvoiceCard title={t.invoices.detail.totals}>
+            <div className="space-y-3 rounded-xl bg-slate-50 p-4">
+              <TotalRow testId="invoice-total-net" label={t.invoices.detail.netAmount} value={formatWholeMoney(totals.net)} />
+              <TotalRow testId="invoice-total-vat" label={t.invoices.detail.vatAmount} value={formatWholeMoney(totals.vat)} />
+              <TotalRow
+                testId="invoice-total-gross"
+                label={t.invoices.detail.grossTotal}
+                value={formatWholeMoney(totals.gross)}
+                strong
               />
             </div>
-          </div>
-          <div className="card">
-            <div className="card-header">
-              <div className="text-sm font-semibold text-slate-900">{t.invoices.detail.totals}</div>
-            </div>
-            <div className="card-body space-y-3">
-              <TotalRow testId="invoice-total-net" label={t.invoices.detail.netAmount} value={formatMoney(totals.net)} />
-              <TotalRow testId="invoice-total-vat" label={t.invoices.detail.vatAmount} value={formatMoney(totals.vat)} />
-              <TotalRow testId="invoice-total-gross" label={t.invoices.detail.grossTotal} value={formatMoney(totals.gross)} strong />
-              <div className="border-t border-slate-200 pt-3">
-                <Field label={t.invoices.detail.overrideNet} type="number" value={String(form.netAmountOverride ?? '')} onChange={(value) => setField('netAmountOverride', value)} />
-                <div className="mt-3" />
-                <Field label={t.invoices.detail.overrideVat} type="number" value={String(form.vatAmountOverride ?? '')} onChange={(value) => setField('vatAmountOverride', value)} />
-                <div className="mt-3" />
-                <Field label={t.invoices.detail.overrideGross} type="number" value={String(form.grossTotalOverride ?? '')} onChange={(value) => setField('grossTotalOverride', value)} />
-              </div>
-            </div>
-          </div>
+          </InvoiceCard>
         </div>
 
-        <div className="flex justify-end">
-          <button type="submit" data-testid="invoice-save" className="btn btn-primary w-full sm:w-auto" disabled={saving}>
-            <Save className="h-4 w-4" />
-            {saving ? t.invoices.detail.saving : t.invoices.detail.saveInvoice}
-          </button>
+        <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2 text-sm text-slate-500">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+            <span>{t.invoices.detail.pdfFooterNote}</span>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="submit"
+              data-testid="invoice-save"
+              className="btn btn-primary h-11 px-5"
+              disabled={saving}
+            >
+              <Save className="h-4 w-4" />
+              {saving ? t.invoices.detail.saving : t.invoices.detail.saveInvoice}
+            </button>
+            {invoice ? (
+              <button
+                type="button"
+                data-testid="invoice-generate-pdf"
+                className="btn btn-primary h-11 px-5"
+                onClick={handleGeneratePdf}
+                disabled={saving}
+              >
+                <FileText className="h-4 w-4" />
+                {t.invoices.detail.generatePdf}
+              </button>
+            ) : null}
+            {invoice?.pdfPath ? (
+              <button
+                type="button"
+                data-testid="invoice-download-pdf"
+                className="btn btn-primary h-11 px-5"
+                onClick={() => downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`)}
+              >
+                <Download className="h-4 w-4" />
+                {t.invoices.detail.downloadPdf}
+              </button>
+            ) : null}
+          </div>
         </div>
       </form>
     </div>
+  )
+}
+
+function InvoiceCard(props: { title: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={`card overflow-hidden ${props.className ?? ''}`}>
+      <div className="border-b border-slate-200 px-5 py-4">
+        <h2 className="text-sm font-semibold text-slate-900">{props.title}</h2>
+      </div>
+      <div className="space-y-4 px-5 py-5">{props.children}</div>
+    </section>
   )
 }
 
@@ -467,7 +683,7 @@ function VatPercentField(props: {
   return (
     <div>
       <select
-        className="input"
+        className="input h-10"
         data-testid={props.testId}
         value={preset}
         onChange={(event) => {
@@ -490,12 +706,18 @@ function VatPercentField(props: {
         <input
           className="input mt-2"
           type="number"
-          step="0.01"
-          min="0"
+          step={1}
+          min={0}
+          max={100}
+          inputMode="numeric"
           data-testid={props.testId ? `${props.testId}-custom` : undefined}
           placeholder={props.customPlaceholder}
           value={props.value}
-          onChange={(event) => props.onChange(event.target.value)}
+          onChange={(event) => props.onChange(normalizeWholeInput(event.target.value))}
+          onBlur={() => {
+            const normalized = props.value.trim() ? normalizeWholeInput(props.value) : '0'
+            props.onChange(normalized)
+          }}
         />
       ) : null}
     </div>
@@ -507,20 +729,39 @@ function Field(props: {
   label: string
   value: string
   type?: string
+  placeholder?: string
+  required?: boolean
   error?: string
+  multiline?: boolean
+  readOnly?: boolean
   onChange: (value: string) => void
 }) {
   return (
     <label>
-      <span className="label">{props.label}</span>
-      <input
-        className="input"
-        data-testid={props.testId}
-        type={props.type ?? 'text'}
-        step={props.type === 'number' ? '0.01' : undefined}
-        value={props.value}
-        onChange={(event) => props.onChange(event.target.value)}
-      />
+      <span className="label">
+        {props.label}
+        {props.required ? <span className="text-red-500"> *</span> : null}
+      </span>
+      {props.multiline ? (
+        <textarea
+          className="min-h-24 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+          data-testid={props.testId}
+          placeholder={props.placeholder}
+          value={props.value}
+          onChange={(event) => props.onChange(event.target.value)}
+        />
+      ) : (
+        <input
+          className={`input h-11${props.readOnly ? ' cursor-default bg-slate-50 text-slate-600' : ''}`}
+          data-testid={props.testId}
+          type={props.type ?? 'text'}
+          step={props.type === 'number' ? '0.01' : undefined}
+          placeholder={props.placeholder}
+          value={props.value}
+          readOnly={props.readOnly}
+          onChange={(event) => props.onChange(event.target.value)}
+        />
+      )}
       {props.error ? (
         <p className="mt-1 text-xs font-medium text-red-600" data-testid={props.testId ? `${props.testId}-error` : undefined}>
           {props.error}

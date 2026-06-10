@@ -1,4 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
+import { getActiveTranslations } from '../i18n/active'
 import type { Invoice, InvoicePayload } from '../types/invoice'
 import type { InvoicePaymentStatus } from '../types/invoice'
 
@@ -59,7 +60,7 @@ export async function fetchInvoicePdfBlob(id: string) {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
 
-  if (!response.ok) throw new Error('PDF could not be loaded')
+  if (!response.ok) throw new Error(getActiveTranslations().common.errors.pdfFailed)
   return response.blob()
 }
 

@@ -60,26 +60,42 @@ export const generateRepairOrderNumber = async (userId: string) => {
   });
 };
 
+const INVOICE_NUMBER_PREFIX = "INV-";
+
+const parseInvoiceSequence = (invoiceNumber: string) => {
+  const simple = invoiceNumber.match(/^INV-(\d+)$/);
+  if (simple) {
+    const sequence = Number(simple[1]);
+    return Number.isFinite(sequence) ? sequence : null;
+  }
+
+  const legacy = invoiceNumber.match(/^INV-\d{4}-(\d+)$/);
+  if (legacy) {
+    const sequence = Number(legacy[1]);
+    return Number.isFinite(sequence) ? sequence : null;
+  }
+
+  return null;
+};
+
 export const generateInvoiceNumber = async (userId: string) => {
-  const year = new Date().getFullYear();
-  const prefix = `INV-${year}-`;
-
-  return nextNumber(prefix, async () => {
-    const latest = await prisma.invoice.findFirst({
-      where: {
-        userId,
-        invoiceNumber: {
-          startsWith: prefix
-        }
-      },
-      orderBy: {
-        invoiceNumber: "desc"
-      },
-      select: {
-        invoiceNumber: true
+  const invoices = await prisma.invoice.findMany({
+    where: {
+      userId,
+      invoiceNumber: {
+        startsWith: INVOICE_NUMBER_PREFIX
       }
-    });
-
-    return latest?.invoiceNumber ?? null;
+    },
+    select: {
+      invoiceNumber: true
+    }
   });
+
+  const maxSequence = invoices.reduce((max, invoice) => {
+    const sequence = parseInvoiceSequence(invoice.invoiceNumber);
+    return sequence !== null && sequence > max ? sequence : max;
+  }, 0);
+
+  const nextSequence = maxSequence + 1;
+  return `${INVOICE_NUMBER_PREFIX}${String(nextSequence).padStart(3, "0")}`;
 };

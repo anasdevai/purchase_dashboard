@@ -1,6 +1,6 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
-import type { RepairOrder, RepairOrderPayload } from '../types/repairOrder'
-import type { RepairOrderStatus } from '../types/repairOrder'
+import { getActiveTranslations } from '../i18n/active'
+import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
 
 type RepairOrderResponse = { repairOrder: RepairOrder }
 type RepairOrderListResponse = { repairOrders: RepairOrder[] }
@@ -15,7 +15,10 @@ export async function fetchRepairOrders(query = '', status = '') {
 }
 
 export async function fetchRepairOrder(id: string) {
-  const response = await apiRequest<RepairOrderResponse>(`/api/repair-orders/${id}`)
+  const response = await apiRequest<RepairOrderResponse>(`/api/repair-orders/${encodeURIComponent(id)}`)
+  if (!response?.repairOrder?.id) {
+    throw new Error(getActiveTranslations().repairOrders.errors.loadDetailFailed)
+  }
   return response.repairOrder
 }
 
@@ -27,6 +30,9 @@ export async function saveRepairOrder(payload: RepairOrderPayload, id?: string) 
       body: JSON.stringify(payload),
     },
   )
+  if (!response?.repairOrder?.id) {
+    throw new Error(getActiveTranslations().repairOrders.errors.saveFailed)
+  }
   return response.repairOrder
 }
 
@@ -55,7 +61,7 @@ export async function fetchRepairOrderPdfBlob(id: string) {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
 
-  if (!response.ok) throw new Error('PDF could not be loaded')
+  if (!response.ok) throw new Error(getActiveTranslations().common.errors.pdfFailed)
   return response.blob()
 }
 

@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { generateContractPdf } from "../src/services/pdfService.js";
+import { getShopSettingsForUser, shopSettingsToPdf } from "../src/services/settingsService.js";
 
 const prisma = new PrismaClient();
 
@@ -11,7 +12,8 @@ const regenerateCompletedPdfs = async () => {
   });
 
   for (const contract of completedContracts) {
-    const pdfPath = await generateContractPdf(contract);
+    const shopSettings = shopSettingsToPdf(await getShopSettingsForUser(contract.userId));
+    const pdfPath = await generateContractPdf(contract, shopSettings);
     await prisma.contract.update({
       where: { id: contract.id },
       data: { pdfPath }

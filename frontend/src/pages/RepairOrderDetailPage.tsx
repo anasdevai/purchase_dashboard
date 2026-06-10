@@ -8,6 +8,7 @@ import {
   saveRepairOrder,
 } from '../api/repairOrders'
 import { createInvoiceFromRepairOrder } from '../api/invoices'
+import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
@@ -166,6 +167,12 @@ function serializeAccessories(selected: Set<AccessoryKey>, otherText: string) {
   return parts.join(',')
 }
 
+function formatDateInputValue(value: RepairOrder['expectedCompletionDate']) {
+  if (!value) return ''
+  if (typeof value === 'string') return value.slice(0, 10)
+  return ''
+}
+
 function fromRepairOrder(order: RepairOrder): RepairOrderPayload {
   return {
     customerName: order.customerName,
@@ -189,8 +196,18 @@ function fromRepairOrder(order: RepairOrder): RepairOrderPayload {
       order.depositAmount === null || order.depositAmount === undefined
         ? undefined
         : Number(order.depositAmount),
-    expectedCompletionDate: order.expectedCompletionDate?.slice(0, 10) ?? '',
+    expectedCompletionDate: formatDateInputValue(order.expectedCompletionDate),
     status: order.status,
+  }
+}
+
+function applyRepairOrderToForm(
+  order: RepairOrder,
+  accessories: TranslationSchema['repairOrders']['accessories'],
+) {
+  return {
+    form: fromRepairOrder(order),
+    accessoriesState: parseAccessories(order.accessoriesReceived ?? '', accessories),
   }
 }
 
@@ -280,6 +297,7 @@ export function NewRepairOrderPage() {
 }
 
 export function RepairOrderDetailPage(props: { mode?: 'new' }) {
+  const { user } = useAuth()
   const { t, interpolate } = useLanguage()
   const { confirm, showToast } = useAppConfirm()
   const params = useParams()
@@ -294,6 +312,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showActions, setShowActions] = useState(false)
+  const isExistingOrder = Boolean(repairOrderId)
 
   const repairStatuses = useMemo(
     () =>
@@ -314,22 +333,46 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   )
 
   useEffect(() => {
-    if (!repairOrderId) return
+    if (!repairOrderId || !user?.id) {
+      if (!repairOrderId) {
+        setLoading(false)
+        setRepairOrder(null)
+        setForm(emptyForm)
+        setSelectedAccessories(new Set())
+        setAccessoryOtherText('')
+        setShowActions(false)
+        setError(null)
+      }
+      return
+    }
+
     let alive = true
     setLoading(true)
-    fetchRepairOrder(repairOrderId)
+    setRepairOrder(null)
+    setForm(emptyForm)
+    setSelectedAccessories(new Set())
+    setAccessoryOtherText('')
+    setShowActions(false)
+    setError(null)
+
+    void fetchRepairOrder(repairOrderId)
       .then((data) => {
         if (!alive) return
-        setRepairOrder(data)
-        setForm(fromRepairOrder(data))
-        const parsed = parseAccessories(data.accessoriesReceived ?? '', t.repairOrders.accessories)
-        setSelectedAccessories(parsed.selected)
-        setAccessoryOtherText(parsed.otherText)
-        setShowActions(true)
-        setError(null)
+        try {
+          const next = applyRepairOrderToForm(data, t.repairOrders.accessories)
+          setRepairOrder(data)
+          setForm(next.form)
+          setSelectedAccessories(next.accessoriesState.selected)
+          setAccessoryOtherText(next.accessoriesState.otherText)
+          setShowActions(true)
+          setError(null)
+        } catch (err) {
+          setError(err instanceof Error ? err.message : t.repairOrders.errors.loadDetailFailed)
+        }
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : t.repairOrders.errors.loadDetailFailed)
+        if (!alive) return
+        setError(err instanceof Error ? err.message : t.repairOrders.errors.loadDetailFailed)
       })
       .finally(() => {
         if (alive) setLoading(false)
@@ -338,7 +381,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     return () => {
       alive = false
     }
-  }, [repairOrderId, t])
+  }, [repairOrderId, user?.id, t.repairOrders.accessories, t.repairOrders.errors.loadDetailFailed])
 
   const setField = (name: keyof RepairOrderPayload, value: string) => {
     setForm((current) => ({ ...current, [name]: value }))
@@ -445,11 +488,11 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
 
     try {
       const saved = await saveRepairOrder(validation.payload!, repairOrderId)
+      const next = applyRepairOrderToForm(saved, t.repairOrders.accessories)
       setRepairOrder(saved)
-      setForm(fromRepairOrder(saved))
-      const parsed = parseAccessories(saved.accessoriesReceived ?? '', t.repairOrders.accessories)
-      setSelectedAccessories(parsed.selected)
-      setAccessoryOtherText(parsed.otherText)
+      setForm(next.form)
+      setSelectedAccessories(next.accessoriesState.selected)
+      setAccessoryOtherText(next.accessoriesState.otherText)
       setShowActions(true)
       showToast('success', t.repairOrders.detail.savedSuccess)
 
@@ -465,7 +508,24 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     }
   }
 
-  if (loading) {
+  if (isExistingOrder && loading) {
+    return <div className="text-sm font-semibold text-slate-600">{t.repairOrders.detail.loading}</div>
+  }
+
+  if (isExistingOrder && error && !repairOrder) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">
+          {error}
+        </div>
+        <Link to="/repair-orders" className="btn btn-secondary w-full sm:w-auto">
+          {t.repairOrders.detail.backToList}
+        </Link>
+      </div>
+    )
+  }
+
+  if (isExistingOrder && !repairOrder) {
     return <div className="text-sm font-semibold text-slate-600">{t.repairOrders.detail.loading}</div>
   }
 
@@ -612,6 +672,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
               label={t.repairOrders.detail.deviceType}
               value={form.deviceType}
               presets={DEVICE_TYPE_PRESETS}
+              presetLabels={t.contractWizard.options}
               otherLabel={t.repairOrders.detail.otherOption}
               customPlaceholder={t.repairOrders.detail.deviceTypeCustomPlaceholder}
               error={fieldErrors.deviceType}
@@ -771,6 +832,7 @@ function PresetSelectField(props: {
   label: string
   value: string
   presets: readonly string[]
+  presetLabels?: Partial<Record<string, string>>
   otherLabel: string
   customPlaceholder: string
   error?: string
@@ -798,7 +860,7 @@ function PresetSelectField(props: {
       >
         {(props.presets as readonly string[]).filter((option) => option !== 'Other').map((option) => (
           <option key={option} value={option}>
-            {option}
+            {props.presetLabels?.[option] ?? option}
           </option>
         ))}
         <option value="Other">{props.otherLabel}</option>

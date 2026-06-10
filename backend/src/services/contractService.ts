@@ -7,8 +7,8 @@ import { getDayRange } from "../utils/date.js";
 import { HttpError } from "../utils/httpError.js";
 import { ensureDirectory, getContractStorageDir } from "../utils/paths.js";
 import { generateContractNumber } from "./numberingService.js";
-import { shopSettingsSchema } from "../validators/shopSettingsValidators.js";
-import { generateContractPdf, type PdfShopSettings } from "./pdfService.js";
+import { generateContractPdf } from "./pdfService.js";
+import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
 
 const includeFiles = {
   files: true
@@ -216,10 +216,8 @@ const assertCompletionFiles = (contract: ContractWithFiles) => {
 };
 
 const extractCompletionInput = (input: Record<string, unknown>) => {
-  const { shopSettings, ...contractInput } = input;
-  const parsedShopSettings =
-    shopSettings === undefined ? undefined : shopSettingsSchema.parse(shopSettings);
-  return { contractInput, shopSettings: parsedShopSettings };
+  const { shopSettings: _shopSettings, ...contractInput } = input;
+  return { contractInput };
 };
 
 export const completeContract = async (
@@ -233,7 +231,7 @@ export const completeContract = async (
     throw new HttpError(409, "Only draft contracts can be completed");
   }
 
-  const { contractInput, shopSettings } = extractCompletionInput(input);
+  const { contractInput } = extractCompletionInput(input);
 
   if (Object.keys(contractInput).length > 0) {
     await updateDraftContract(id, userId, contractInput);
@@ -251,16 +249,7 @@ export const completeContract = async (
   );
   assertCompletionFiles(contract);
 
-  const pdfShopSettings: PdfShopSettings | undefined = shopSettings
-    ? {
-        name: shopSettings.shopName?.trim() || env.SHOP_NAME,
-        address: shopSettings.shopAddress?.trim() || env.SHOP_ADDRESS,
-        phone: shopSettings.shopPhone?.trim() || env.SHOP_PHONE,
-        email: shopSettings.shopEmail?.trim() || env.SHOP_EMAIL,
-        ownerName: shopSettings.ownerName?.trim() || env.SHOP_OWNER_NAME,
-        logoDataUrl: shopSettings.logoDataUrl
-      }
-    : undefined;
+  const pdfShopSettings = shopSettingsToPdf(await getShopSettingsForUser(userId));
 
   const pdfPath = await generateContractPdf(
     {

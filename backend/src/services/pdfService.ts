@@ -64,11 +64,33 @@ const colors = {
 const value = (input: unknown) =>
   input === null || input === undefined || input === "" ? "-" : String(input);
 
-const money = (input: ContractWithFiles["purchasePrice"]) =>
-  input ? `$${Number(input.toString()).toFixed(2)}` : "$0.00";
+type MoneyLike = { toString: () => string } | number | null | undefined;
+
+// Standard PDF fonts (Helvetica) use WinAnsiEncoding where 0x80 is the euro sign.
+const PDF_EURO_SIGN = "\x80";
+
+const formatPdfMoney = (input: MoneyLike) => {
+  if (input === null || input === undefined || input === "") return `${PDF_EURO_SIGN}0.00`;
+  return `${PDF_EURO_SIGN}${Number(input.toString()).toFixed(2)}`;
+};
+
+const formatPdfWholeMoney = (input: MoneyLike) => {
+  if (input === null || input === undefined || input === "") return `${PDF_EURO_SIGN}0`;
+  return `${PDF_EURO_SIGN}${Math.round(Number(input.toString()))}`;
+};
 
 const formatDate = (date: Date) =>
   date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+
+const formatPdfDateEuropean = (date: Date) => {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}.${month}.${year}`;
+};
+
+const hasText = (value: unknown) =>
+  value !== null && value !== undefined && String(value).trim() !== "";
 
 const sectionTitle = (doc: PDFKit.PDFDocument, title: string, x: number, y: number, width: number) => {
   doc
@@ -99,6 +121,29 @@ const row = (
   });
 };
 
+const drawHorizontalRule = (doc: PDFKit.PDFDocument, x: number, y: number, width: number) => {
+  doc.strokeColor(colors.border).lineWidth(0.8).moveTo(x, y).lineTo(x + width, y).stroke();
+};
+
+const optionalTextRow = (
+  doc: PDFKit.PDFDocument,
+  label: string,
+  rowValue: unknown,
+  x: number,
+  y: number,
+  labelWidth: number,
+  valueWidth: number,
+  lineHeight = 14
+) => {
+  if (!hasText(rowValue)) return y;
+  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(colors.ink).text(label, x, y, { width: labelWidth });
+  doc.font("Helvetica").fontSize(8.5).fillColor(colors.ink).text(String(rowValue).trim(), x + labelWidth, y, {
+    width: valueWidth,
+    ellipsis: true
+  });
+  return y + lineHeight;
+};
+
 const addPanel = (doc: PDFKit.PDFDocument, x: number, y: number, width: number, height: number) => {
   doc.roundedRect(x, y, width, height, 7).fillAndStroke("#ffffff", colors.border);
 };
@@ -110,6 +155,269 @@ export type PdfShopSettings = {
   email: string;
   ownerName?: string;
   logoDataUrl?: string;
+  website?: string;
+  vatNumber?: string;
+  companyRegistrationNumber?: string;
+  taxNumber?: string;
+  accountHolder?: string;
+  iban?: string;
+  bicSwift?: string;
+  bankName?: string;
+  street?: string;
+  zipCode?: string;
+  city?: string;
+  country?: string;
+};
+
+const getStructuredAddressLines = (shopSettings?: PdfShopSettings) => {
+  if (!shopSettings) return [] as string[];
+
+  const lines: string[] = [];
+  if (shopSettings.street?.trim()) lines.push(shopSettings.street.trim());
+
+  const zipCity = [shopSettings.zipCode?.trim(), shopSettings.city?.trim()].filter(Boolean).join(" ");
+  const country = shopSettings.country?.trim();
+  if (zipCity && country) lines.push(`${zipCity} – ${country}`);
+  else if (zipCity) lines.push(zipCity);
+  else if (country) lines.push(country);
+
+  if (lines.length === 0 && shopSettings.address?.trim()) {
+    return shopSettings.address
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+
+  return lines;
+};
+
+const renderShopCompanyHeader = (doc: PDFKit.PDFDocument, shopSettings?: PdfShopSettings) => {
+  const left = page.margin;
+  const right = page.width - page.margin;
+  const contentWidth = right - left;
+  const padding = 20;
+  const logoWidth = 72;
+  const logoHeight = 52;
+  const logoX = left + padding;
+  const logoY = 42;
+
+  if (shopSettings) {
+    addShopLogo(doc, logoX, logoY, shopSettings, logoWidth, logoHeight);
+  }
+
+  const textWidth = contentWidth - logoWidth - padding * 2 - 12;
+  const textX = right - padding - textWidth;
+  let y = 46;
+
+  const addRightLine = (text: string, options?: { bold?: boolean; size?: number }) => {
+    if (!text.trim()) return;
+    doc
+      .font(options?.bold ? "Helvetica-Bold" : "Helvetica")
+      .fontSize(options?.size ?? 8)
+      .fillColor(colors.ink)
+      .text(text, textX, y, { width: textWidth, align: "right" });
+    y += (options?.size ?? 8) + 3;
+  };
+
+  addRightLine(shopSettings?.name?.trim() ?? "", { bold: true, size: 12 });
+  if (shopSettings?.ownerName?.trim()) addRightLine(shopSettings.ownerName.trim());
+  getStructuredAddressLines(shopSettings).forEach((line) => addRightLine(line));
+  if (shopSettings?.email?.trim()) addRightLine(shopSettings.email.trim());
+  if (shopSettings?.phone?.trim()) addRightLine(`Tel.: ${shopSettings.phone.trim()}`);
+  if (shopSettings?.website?.trim()) addRightLine(shopSettings.website.trim());
+  if (shopSettings?.vatNumber?.trim()) addRightLine(`UID: ${shopSettings.vatNumber.trim()}`);
+  if (shopSettings?.companyRegistrationNumber?.trim()) {
+    addRightLine(`Firmenbuchnummer: ${shopSettings.companyRegistrationNumber.trim()}`);
+  }
+  if (shopSettings?.taxNumber?.trim()) {
+    addRightLine(`Steuernummer: ${shopSettings.taxNumber.trim()}`);
+  }
+
+  const headerBottom = Math.max(y + 8, logoY + logoHeight + 12);
+  drawHorizontalRule(doc, left + padding, headerBottom, contentWidth - padding * 2);
+  return headerBottom + 14;
+};
+
+const REPAIR_PAGE_BOTTOM = 786;
+
+const ensureRepairPageSpace = (doc: PDFKit.PDFDocument, y: number, neededHeight: number) => {
+  if (y + neededHeight <= REPAIR_PAGE_BOTTOM) return y;
+  doc.addPage();
+  return page.margin + 36;
+};
+
+const renderRepairOrderShopHeader = (
+  doc: PDFKit.PDFDocument,
+  shopSettings: PdfShopSettings | undefined,
+  orderNumber: string,
+  orderDate: Date
+) => {
+  const left = page.margin;
+  const right = page.width - page.margin;
+  const contentWidth = right - left;
+  const padding = 20;
+  const logoWidth = 56;
+  const logoHeight = 40;
+  const logoX = left + padding;
+  const logoY = 40;
+
+  if (shopSettings) {
+    addShopLogo(doc, logoX, logoY, shopSettings, logoWidth, logoHeight);
+  }
+
+  const metaX = right - padding - 110;
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text("Repair Order No.", metaX, 42, {
+    width: 110,
+    align: "right",
+    lineBreak: false
+  });
+  doc.fontSize(9).fillColor(colors.ink).text(orderNumber, metaX, 52, { width: 110, align: "right", lineBreak: false });
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text("Date", metaX, 66, {
+    width: 110,
+    align: "right",
+    lineBreak: false
+  });
+  doc
+    .font("Helvetica")
+    .fontSize(7.5)
+    .fillColor(colors.ink)
+    .text(formatDate(orderDate), metaX, 76, { width: 110, align: "right", lineBreak: false });
+
+  const textWidth = contentWidth - logoWidth - padding * 2 - 16;
+  const textX = right - padding - textWidth;
+  let y = 44;
+
+  const addRightLine = (text: string, options?: { bold?: boolean; size?: number }) => {
+    if (!text.trim()) return;
+    doc
+      .font(options?.bold ? "Helvetica-Bold" : "Helvetica")
+      .fontSize(options?.size ?? 7.5)
+      .fillColor(colors.ink)
+      .text(text, textX, y, { width: textWidth, align: "right", lineBreak: false });
+    y += (options?.size ?? 7.5) + 2;
+  };
+
+  addRightLine(shopSettings?.name?.trim() ?? "", { bold: true, size: 10 });
+  getStructuredAddressLines(shopSettings).forEach((line) => addRightLine(line));
+  if (shopSettings?.phone?.trim()) addRightLine(`Tel.: ${shopSettings.phone.trim()}`);
+  if (shopSettings?.email?.trim()) addRightLine(shopSettings.email.trim());
+  if (shopSettings?.website?.trim()) addRightLine(shopSettings.website.trim());
+  if (shopSettings?.vatNumber?.trim()) addRightLine(`UID: ${shopSettings.vatNumber.trim()}`);
+
+  const headerBottom = Math.max(y + 6, logoY + logoHeight + 8);
+  drawHorizontalRule(doc, left + padding, headerBottom, contentWidth - padding * 2);
+  return headerBottom + 10;
+};
+
+const compactSectionTitle = (
+  doc: PDFKit.PDFDocument,
+  title: string,
+  x: number,
+  y: number,
+  width: number
+) => {
+  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(colors.ink).text(title, x, y, { lineBreak: false });
+  drawHorizontalRule(doc, x, y + 12, width);
+  return y + 18;
+};
+
+const compactRow = (
+  doc: PDFKit.PDFDocument,
+  label: string,
+  rowValue: unknown,
+  x: number,
+  y: number,
+  labelWidth: number,
+  valueWidth: number
+) => {
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text(label, x, y, { width: labelWidth, lineBreak: false });
+  doc.font("Helvetica").fontSize(7.2).fillColor(colors.ink).text(value(rowValue), x + labelWidth, y, {
+    width: valueWidth,
+    ellipsis: true,
+    lineBreak: false
+  });
+  return y + 11;
+};
+
+const compactMultilineRow = (
+  doc: PDFKit.PDFDocument,
+  label: string,
+  rowValue: unknown,
+  x: number,
+  y: number,
+  width: number,
+  maxHeight = 24
+) => {
+  if (!hasText(rowValue)) return y;
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text(label, x, y, { width: 52, lineBreak: false });
+  doc.font("Helvetica").fontSize(7.2).fillColor(colors.ink).text(value(rowValue), x + 54, y, {
+    width: width - 54,
+    height: maxHeight,
+    ellipsis: true
+  });
+  return y + maxHeight + 4;
+};
+
+const renderShopFooter = (
+  doc: PDFKit.PDFDocument,
+  shopSettings: PdfShopSettings | undefined,
+  startY: number,
+  innerX: number,
+  sectionWidth: number
+) => {
+  let y = startY;
+  const legalParts: string[] = [];
+
+  if (shopSettings?.vatNumber?.trim()) legalParts.push(`UID: ${shopSettings.vatNumber.trim()}`);
+  if (shopSettings?.companyRegistrationNumber?.trim()) {
+    legalParts.push(`Firmenbuchnummer: ${shopSettings.companyRegistrationNumber.trim()}`);
+  }
+  if (shopSettings?.taxNumber?.trim()) {
+    legalParts.push(`Steuernummer: ${shopSettings.taxNumber.trim()}`);
+  }
+
+  const hasBankDetails =
+    hasText(shopSettings?.accountHolder) ||
+    hasText(shopSettings?.iban) ||
+    hasText(shopSettings?.bicSwift) ||
+    hasText(shopSettings?.bankName);
+
+  if (legalParts.length === 0 && !hasBankDetails) return y;
+
+  drawHorizontalRule(doc, innerX, y, sectionWidth);
+  y += 12;
+
+  if (legalParts.length > 0) {
+    doc.font("Helvetica").fontSize(7.2).fillColor(colors.muted).text(legalParts.join("   |   "), innerX, y, {
+      width: sectionWidth
+    });
+    y += 14;
+  }
+
+  if (hasBankDetails) {
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink).text("Bankverbindung", innerX, y);
+    y += 12;
+
+    const bankRows: Array<[string, string | undefined]> = [
+      ["Kontoinhaber:", shopSettings?.accountHolder],
+      ["IBAN:", shopSettings?.iban],
+      ["BIC / SWIFT:", shopSettings?.bicSwift],
+      ["Bank:", shopSettings?.bankName]
+    ];
+
+    bankRows.forEach(([label, bankValue]) => {
+      if (!hasText(bankValue)) return;
+      doc.font("Helvetica-Bold").fontSize(7.5).fillColor(colors.ink).text(label, innerX, y, { width: 78 });
+      doc
+        .font("Helvetica")
+        .fontSize(7.5)
+        .fillColor(colors.ink)
+        .text(String(bankValue).trim(), innerX + 78, y, { width: sectionWidth - 78 });
+      y += 11;
+    });
+  }
+
+  return y;
 };
 
 const addPhoneIcon = (doc: PDFKit.PDFDocument, x: number, y: number) => {
@@ -123,12 +431,19 @@ const parseLogoDataUrl = (dataUrl: string) => {
   return Buffer.from(match[2], "base64");
 };
 
-const addShopLogo = (doc: PDFKit.PDFDocument, x: number, y: number, shop: PdfShopSettings) => {
+const addShopLogo = (
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  shop: PdfShopSettings,
+  fitWidth = 24,
+  fitHeight = 34
+) => {
   if (shop.logoDataUrl) {
     const buffer = parseLogoDataUrl(shop.logoDataUrl);
     if (buffer) {
       try {
-        doc.image(buffer, x, y, { fit: [24, 34], align: "center", valign: "center" });
+        doc.image(buffer, x, y, { fit: [fitWidth, fitHeight], align: "center", valign: "center" });
         return;
       } catch {
         // Fall through to file path or default icon.
@@ -140,7 +455,7 @@ const addShopLogo = (doc: PDFKit.PDFDocument, x: number, y: number, shop: PdfSho
     const absolutePath = toAbsolutePath(env.SHOP_LOGO_PATH);
     if (fs.existsSync(absolutePath) && absolutePath.toLowerCase().endsWith(".png")) {
       try {
-        doc.image(absolutePath, x, y, { fit: [24, 34], align: "center", valign: "center" });
+        doc.image(absolutePath, x, y, { fit: [fitWidth, fitHeight], align: "center", valign: "center" });
         return;
       } catch {
         // Fall through to default icon.
@@ -203,11 +518,6 @@ export const generateContractPdf = async (
   contract: ContractWithFiles,
   shopSettings?: PdfShopSettings
 ) => {
-  const shopName = shopSettings?.name?.trim() || env.SHOP_NAME;
-  const shopAddress = shopSettings?.address?.trim() || env.SHOP_ADDRESS || "We buy used devices";
-  const shopPhone = shopSettings?.phone?.trim() || env.SHOP_PHONE;
-  const shopEmail = shopSettings?.email?.trim() || env.SHOP_EMAIL;
-  const shopOwner = shopSettings?.ownerName?.trim() || env.SHOP_OWNER_NAME;
   const storageDir = getContractStorageDir(contract.userId, contract.contractNumber);
   await ensureDirectory(storageDir);
 
@@ -221,27 +531,8 @@ export const generateContractPdf = async (
   const contentWidth = right - left;
 
   doc.roundedRect(left, 30, contentWidth, 782, 10).fillAndStroke("#ffffff", colors.border);
-
-  if (shopSettings) {
-    addShopLogo(doc, left + 20, 54, shopSettings);
-  } else {
-    addPhoneIcon(doc, left + 20, 54);
-  }
-  doc.font("Helvetica-Bold").fontSize(18).fillColor(colors.ink).text(shopName, left + 56, 56);
-  doc.font("Helvetica").fontSize(8).fillColor(colors.muted).text(shopAddress, left + 56, 78, {
-    width: 230
-  });
-  const contactLine = [shopPhone, shopEmail].filter(Boolean).join(" | ");
-  if (contactLine) {
-    doc.fontSize(7).text(contactLine, left + 56, 91, {
-      width: 230
-    });
-  }
-  if (shopOwner) {
-    doc.fontSize(7).text(`Owner / Manager: ${shopOwner}`, left + 56, 103, {
-      width: 230
-    });
-  }
+  const contentStartY = renderShopCompanyHeader(doc, shopSettings);
+  const shopOwner = shopSettings?.ownerName?.trim() || "";
 
   doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text("Contract No.", right - 112, 58, {
     width: 92,
@@ -260,48 +551,58 @@ export const generateContractPdf = async (
     align: "right"
   });
 
-  doc.font("Helvetica-Bold").fontSize(11).fillColor(colors.ink).text("DEVICE PURCHASE CONTRACT", left, 122, {
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(colors.ink).text("DEVICE PURCHASE CONTRACT", left, contentStartY, {
     width: contentWidth,
     align: "center"
   });
 
   const sectionWidth = contentWidth - 40;
   const innerX = left + 20;
-  sectionTitle(doc, "Customer Information", innerX, 150, sectionWidth);
-  row(doc, "Name:", contract.customerName, innerX, 176, 235);
-  row(doc, "Phone:", contract.customerPhone, innerX + 255, 176, 220);
-  row(doc, "Address:", contract.customerAddress, innerX, 194, 475);
-  row(doc, "Email:", contract.customerEmail, innerX, 212, 235);
-  row(doc, "DOB:", contract.customerDateOfBirth ? contract.customerDateOfBirth.toISOString().slice(0, 10) : "-", innerX + 255, 212, 220);
-  row(doc, "ID Type:", contract.idDocumentNumber ? "Document" : "-", innerX, 230, 235);
-  row(doc, "ID Number:", contract.idDocumentNumber, innerX + 255, 230, 220);
+  const bodyStartY = contentStartY + 24;
+  sectionTitle(doc, "Customer Information", innerX, bodyStartY, sectionWidth);
+  row(doc, "Name:", contract.customerName, innerX, bodyStartY + 26, 235);
+  row(doc, "Phone:", contract.customerPhone, innerX + 255, bodyStartY + 26, 220);
+  row(doc, "Address:", contract.customerAddress, innerX, bodyStartY + 44, 475);
+  row(doc, "Email:", contract.customerEmail, innerX, bodyStartY + 62, 235);
+  row(
+    doc,
+    "DOB:",
+    contract.customerDateOfBirth ? contract.customerDateOfBirth.toISOString().slice(0, 10) : "-",
+    innerX + 255,
+    bodyStartY + 62,
+    220
+  );
+  row(doc, "ID Type:", contract.idDocumentNumber ? "Document" : "-", innerX, bodyStartY + 80, 235);
+  row(doc, "ID Number:", contract.idDocumentNumber, innerX + 255, bodyStartY + 80, 220);
 
-  sectionTitle(doc, "Device Information", innerX, 260, sectionWidth);
-  row(doc, "Device Type:", contract.deviceType, innerX, 286, 235);
-  row(doc, "Brand:", contract.brand, innerX + 255, 286, 220);
-  row(doc, "Model:", contract.model, innerX, 304, 235);
-  row(doc, "Storage:", contract.storage, innerX + 255, 304, 220);
-  row(doc, "IMEI / Serial:", contract.imei || contract.serialNumber, innerX, 322, 235);
-  row(doc, "Color:", contract.color, innerX + 255, 322, 220);
-  row(doc, "Condition:", contract.condition, innerX, 340, 235);
-  row(doc, "Battery Health:", contract.batteryHealth, innerX + 255, 340, 220);
-  row(doc, "Accessories:", contract.accessories, innerX, 358, 475);
-  row(doc, "Visible Damage:", contract.damageNotes, innerX, 376, 475);
+  const deviceSectionY = bodyStartY + 110;
+  sectionTitle(doc, "Device Information", innerX, deviceSectionY, sectionWidth);
+  row(doc, "Device Type:", contract.deviceType, innerX, deviceSectionY + 26, 235);
+  row(doc, "Brand:", contract.brand, innerX + 255, deviceSectionY + 26, 220);
+  row(doc, "Model:", contract.model, innerX, deviceSectionY + 44, 235);
+  row(doc, "Storage:", contract.storage, innerX + 255, deviceSectionY + 44, 220);
+  row(doc, "IMEI / Serial:", contract.imei || contract.serialNumber, innerX, deviceSectionY + 62, 235);
+  row(doc, "Color:", contract.color, innerX + 255, deviceSectionY + 62, 220);
+  row(doc, "Condition:", contract.condition, innerX, deviceSectionY + 80, 235);
+  row(doc, "Battery Health:", contract.batteryHealth, innerX + 255, deviceSectionY + 80, 220);
+  row(doc, "Accessories:", contract.accessories, innerX, deviceSectionY + 98, 475);
+  row(doc, "Visible Damage:", contract.damageNotes, innerX, deviceSectionY + 116, 475);
 
-  addPanel(doc, innerX, 410, sectionWidth, 74);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Purchase Details", innerX + 14, 426);
-  doc.font("Helvetica-Bold").fontSize(7.5).fillColor(colors.muted).text("Purchase Price:", innerX + 14, 452);
-  doc.font("Helvetica").fontSize(7.5).fillColor(colors.muted).text("Payment Method:", innerX + 14, 468);
-  doc.font("Helvetica-Bold").fontSize(25).fillColor(colors.ink).text(money(contract.purchasePrice), innerX + 320, 433, {
+  const purchasePanelY = deviceSectionY + 150;
+  addPanel(doc, innerX, purchasePanelY, sectionWidth, 74);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Purchase Details", innerX + 14, purchasePanelY + 16);
+  doc.font("Helvetica-Bold").fontSize(7.5).fillColor(colors.muted).text("Purchase Price:", innerX + 14, purchasePanelY + 42);
+  doc.font("Helvetica").fontSize(7.5).fillColor(colors.muted).text("Payment Method:", innerX + 14, purchasePanelY + 58);
+  doc.font("Helvetica-Bold").fontSize(25).fillColor(colors.ink).text(formatPdfMoney(contract.purchasePrice), innerX + 320, purchasePanelY + 23, {
     width: 138,
     align: "right"
   });
-  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(value(contract.paymentMethod), innerX + 320, 466, {
+  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(value(contract.paymentMethod), innerX + 320, purchasePanelY + 56, {
     width: 138,
     align: "right"
   });
 
-  const lowerY = 506;
+  const lowerY = purchasePanelY + 96;
   const leftPanelWidth = 244;
   const photoPanelWidth = sectionWidth - leftPanelWidth - 18;
   addPanel(doc, innerX, lowerY, leftPanelWidth, 150);
@@ -339,6 +640,8 @@ export const generateContractPdf = async (
   doc.font("Helvetica-Bold").fontSize(7).text("Date:", innerX + 272, 774);
   doc.font("Helvetica").fontSize(7).text(formatDate(contract.updatedAt), innerX + 296, 774);
 
+  renderShopFooter(doc, shopSettings, 748, innerX, sectionWidth);
+
   doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.blue).text("Thank you for your business!", left, 793, {
     width: contentWidth,
     align: "center",
@@ -354,8 +657,6 @@ export const generateContractPdf = async (
 
   return toRelativeStoragePath(absolutePdfPath);
 };
-
-type MoneyLike = { toString: () => string } | number | null | undefined;
 
 type RepairOrderForPdf = {
   userId: string;
@@ -410,11 +711,6 @@ type InvoiceForPdf = {
   }>;
 };
 
-const moneyValue = (input: MoneyLike) => {
-  if (input === null || input === undefined || input === "") return "$0.00";
-  return `$${Number(input.toString()).toFixed(2)}`;
-};
-
 const numericValue = (input: MoneyLike) => {
   if (input === null || input === undefined || input === "") return "0";
   return Number(input.toString()).toFixed(2).replace(/\.00$/, "");
@@ -453,35 +749,12 @@ const addDocumentHeader = (
   date: Date,
   shopSettings?: PdfShopSettings
 ) => {
-  const shopName = shopSettings?.name?.trim() || env.SHOP_NAME;
-  const shopAddress = shopSettings?.address?.trim() || env.SHOP_ADDRESS;
-  const shopPhone = shopSettings?.phone?.trim() || env.SHOP_PHONE;
-  const shopEmail = shopSettings?.email?.trim() || env.SHOP_EMAIL;
-  const shopOwner = shopSettings?.ownerName?.trim() || env.SHOP_OWNER_NAME;
   const left = page.margin;
   const right = page.width - page.margin;
   const contentWidth = right - left;
 
   doc.roundedRect(left, 30, contentWidth, 782, 10).fillAndStroke("#ffffff", colors.border);
-  if (shopSettings) {
-    addShopLogo(doc, left + 20, 54, shopSettings);
-  } else {
-    addPhoneIcon(doc, left + 20, 54);
-  }
-
-  doc.font("Helvetica-Bold").fontSize(18).fillColor(colors.ink).text(shopName, left + 56, 56);
-  doc.font("Helvetica").fontSize(8).fillColor(colors.muted).text(shopAddress || "Repair service", left + 56, 78, {
-    width: 260
-  });
-  const contactLine = [shopPhone, shopEmail].filter(Boolean).join(" | ");
-  if (contactLine) {
-    doc.fontSize(7).text(contactLine, left + 56, 91, { width: 260 });
-  }
-  if (shopOwner) {
-    doc.fontSize(7).text(`Owner / Manager: ${shopOwner}`, left + 56, 103, {
-      width: 260
-    });
-  }
+  const contentStartY = renderShopCompanyHeader(doc, shopSettings);
 
   doc.font("Helvetica-Bold").fontSize(7).fillColor(colors.muted).text(numberLabel, right - 140, 58, {
     width: 120,
@@ -500,10 +773,12 @@ const addDocumentHeader = (
     align: "right"
   });
 
-  doc.font("Helvetica-Bold").fontSize(12).fillColor(colors.ink).text(title, left, 126, {
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(colors.ink).text(title, left, contentStartY, {
     width: contentWidth,
     align: "center"
   });
+
+  return contentStartY + 24;
 };
 
 export const generateRepairOrderPdf = async (
@@ -514,7 +789,7 @@ export const generateRepairOrderPdf = async (
   await ensureDirectory(storageDir);
 
   const absolutePdfPath = `${storageDir}/repair-order.pdf`;
-  const doc = new PDFDocument({ margin: page.margin, size: "A4" });
+  const doc = new PDFDocument({ margin: page.margin, size: "A4", autoFirstPage: true });
   const stream = fs.createWriteStream(absolutePdfPath);
   doc.pipe(stream);
 
@@ -522,53 +797,126 @@ export const generateRepairOrderPdf = async (
   const innerX = left + 20;
   const right = page.width - page.margin;
   const sectionWidth = right - left - 40;
+  const halfWidth = Math.floor(sectionWidth / 2) - 8;
 
-  addDocumentHeader(doc, "REPAIR ORDER", "Repair Order No.", repairOrder.repairOrderNumber, repairOrder.createdAt, shopSettings);
+  doc.roundedRect(left, 30, right - left, 762, 10).fillAndStroke("#ffffff", colors.border);
 
-  sectionTitle(doc, "Customer Information", innerX, 156, sectionWidth);
-  row(doc, "Name:", repairOrder.customerName, innerX, 182, 235);
-  row(doc, "Phone:", repairOrder.customerPhone, innerX + 255, 182, 220);
-  row(doc, "Email:", repairOrder.customerEmail, innerX, 200, 235);
-  row(doc, "Address:", repairOrder.customerAddress, innerX, 218, 475);
+  let y = renderRepairOrderShopHeader(
+    doc,
+    shopSettings,
+    repairOrder.repairOrderNumber,
+    repairOrder.createdAt
+  );
 
-  sectionTitle(doc, "Device Information", innerX, 252, sectionWidth);
-  row(doc, "Device Type:", repairOrder.deviceType, innerX, 278, 235);
-  row(doc, "Brand:", repairOrder.brand, innerX + 255, 278, 220);
-  row(doc, "Model:", repairOrder.model, innerX, 296, 235);
-  row(doc, "IMEI/Serial:", repairOrder.imeiOrSerial, innerX + 255, 296, 220);
-  row(doc, "Password/PIN:", repairOrder.passwordPin, innerX, 314, 235);
-  row(doc, "Accessories:", formatAccessoriesReceived(repairOrder.accessoriesReceived), innerX, 332, 475);
-
-  sectionTitle(doc, "Repair Details", innerX, 368, sectionWidth);
-  row(doc, "Problem:", repairOrder.problemDescription, innerX, 394, 475);
-  row(doc, "Damage:", repairOrder.visibleDamage, innerX, 428, 475);
-  row(doc, "Notes:", repairOrder.technicianNotes, innerX, 462, 475);
-  row(doc, "Expected:", repairOrder.expectedCompletionDate ? formatDate(repairOrder.expectedCompletionDate) : "-", innerX, 496, 235);
-  row(doc, "Status:", repairOrder.status, innerX + 255, 496, 220);
-
-  addPanel(doc, innerX, 536, sectionWidth, 74);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Estimate", innerX + 14, 552);
-  doc.font("Helvetica").fontSize(7.5).fillColor(colors.muted).text("Estimated Price", innerX + 14, 576);
-  doc.font("Helvetica").fontSize(7.5).text("Deposit / Advance", innerX + 14, 592);
-  doc.font("Helvetica-Bold").fontSize(21).fillColor(colors.ink).text(moneyValue(repairOrder.estimatedPrice), innerX + 302, 558, {
-    width: 156,
-    align: "right"
-  });
-  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(moneyValue(repairOrder.depositAmount), innerX + 302, 590, {
-    width: 156,
-    align: "right"
-  });
-
-  addPanel(doc, innerX, 642, sectionWidth, 92);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Customer Signature", innerX + 14, 660);
-  doc.strokeColor(colors.border).lineWidth(0.8).moveTo(innerX + 14, 706).lineTo(innerX + 226, 706).stroke();
-  doc.font("Helvetica").fontSize(7).fillColor(colors.muted).text("Signature", innerX + 14, 714);
-  doc.strokeColor(colors.border).lineWidth(0.8).moveTo(innerX + 282, 706).lineTo(innerX + 458, 706).stroke();
-  doc.font("Helvetica").fontSize(7).fillColor(colors.muted).text("Date", innerX + 282, 714);
-
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.blue).text("Thank you for your business!", left, 793, {
-    width: right - left,
+  doc.font("Helvetica-Bold").fontSize(11).fillColor(colors.ink).text("REPAIR ORDER", innerX, y, {
+    width: sectionWidth,
     align: "center",
+    lineBreak: false
+  });
+  y += 20;
+
+  y = compactSectionTitle(doc, "Customer Information", innerX, y, sectionWidth);
+  let rowY = y;
+  compactRow(doc, "Name:", repairOrder.customerName, innerX, rowY, 52, halfWidth - 52);
+  compactRow(doc, "Phone:", repairOrder.customerPhone, innerX + halfWidth + 16, rowY, 52, halfWidth - 52);
+  y = rowY + 11;
+  y = compactRow(doc, "Email:", repairOrder.customerEmail, innerX, y, 52, sectionWidth - 52);
+  y = compactRow(doc, "Address:", repairOrder.customerAddress, innerX, y, 52, sectionWidth - 52);
+  y += 6;
+
+  y = compactSectionTitle(doc, "Device Information", innerX, y, sectionWidth);
+  rowY = y;
+  compactRow(doc, "Device Type:", repairOrder.deviceType, innerX, rowY, 64, halfWidth - 64);
+  compactRow(doc, "Brand:", repairOrder.brand, innerX + halfWidth + 16, rowY, 52, halfWidth - 52);
+  y = rowY + 11;
+  rowY = y;
+  compactRow(doc, "Model:", repairOrder.model, innerX, rowY, 52, halfWidth - 52);
+  compactRow(doc, "IMEI/Serial:", repairOrder.imeiOrSerial, innerX + halfWidth + 16, rowY, 64, halfWidth - 64);
+  y = rowY + 11;
+  y = compactRow(doc, "Password/PIN:", repairOrder.passwordPin, innerX, y, 64, halfWidth - 64);
+  y = compactRow(
+    doc,
+    "Accessories:",
+    formatAccessoriesReceived(repairOrder.accessoriesReceived),
+    innerX,
+    y,
+    64,
+    sectionWidth - 64
+  );
+  y += 6;
+
+  y = compactSectionTitle(doc, "Repair Details", innerX, y, sectionWidth);
+  y = compactMultilineRow(doc, "Problem:", repairOrder.problemDescription, innerX, y, sectionWidth, 28);
+  y = compactMultilineRow(doc, "Damage:", repairOrder.visibleDamage, innerX, y, sectionWidth, 20);
+  y = compactMultilineRow(doc, "Notes:", repairOrder.technicianNotes, innerX, y, sectionWidth, 20);
+  rowY = y;
+  compactRow(
+    doc,
+    "Expected:",
+    repairOrder.expectedCompletionDate ? formatDate(repairOrder.expectedCompletionDate) : "-",
+    innerX,
+    rowY,
+    64,
+    halfWidth - 64
+  );
+  compactRow(doc, "Status:", repairOrder.status, innerX + halfWidth + 16, rowY, 52, halfWidth - 52);
+  y = rowY + 11;
+  y += 8;
+
+  const estimatePanelHeight = 54;
+  y = ensureRepairPageSpace(doc, y, estimatePanelHeight + 8);
+  addPanel(doc, innerX, y, sectionWidth, estimatePanelHeight);
+  doc.font("Helvetica-Bold").fontSize(8.5).fillColor(colors.ink).text("Estimate", innerX + 12, y + 10, {
+    lineBreak: false
+  });
+  doc.font("Helvetica").fontSize(7).fillColor(colors.muted).text("Estimated Price", innerX + 12, y + 26, {
+    lineBreak: false
+  });
+  doc.font("Helvetica").fontSize(7).text("Deposit / Advance", innerX + 12, y + 38, { lineBreak: false });
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(18)
+    .fillColor(colors.ink)
+    .text(formatPdfMoney(repairOrder.estimatedPrice), innerX + sectionWidth - 168, y + 12, {
+      width: 156,
+      align: "right",
+      lineBreak: false
+    });
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(colors.ink)
+    .text(formatPdfMoney(repairOrder.depositAmount), innerX + sectionWidth - 168, y + 36, {
+      width: 156,
+      align: "right",
+      lineBreak: false
+    });
+  y += estimatePanelHeight + 10;
+
+  const signaturePanelHeight = 68;
+  y = ensureRepairPageSpace(doc, y, signaturePanelHeight);
+  addPanel(doc, innerX, y, sectionWidth, signaturePanelHeight);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor(colors.ink)
+    .text("Customer Signature", innerX + 12, y + 10, { lineBreak: false });
+  doc
+    .strokeColor(colors.border)
+    .lineWidth(0.8)
+    .moveTo(innerX + 12, y + 48)
+    .lineTo(innerX + 220, y + 48)
+    .stroke();
+  doc.font("Helvetica").fontSize(6.8).fillColor(colors.muted).text("Signature", innerX + 12, y + 54, {
+    lineBreak: false
+  });
+  doc
+    .strokeColor(colors.border)
+    .lineWidth(0.8)
+    .moveTo(innerX + 248, y + 48)
+    .lineTo(innerX + sectionWidth - 12, y + 48)
+    .stroke();
+  doc.font("Helvetica").fontSize(6.8).fillColor(colors.muted).text("Date", innerX + 248, y + 54, {
     lineBreak: false
   });
 
@@ -599,47 +947,59 @@ export const generateInvoicePdf = async (
   const right = page.width - page.margin;
   const sectionWidth = right - left - 40;
 
-  addDocumentHeader(doc, "INVOICE", "Invoice No.", invoice.invoiceNumber, invoice.invoiceDate, shopSettings);
+  doc.roundedRect(left, 30, right - left, 782, 10).fillAndStroke("#ffffff", colors.border);
+  let y = renderShopCompanyHeader(doc, shopSettings);
 
-  sectionTitle(doc, "Customer Information", innerX, 156, sectionWidth);
-  row(doc, "Name:", invoice.customerName, innerX, 182, 235);
-  row(doc, "Phone:", invoice.customerPhone, innerX + 255, 182, 220);
-  row(doc, "Address:", invoice.customerAddress, innerX, 200, 475);
-  row(doc, "Email:", invoice.customerEmail, innerX, 218, 235);
-  row(doc, "Payment:", invoice.paymentMethod, innerX + 255, 218, 220);
-  row(doc, "Status:", invoice.paymentStatus, innerX + 255, 236, 220);
+  doc.font("Helvetica-Bold").fontSize(14).fillColor(colors.ink).text("RECHNUNG", innerX, y, {
+    width: sectionWidth
+  });
+  y += 24;
 
-  if (invoice.deviceSummary || invoice.repairSummary) {
-    sectionTitle(doc, "Repair Reference", innerX, 268, sectionWidth);
-    row(doc, "Device:", invoice.deviceSummary, innerX, 294, 475);
-    row(doc, "Repair:", invoice.repairSummary, innerX, 312, 475);
+  y = optionalTextRow(doc, "Rechnungsnummer:", invoice.invoiceNumber, innerX, y, 96, sectionWidth - 96);
+  y = optionalTextRow(doc, "Datum:", formatPdfDateEuropean(invoice.invoiceDate), innerX, y, 96, sectionWidth - 96);
+  y = optionalTextRow(doc, "Kunde:", invoice.customerName, innerX, y, 96, sectionWidth - 96);
+  y = optionalTextRow(doc, "Adresse:", invoice.customerAddress, innerX, y, 96, sectionWidth - 96);
+  y = optionalTextRow(doc, "Telefon:", invoice.customerPhone, innerX, y, 96, sectionWidth - 96);
+  y = optionalTextRow(doc, "E-Mail:", invoice.customerEmail, innerX, y, 96, sectionWidth - 96);
+
+  drawHorizontalRule(doc, innerX, y + 4, sectionWidth);
+  y += 16;
+
+  const serviceSummary = invoice.repairSummary?.trim() || invoice.deviceSummary?.trim();
+  if (serviceSummary) {
+    y = optionalTextRow(doc, "Leistung:", serviceSummary, innerX, y, 96, sectionWidth - 96);
+    drawHorizontalRule(doc, innerX, y + 4, sectionWidth);
+    y += 16;
   }
 
-  const tableY = 354;
+  const tableY = y;
   doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink);
-  doc.text("Description", innerX, tableY, { width: 210 });
-  doc.text("Qty", innerX + 220, tableY, { width: 38, align: "right" });
-  doc.text("Unit", innerX + 268, tableY, { width: 62, align: "right" });
-  doc.text("VAT %", innerX + 340, tableY, { width: 48, align: "right" });
-  doc.text("Total", innerX + 398, tableY, { width: 76, align: "right" });
-  doc.strokeColor(colors.border).moveTo(innerX, tableY + 16).lineTo(innerX + sectionWidth, tableY + 16).stroke();
+  doc.text("Pos.", innerX, tableY, { width: 24 });
+  doc.text("Beschreibung", innerX + 28, tableY, { width: 168 });
+  doc.text("Menge", innerX + 200, tableY, { width: 34, align: "right" });
+  doc.text("Einzelpreis", innerX + 238, tableY, { width: 58, align: "right" });
+  doc.text("MwSt %", innerX + 302, tableY, { width: 42, align: "right" });
+  doc.text("Gesamt", innerX + 350, tableY, { width: sectionWidth - 350, align: "right" });
+  drawHorizontalRule(doc, innerX, tableY + 14, sectionWidth);
 
-  let y = tableY + 26;
-  invoice.items.slice(0, 14).forEach((item) => {
-    doc.font("Helvetica").fontSize(7.4).fillColor(colors.ink);
-    doc.text(value(item.description), innerX, y, { width: 210, ellipsis: true });
-    doc.text(numericValue(item.quantity), innerX + 220, y, { width: 38, align: "right" });
-    doc.text(moneyValue(item.unitPrice), innerX + 268, y, { width: 62, align: "right" });
-    doc.text(numericValue(item.vatPercent), innerX + 340, y, { width: 48, align: "right" });
-    doc.text(moneyValue(item.lineTotal), innerX + 398, y, { width: 76, align: "right" });
-    y += 20;
+  y = tableY + 22;
+  invoice.items.slice(0, 14).forEach((item, index) => {
+    doc.font("Helvetica").fontSize(7.6).fillColor(colors.ink);
+    doc.text(String(index + 1), innerX, y, { width: 24 });
+    doc.text(value(item.description), innerX + 28, y, { width: 168, ellipsis: true });
+    doc.text(numericValue(item.quantity), innerX + 200, y, { width: 34, align: "right" });
+    doc.text(formatPdfWholeMoney(item.unitPrice), innerX + 238, y, { width: 58, align: "right" });
+    doc.text(numericValue(item.vatPercent), innerX + 302, y, { width: 42, align: "right" });
+    doc.text(formatPdfWholeMoney(item.lineTotal), innerX + 350, y, {
+      width: sectionWidth - 350,
+      align: "right"
+    });
+    y += 18;
   });
 
-  doc.strokeColor(colors.border).moveTo(innerX, y + 4).lineTo(innerX + sectionWidth, y + 4).stroke();
-  y += 22;
+  drawHorizontalRule(doc, innerX, y + 2, sectionWidth);
+  y += 14;
 
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink).text("VAT Breakdown", innerX, y);
-  y += 16;
   const vatBreakdown = new Map<string, { net: number; vat: number }>();
   invoice.items.forEach((item) => {
     const key = numericValue(item.vatPercent);
@@ -648,40 +1008,55 @@ export const generateInvoicePdf = async (
     current.vat += Number(item.lineVat?.toString() ?? 0);
     vatBreakdown.set(key, current);
   });
+
+  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink).text("MwSt-Aufschlüsselung", innerX, y);
+  y += 14;
   Array.from(vatBreakdown.entries()).forEach(([percent, totals]) => {
-    doc.font("Helvetica").fontSize(7.4).fillColor(colors.muted).text(`${percent}% VAT on ${moneyValue(totals.net)}: ${moneyValue(totals.vat)}`, innerX, y, {
-      width: 260
-    });
-    y += 14;
+    doc
+      .font("Helvetica")
+      .fontSize(7.6)
+      .fillColor(colors.muted)
+      .text(`+ ${percent}% MwSt. auf ${formatPdfWholeMoney(totals.net)}: ${formatPdfWholeMoney(totals.vat)}`, innerX, y, {
+        width: 260
+      });
+    y += 13;
   });
 
-  const net = invoice.netAmountOverride ?? invoice.calculatedNetAmount;
-  const vat = invoice.vatAmountOverride ?? invoice.calculatedVatAmount;
-  const gross = invoice.grossTotalOverride ?? invoice.calculatedGrossTotal;
-  const totalsX = innerX + 306;
-  addPanel(doc, totalsX, Math.max(574, y - 60), 168, 94);
-  const totalsY = Math.max(590, y - 44);
-  doc.font("Helvetica").fontSize(8).fillColor(colors.muted).text("Net Amount", totalsX + 14, totalsY);
-  doc.font("Helvetica").fontSize(8).text("VAT Amount", totalsX + 14, totalsY + 20);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Gross Total", totalsX + 14, totalsY + 44);
-  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(moneyValue(net), totalsX + 86, totalsY, { width: 62, align: "right" });
-  doc.text(moneyValue(vat), totalsX + 86, totalsY + 20, { width: 62, align: "right" });
-  doc.font("Helvetica-Bold").fontSize(10).text(moneyValue(gross), totalsX + 86, totalsY + 44, { width: 62, align: "right" });
+  const net = invoice.calculatedNetAmount;
+  const vat = invoice.calculatedVatAmount;
+  const gross = invoice.calculatedGrossTotal;
+  const totalsX = innerX + Math.max(250, sectionWidth - 190);
+  const totalsY = y;
+  addPanel(doc, totalsX, totalsY, 170, 88);
+  doc.font("Helvetica").fontSize(8).fillColor(colors.muted).text("Netto-Betrag", totalsX + 12, totalsY + 12);
+  doc.font("Helvetica").fontSize(8).text("MwSt.", totalsX + 12, totalsY + 30);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(colors.ink).text("Brutto-Gesamt", totalsX + 12, totalsY + 52);
+  doc.font("Helvetica").fontSize(8).fillColor(colors.ink).text(formatPdfWholeMoney(net), totalsX + 88, totalsY + 12, {
+    width: 70,
+    align: "right"
+  });
+  doc.text(formatPdfWholeMoney(vat), totalsX + 88, totalsY + 30, { width: 70, align: "right" });
+  doc.font("Helvetica-Bold").fontSize(10).text(formatPdfWholeMoney(gross), totalsX + 88, totalsY + 50, {
+    width: 70,
+    align: "right"
+  });
 
-  if (invoice.notes) {
-    sectionTitle(doc, "Notes", innerX, 704, sectionWidth);
-    doc.font("Helvetica").fontSize(7.5).fillColor(colors.ink).text(invoice.notes, innerX, 730, {
+  y = Math.max(y + 96, totalsY + 100);
+
+  if (hasText(invoice.notes)) {
+    drawHorizontalRule(doc, innerX, y, sectionWidth);
+    y += 12;
+    doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.ink).text("Anmerkungen", innerX, y);
+    y += 12;
+    doc.font("Helvetica").fontSize(7.6).fillColor(colors.ink).text(String(invoice.notes).trim(), innerX, y, {
       width: sectionWidth,
-      height: 42,
+      height: 48,
       ellipsis: true
     });
+    y += 56;
   }
 
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(colors.blue).text("Thank you for your business!", left, 793, {
-    width: right - left,
-    align: "center",
-    lineBreak: false
-  });
+  renderShopFooter(doc, shopSettings, Math.min(y + 8, 700), innerX, sectionWidth);
 
   doc.end();
 

@@ -15,24 +15,35 @@ const optionalDate = z.preprocess(
   z.coerce.date().optional()
 );
 
-const optionalMoney = z.preprocess(
-  (value) => (value === "" || value === undefined || value === null ? undefined : value),
-  z.coerce.number().min(0).optional()
-);
+const wholeNumberMessage = "Must be a whole number";
 
-const positiveNumber = z.coerce.number().positive();
-const nonNegativeNumber = z.coerce.number().min(0);
+const isWholeNumber = (value: number) => Number.isInteger(value);
+
+const quantitySchema = z.coerce
+  .number({ invalid_type_error: wholeNumberMessage })
+  .min(1, "Quantity must be at least 1")
+  .refine(isWholeNumber, { message: wholeNumberMessage });
+
+const wholeEuroSchema = z.coerce
+  .number({ invalid_type_error: wholeNumberMessage })
+  .min(0, "Amount must be zero or greater")
+  .refine(isWholeNumber, { message: wholeNumberMessage });
+
+const wholeVatSchema = z.coerce
+  .number({ invalid_type_error: wholeNumberMessage })
+  .min(0, "VAT must be zero or greater")
+  .max(100, "VAT cannot exceed 100")
+  .refine(isWholeNumber, { message: wholeNumberMessage });
 
 export const invoiceItemSchema = z.object({
   description: requiredText(1000),
-  quantity: positiveNumber,
-  unitPrice: nonNegativeNumber,
-  vatPercent: nonNegativeNumber
+  quantity: quantitySchema,
+  unitPrice: wholeEuroSchema,
+  vatPercent: wholeVatSchema
 });
 
 export const invoiceSchema = z.object({
   repairOrderId: optionalText,
-  invoiceNumber: optionalText,
   invoiceDate: optionalDate,
   customerName: requiredText(150),
   customerAddress: optionalText,
@@ -45,9 +56,6 @@ export const invoiceSchema = z.object({
   repairSummary: optionalText,
   paymentMethod: z.enum(invoicePaymentMethods).optional(),
   paymentStatus: z.enum(invoicePaymentStatuses).optional(),
-  netAmountOverride: optionalMoney,
-  vatAmountOverride: optionalMoney,
-  grossTotalOverride: optionalMoney,
   notes: optionalText,
   items: z.array(invoiceItemSchema).min(1)
 });

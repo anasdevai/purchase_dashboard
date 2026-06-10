@@ -41,7 +41,6 @@ export type Invoice = {
 
 export type InvoicePayload = {
   repairOrderId?: string
-  invoiceNumber?: string
   invoiceDate?: string
   customerName: string
   customerAddress?: string
@@ -51,9 +50,6 @@ export type InvoicePayload = {
   repairSummary?: string
   paymentMethod?: InvoicePaymentMethod
   paymentStatus?: InvoicePaymentStatus
-  netAmountOverride?: number
-  vatAmountOverride?: number
-  grossTotalOverride?: number
   notes?: string
   items: Array<{
     description: string

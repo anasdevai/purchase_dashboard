@@ -170,7 +170,12 @@ export function RepairOrdersPage() {
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex justify-end gap-2">
-                        <Link className="btn btn-secondary h-8 w-8 p-0" to={`/repair-orders/${order.id}`} title={t.table.open}>
+                        <Link
+                          className="btn btn-secondary h-8 w-8 p-0"
+                          data-testid={`repair-order-view-${order.id}`}
+                          to={`/repair-orders/${order.id}`}
+                          title={t.table.open}
+                        >
                           <Eye className="h-4 w-4" />
                         </Link>
                         {order.pdfPath ? (

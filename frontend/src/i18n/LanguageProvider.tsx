@@ -2,14 +2,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
+import { formatMoney as formatMoneyValue } from '../utils/formatMoney'
 import { translations } from './locales'
+import { LANGUAGE_STORAGE_KEY, readStoredLanguage } from './active'
 import type { Language, TranslationSchema } from './types'
-
-const STORAGE_KEY = 'device-contract-app-language'
 
 type LanguageContextValue = {
   language: Language
@@ -22,27 +23,23 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 
-function readStoredLanguage(): Language {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored === 'de' || stored === 'en') return stored
-  } catch {
-    // ignore
-  }
-  return 'de'
-}
-
 export function LanguageProvider(props: { children: ReactNode }) {
   const [language, setLanguageState] = useState<Language>(readStoredLanguage)
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
     try {
-      localStorage.setItem(STORAGE_KEY, lang)
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, lang)
     } catch {
       // ignore
     }
   }, [])
+
+  useEffect(() => {
+    document.documentElement.lang = language
+    const { app } = translations[language]
+    document.title = `${app.nameLine1} ${app.nameLine2}`
+  }, [language])
 
   const interpolate = useCallback(
     (text: string, vars: Record<string, string | number>) => {
@@ -56,11 +53,7 @@ export function LanguageProvider(props: { children: ReactNode }) {
 
   const locale = language === 'de' ? 'de-DE' : 'en-US'
 
-  const formatMoney = useCallback(
-    (value: number) =>
-      value.toLocaleString(locale, { style: 'currency', currency: 'USD' }),
-    [locale],
-  )
+  const formatMoney = useCallback((value: number) => formatMoneyValue(value), [])
 
   const formatDate = useCallback(
     (iso: string) => {

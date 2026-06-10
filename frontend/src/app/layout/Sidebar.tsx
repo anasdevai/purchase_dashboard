@@ -4,12 +4,11 @@ import {
   LayoutDashboard,
   LogOut,
   PlusSquare,
-  ReceiptText,
   Search,
   Settings,
-  Wrench,
   X,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../auth/AuthContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
@@ -17,22 +16,144 @@ import { useLayout } from './LayoutContext'
 
 const LOGO_SRC = '/company_logo.png'
 
+type NavItem = {
+  to: string
+  label: string
+  icon: LucideIcon
+  testId: string
+  end?: boolean
+}
+
+type NavSection = {
+  title: string
+  items: NavItem[]
+}
+
+function SidebarNavLink(props: {
+  item: NavItem
+  onNavigate?: () => void
+}) {
+  const { item, onNavigate } = props
+  const Icon = item.icon
+
+  return (
+    <li>
+      <NavLink
+        to={item.to}
+        end={item.end}
+        data-testid={item.testId}
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          clsx(
+            'relative flex items-center gap-3 rounded-lg py-2.5 pl-3 pr-3 text-sm font-medium transition',
+            isActive
+              ? 'bg-white/15 text-white'
+              : 'text-white/90 hover:bg-white/10 hover:text-white',
+          )
+        }
+      >
+        {({ isActive }) => (
+          <>
+            {isActive ? (
+              <span
+                className="absolute bottom-2 left-0 top-2 w-1 rounded-r bg-sky-300"
+                aria-hidden
+              />
+            ) : null}
+            <Icon className="h-5 w-5 shrink-0" />
+            <span className="truncate">{item.label}</span>
+          </>
+        )}
+      </NavLink>
+    </li>
+  )
+}
+
 function SidebarNav(props: { onNavigate?: () => void }) {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const { t } = useLanguage()
   const { onNavigate } = props
 
-  const navItems = [
-    { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
-    { to: '/contracts/new', label: t.nav.newContract, icon: PlusSquare, testId: 'nav-new-contract' },
-    { to: '/contracts', label: t.nav.contracts, icon: FileText, testId: 'nav-contracts' },
-    { to: '/contracts/search', label: t.nav.searchContracts, icon: Search, testId: 'nav-search-contracts' },
-    { to: '/repair-orders/new', label: t.nav.newRepairOrder, icon: Wrench, testId: 'nav-new-repair-order' },
-    { to: '/repair-orders', label: t.nav.repairOrders, icon: Wrench, testId: 'nav-repair-orders' },
-    { to: '/invoices/new', label: t.nav.newInvoice, icon: ReceiptText, testId: 'nav-new-invoice' },
-    { to: '/invoices', label: t.nav.invoices, icon: ReceiptText, testId: 'nav-invoices' },
-    { to: '/settings', label: t.nav.settings, icon: Settings, testId: 'nav-settings' },
+  const sections: NavSection[] = [
+    {
+      title: t.nav.sections.overview,
+      items: [
+        { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
+        {
+          to: '/contracts/search',
+          label: t.nav.searchContracts,
+          icon: Search,
+          testId: 'nav-search-contracts',
+        },
+      ],
+    },
+    {
+      title: t.nav.sections.contract,
+      items: [
+        {
+          to: '/contracts/new',
+          label: t.nav.newContract,
+          icon: PlusSquare,
+          testId: 'nav-new-contract',
+        },
+        {
+          to: '/contracts',
+          label: t.nav.contracts,
+          icon: FileText,
+          testId: 'nav-contracts',
+          end: true,
+        },
+      ],
+    },
+    {
+      title: t.nav.sections.repairOrders,
+      items: [
+        {
+          to: '/repair-orders/new',
+          label: t.nav.newRepairOrder,
+          icon: PlusSquare,
+          testId: 'nav-new-repair-order',
+        },
+        {
+          to: '/repair-orders',
+          label: t.nav.repairOrders,
+          icon: FileText,
+          testId: 'nav-repair-orders',
+          end: true,
+        },
+      ],
+    },
+    {
+      title: t.nav.sections.invoices,
+      items: [
+        {
+          to: '/invoices/new',
+          label: t.nav.newInvoice,
+          icon: PlusSquare,
+          testId: 'nav-new-invoice',
+        },
+        {
+          to: '/invoices',
+          label: t.nav.invoices,
+          icon: FileText,
+          testId: 'nav-invoices',
+          end: true,
+        },
+      ],
+    },
+    {
+      title: t.nav.sections.settings,
+      items: [
+        {
+          to: '/settings',
+          label: t.nav.settings,
+          icon: Settings,
+          testId: 'nav-settings',
+          end: true,
+        },
+      ],
+    },
   ]
 
   return (
@@ -41,39 +162,30 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         <img
           src={LOGO_SRC}
           alt=""
-          className="h-[72px] w-auto max-w-[180px] object-contain mix-blend-screen"
+          className="h-[72px] w-auto max-w-[180px] cursor-pointer object-contain mix-blend-screen transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.03]"
         />
         <p className="mt-3 text-[11px] font-medium leading-snug text-white/90">
           {t.app.nameLine1} {t.app.nameLine2}
         </p>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3">
-        <ul className="space-y-1">
-          {navItems.map(({ to, label, icon: Icon, testId }) => (
-            <li key={to}>
-              <NavLink
-                to={to}
-                data-testid={testId}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  clsx(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'text-white/90 hover:bg-white/10 hover:text-white',
-                  )
-                }
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span className="truncate">{label}</span>
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+        {sections.map((section, sectionIndex) => (
+          <div key={section.title}>
+            {sectionIndex > 0 ? <div className="my-3 border-t border-white/15" aria-hidden /> : null}
+            <p className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-white/45">
+              {section.title}
+            </p>
+            <ul className="space-y-0.5">
+              {section.items.map((item) => (
+                <SidebarNavLink key={item.to} item={item} onNavigate={onNavigate} />
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
-      <div className="shrink-0 px-3 pb-4 pt-2">
+      <div className="shrink-0 border-t border-white/10 px-3 pb-4 pt-3">
         <button
           type="button"
           data-testid="nav-logout"
@@ -82,7 +194,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
             onNavigate?.()
             navigate('/login')
           }}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
         >
           <LogOut className="h-5 w-5 shrink-0" />
           <span className="truncate">{t.nav.logout}</span>

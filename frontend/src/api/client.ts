@@ -1,3 +1,5 @@
+import { getActiveTranslations } from '../i18n/active'
+
 const API_PORT = '4000'
 
 function resolveApiBaseUrl() {
@@ -46,6 +48,7 @@ export function clearToken() {
 }
 
 async function readError(response: Response) {
+  const fallback = getActiveTranslations().common.errors.requestFailed
   try {
     const body = (await response.json()) as {
       message?: string
@@ -59,11 +62,11 @@ async function readError(response: Response) {
     const formMessages = body.errors?.formErrors ?? []
     const details = [...formMessages, ...fieldMessages]
     if (details.length > 0) {
-      return `${body.message || 'Request failed'} (${details.join('; ')})`
+      return `${body.message || fallback} (${details.join('; ')})`
     }
-    return body.message || 'Request failed'
+    return body.message || fallback
   } catch {
-    return 'Request failed'
+    return fallback
   }
 }
 

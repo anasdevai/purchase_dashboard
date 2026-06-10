@@ -179,7 +179,7 @@ export function ContractDetailPage() {
             <div className="card-body space-y-3 text-sm">
               {[
                 [t.table.contractNumber, contract.contractNumber],
-                [t.table.customer, apiContract.customerName || '-'],
+                [t.table.customer, apiContract.customerName || t.common.dash],
                 [t.table.phone, apiContract.customerPhone || t.common.dash],
                 [t.table.address, apiContract.customerAddress || t.common.dash],
                 [t.table.device, contract.device],

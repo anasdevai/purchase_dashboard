@@ -41,38 +41,45 @@ export function Topbar() {
 
   return (
     <header className="z-20 shrink-0 border-b border-slate-200 bg-white">
-      <div className="flex h-14 min-w-0 items-center justify-between gap-3 px-3 sm:h-16 sm:gap-4 sm:px-4 lg:px-6">
+      <div className="flex h-14 min-w-0 items-center justify-between gap-1.5 px-2 sm:h-16 sm:gap-4 sm:px-4 lg:px-6">
         <div className="flex min-w-0 items-center lg:hidden">
           <button
             type="button"
             data-testid="topbar-menu-toggle"
             onClick={toggleSidebar}
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-50"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-600 transition hover:bg-slate-50 sm:h-9 sm:w-9"
             aria-label={t.common.openMenu}
           >
             <Menu className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto sm:gap-2">
-          <span className="hidden shrink-0 text-xs font-medium leading-none text-slate-500 sm:inline">
-            {t.login.poweredBy}
-          </span>
-          <img
-            src={SCELRA_LOGO}
-            alt="Scelra"
-            className="-mr-6 h-[64px] w-auto max-w-[18rem] shrink-0 object-contain sm:-mr-8"
-          />
+        <div className="flex min-w-0 items-center gap-1 sm:ml-auto sm:gap-4 sm:shrink-0">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <span className="hidden shrink-0 text-[10px] font-medium leading-none text-slate-500 min-[360px]:inline sm:text-xs">
+              {t.login.poweredBy}
+            </span>
+            {/* Asset is a square canvas with large transparent padding around the
+                wordmark, so we scale the rendered image up and reserve the extra
+                visible width with margins instead of cropping the file. */}
+            <span className="inline-flex shrink-0 cursor-pointer transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.03]">
+              <img
+                src={SCELRA_LOGO}
+                alt="Scelra"
+                className="mx-3.5 h-7 w-auto shrink-0 scale-[1.8] object-contain min-[400px]:mx-5 min-[400px]:h-8 min-[400px]:scale-[2] sm:mx-9 sm:h-12 sm:scale-[2.4]"
+              />
+            </span>
+          </div>
 
           <LanguageSwitcher />
 
           <button
             type="button"
-            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50"
+            className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 sm:h-9 sm:w-9"
             aria-label={t.topbar.notifications}
           >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
+            <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white sm:right-2 sm:top-2" />
           </button>
 
           <div className="relative" ref={userMenuRef}>

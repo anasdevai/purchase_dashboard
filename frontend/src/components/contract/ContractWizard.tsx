@@ -165,7 +165,7 @@ export function ContractWizard(props: {
   initialContract?: ApiContract
   onCompleted?: (contract: ApiContract) => void
 }) {
-  const { t, interpolate } = useLanguage()
+  const { t, interpolate, formatMoney } = useLanguage()
   const w = t.contractWizard
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -652,15 +652,15 @@ export function ContractWizard(props: {
               >
                 {(DEVICE_TYPE_PRESETS as readonly string[]).filter((x) => x !== 'Other').map((preset) => (
                   <option key={preset} value={preset}>
-                    {preset}
+                    {optionLabel(preset, w.options)}
                   </option>
                 ))}
-                <option value="Other">Sonstiges</option>
+                <option value="Other">{w.options.Other}</option>
               </select>
               {deviceTypePreset === 'Other' ? (
                 <input
                   className="input mt-2"
-                  placeholder="Gerätetyp manuell eingeben"
+                  placeholder={w.deviceTypeCustomPlaceholder}
                   value={values.deviceType ?? ''}
                   onChange={(event) => {
                     setValue('deviceType', event.target.value, { shouldValidate: true, shouldDirty: true })
@@ -686,15 +686,15 @@ export function ContractWizard(props: {
               >
                 {(BRAND_PRESETS as readonly string[]).filter((x) => x !== 'Other').map((preset) => (
                   <option key={preset} value={preset}>
-                    {preset}
+                    {optionLabel(preset, w.options)}
                   </option>
                 ))}
-                <option value="Other">Sonstiges</option>
+                <option value="Other">{w.options.Other}</option>
               </select>
               {brandPreset === 'Other' ? (
                 <input
                   className="input mt-2"
-                  placeholder="Marke manuell eingeben"
+                  placeholder={w.brandCustomPlaceholder}
                   value={values.brand ?? ''}
                   onChange={(event) => {
                     setValue('brand', event.target.value, { shouldValidate: true, shouldDirty: true })
@@ -756,17 +756,17 @@ export function ContractWizard(props: {
                   })
                 }}
               >
-                <option value="">Zubehör auswählen</option>
+                <option value="">{w.accessoriesSelectOption}</option>
                 {ACCESSORY_OPTIONS.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {optionLabel(option, w.options)}
                   </option>
                 ))}
               </select>
               {accessoryPreset === 'Sonstiges' ? (
                 <input
                   className="input mt-2"
-                  placeholder="Zubehör manuell eingeben"
+                  placeholder={w.accessoriesCustomPlaceholder}
                   value={values.accessories ?? ''}
                   onChange={(event) => {
                     setValue('accessories', event.target.value, {
@@ -894,7 +894,7 @@ export function ContractWizard(props: {
                   [w.review.device, [values.brand, values.model].filter(Boolean).join(' ')],
                   [w.review.imeiSerial, values.imei || values.serialNumber],
                   [w.review.condition, values.condition ? optionLabel(values.condition, w.options) : undefined],
-                  [w.review.price, values.purchasePrice ? String(values.purchasePrice) : undefined],
+                  [w.review.price, values.purchasePrice ? formatMoney(Number(values.purchasePrice)) : undefined],
                 ]}
               />
               <ReviewCard

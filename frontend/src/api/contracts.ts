@@ -1,4 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
+import { getActiveTranslations } from '../i18n/active'
 import { shopSettingsForPdf, type ShopSettings } from '../services/shopSettings'
 import type { ApiContract, Contract, ContractStatus } from '../types/contract'
 
@@ -233,7 +234,7 @@ export async function fetchPdfBlob(id: string) {
   })
 
   if (!response.ok) {
-    throw new Error('PDF could not be loaded')
+    throw new Error(getActiveTranslations().common.errors.pdfFailed)
   }
 
   return response.blob()

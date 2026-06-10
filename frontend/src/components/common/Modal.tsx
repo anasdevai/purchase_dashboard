@@ -1,5 +1,6 @@
 import { useEffect, useId, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useLanguage } from '../../i18n/LanguageProvider'
 
 type ModalProps = {
   open: boolean
@@ -18,6 +19,8 @@ export function Modal({
   closeOnBackdrop = true,
   closeOnEscape = true,
 }: ModalProps) {
+  const { t } = useLanguage()
+
   useEffect(() => {
     if (!open || !closeOnEscape) return
 
@@ -44,7 +47,7 @@ export function Modal({
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       <button
         type="button"
-        aria-label="Close dialog"
+        aria-label={t.common.closeDialog}
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         onClick={closeOnBackdrop ? onClose : undefined}
       />

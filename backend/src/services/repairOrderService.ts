@@ -10,7 +10,7 @@ import {
   repairOrderStatusSchema,
   searchRepairOrdersSchema
 } from "../validators/repairOrderValidators.js";
-import { getShopSettingsForUser } from "./settingsService.js";
+import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
@@ -58,10 +58,12 @@ export const updateRepairOrder = async (id: string, userId: string, input: Recor
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
 
-  return prisma.repairOrder.update({
+  await prisma.repairOrder.update({
     where: { id },
     data: orderData
   });
+
+  return getRepairOrderOrThrow(id, userId);
 };
 
 export const updateRepairOrderStatus = async (
@@ -72,23 +74,18 @@ export const updateRepairOrderStatus = async (
   await getRepairOrderOrThrow(id, userId);
   const parsed = repairOrderStatusSchema.parse(input);
 
-  return prisma.repairOrder.update({
+  await prisma.repairOrder.update({
     where: { id },
     data: { status: parsed.status }
   });
+
+  return getRepairOrderOrThrow(id, userId);
 };
 
 export const generatePdfForRepairOrder = async (id: string, userId: string) => {
   const repairOrder = await getRepairOrderOrThrow(id, userId);
   const shopSettings = await getShopSettingsForUser(userId);
-  const pdfPath = await generateRepairOrderPdf(repairOrder, {
-    name: shopSettings.shopName,
-    address: shopSettings.shopAddress,
-    phone: shopSettings.shopPhone,
-    email: shopSettings.shopEmail,
-    ownerName: shopSettings.ownerName,
-    logoDataUrl: shopSettings.logoDataUrl
-  });
+  const pdfPath = await generateRepairOrderPdf(repairOrder, shopSettingsToPdf(shopSettings));
 
   return prisma.repairOrder.update({
     where: { id },

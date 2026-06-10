@@ -10,23 +10,23 @@ import {
 } from "../validators/invoiceValidators.js";
 import { generateInvoiceNumber } from "./numberingService.js";
 import { generateInvoicePdf } from "./pdfService.js";
-import { getShopSettingsForUser } from "./settingsService.js";
+import { getDefaultVatPercent, getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
 
 const includeItems = {
   items: { orderBy: { sortOrder: "asc" as const } },
   repairOrder: { select: { id: true, repairOrderNumber: true } }
 };
 
-const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+const roundWhole = (value: number) => Math.round(value);
 
 const calculateItems = (items: Array<{ description: string; quantity: number; unitPrice: number; vatPercent: number }>) => {
   let calculatedNetAmount = 0;
   let calculatedVatAmount = 0;
 
   const preparedItems = items.map((item, index) => {
-    const lineNet = roundMoney(item.quantity * item.unitPrice);
-    const lineVat = roundMoney(lineNet * (item.vatPercent / 100));
-    const lineTotal = roundMoney(lineNet + lineVat);
+    const lineNet = roundWhole(item.quantity * item.unitPrice);
+    const lineVat = roundWhole(lineNet * (item.vatPercent / 100));
+    const lineTotal = lineNet + lineVat;
     calculatedNetAmount += lineNet;
     calculatedVatAmount += lineVat;
 
@@ -42,14 +42,14 @@ const calculateItems = (items: Array<{ description: string; quantity: number; un
     };
   });
 
-  calculatedNetAmount = roundMoney(calculatedNetAmount);
-  calculatedVatAmount = roundMoney(calculatedVatAmount);
+  calculatedNetAmount = roundWhole(calculatedNetAmount);
+  calculatedVatAmount = roundWhole(calculatedVatAmount);
 
   return {
     preparedItems,
     calculatedNetAmount,
     calculatedVatAmount,
-    calculatedGrossTotal: roundMoney(calculatedNetAmount + calculatedVatAmount)
+    calculatedGrossTotal: calculatedNetAmount + calculatedVatAmount
   };
 };
 
@@ -66,6 +66,18 @@ export const getInvoiceOrThrow = async (id: string, userId: string) => {
   }
 
   return invoice;
+};
+
+const attachInvoicePdf = async (id: string, userId: string) => {
+  const invoice = await getInvoiceOrThrow(id, userId);
+  const shopSettings = await getShopSettingsForUser(userId);
+  const pdfPath = await generateInvoicePdf(invoice, shopSettingsToPdf(shopSettings));
+
+  return prisma.invoice.update({
+    where: { id },
+    data: { pdfPath },
+    include: includeItems
+  });
 };
 
 const assertRepairOrderAccess = async (repairOrderId: string | undefined, userId: string) => {
@@ -86,8 +98,8 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
   await assertRepairOrderAccess(parsed.repairOrderId, userId);
   const totals = calculateItems(parsed.items);
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const invoiceNumber = parsed.invoiceNumber?.trim() || (await generateInvoiceNumber(userId));
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const invoiceNumber = await generateInvoiceNumber(userId);
 
     try {
       const invoice = await prisma.invoice.create({
@@ -107,9 +119,9 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
           calculatedNetAmount: totals.calculatedNetAmount,
           calculatedVatAmount: totals.calculatedVatAmount,
           calculatedGrossTotal: totals.calculatedGrossTotal,
-          netAmountOverride: parsed.netAmountOverride,
-          vatAmountOverride: parsed.vatAmountOverride,
-          grossTotalOverride: parsed.grossTotalOverride,
+          netAmountOverride: null,
+          vatAmountOverride: null,
+          grossTotalOverride: null,
           notes: parsed.notes,
           items: { create: totals.preparedItems }
         },
@@ -117,9 +129,9 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
       });
 
       await ensureDirectory(getInvoiceStorageDir(userId, invoice.invoiceNumber));
-      return invoice;
+      return attachInvoicePdf(invoice.id, userId);
     } catch (error) {
-      if (parsed.invoiceNumber || attempt === 2) throw error;
+      if (attempt === 4) throw error;
     }
   }
 
@@ -151,6 +163,9 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
     .filter(Boolean)
     .join(" ");
 
+  const shopSettings = await getShopSettingsForUser(userId);
+  const defaultVatPercent = getDefaultVatPercent(shopSettings);
+
   return createInvoice(userId, {
     repairOrderId: repairOrder.id,
     customerName: repairOrder.customerName,
@@ -164,8 +179,10 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
       {
         description: repairOrder.problemDescription || "Repair service",
         quantity: 1,
-        unitPrice: repairOrder.estimatedPrice ? Number(repairOrder.estimatedPrice.toString()) : 0,
-        vatPercent: 0
+        unitPrice: repairOrder.estimatedPrice
+          ? Math.round(Number(repairOrder.estimatedPrice.toString()))
+          : 0,
+        vatPercent: Math.round(defaultVatPercent)
       }
     ]
   });
@@ -177,14 +194,13 @@ export const updateInvoice = async (id: string, userId: string, input: Record<st
   await assertRepairOrderAccess(parsed.repairOrderId, userId);
   const totals = calculateItems(parsed.items);
 
-  return prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
 
-    return tx.invoice.update({
+    await tx.invoice.update({
       where: { id },
       data: {
         repairOrderId: parsed.repairOrderId,
-        invoiceNumber: parsed.invoiceNumber,
         invoiceDate: parsed.invoiceDate ?? new Date(),
         customerName: parsed.customerName,
         customerAddress: parsed.customerAddress,
@@ -197,16 +213,17 @@ export const updateInvoice = async (id: string, userId: string, input: Record<st
         calculatedNetAmount: totals.calculatedNetAmount,
         calculatedVatAmount: totals.calculatedVatAmount,
         calculatedGrossTotal: totals.calculatedGrossTotal,
-        netAmountOverride: parsed.netAmountOverride,
-        vatAmountOverride: parsed.vatAmountOverride,
-        grossTotalOverride: parsed.grossTotalOverride,
+        netAmountOverride: null,
+        vatAmountOverride: null,
+        grossTotalOverride: null,
         notes: parsed.notes,
         pdfPath: null,
         items: { create: totals.preparedItems }
-      },
-      include: includeItems
+      }
     });
   });
+
+  return attachInvoicePdf(id, userId);
 };
 
 export const updateInvoicePaymentStatus = async (
@@ -224,24 +241,7 @@ export const updateInvoicePaymentStatus = async (
   });
 };
 
-export const generatePdfForInvoice = async (id: string, userId: string) => {
-  const invoice = await getInvoiceOrThrow(id, userId);
-  const shopSettings = await getShopSettingsForUser(userId);
-  const pdfPath = await generateInvoicePdf(invoice, {
-    name: shopSettings.shopName,
-    address: shopSettings.shopAddress,
-    phone: shopSettings.shopPhone,
-    email: shopSettings.shopEmail,
-    ownerName: shopSettings.ownerName,
-    logoDataUrl: shopSettings.logoDataUrl
-  });
-
-  return prisma.invoice.update({
-    where: { id },
-    data: { pdfPath },
-    include: includeItems
-  });
-};
+export const generatePdfForInvoice = async (id: string, userId: string) => attachInvoicePdf(id, userId);
 
 export const deleteInvoice = async (id: string, userId: string) => {
   const invoice = await getInvoiceOrThrow(id, userId);
