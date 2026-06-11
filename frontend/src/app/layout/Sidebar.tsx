@@ -169,7 +169,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         </p>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+      <nav className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-3 py-2">
         {sections.map((section, sectionIndex) => (
           <div key={section.title}>
             {sectionIndex > 0 ? <div className="my-3 border-t border-white/15" aria-hidden /> : null}
