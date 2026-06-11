@@ -234,7 +234,8 @@ export async function fetchPdfBlob(id: string) {
   })
 
   if (!response.ok) {
-    throw new Error(getActiveTranslations().common.errors.pdfFailed)
+    console.error('[API error]', response.status, response.url)
+    throw new Error(getActiveTranslations().common.friendlyErrors.pdfDownload)
   }
 
   return response.blob()

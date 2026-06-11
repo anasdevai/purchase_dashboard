@@ -5,8 +5,10 @@ import { cancelContract, downloadPdf, fetchContract, fetchPdfBlob, mapContract }
 import { ContractWizard } from '../components/contract/ContractWizard'
 import { StatusBadge } from '../components/contract/StatusBadge'
 import { useAuth } from '../auth/AuthContext'
+import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useDeleteContractConfirm } from '../hooks/useDeleteContractConfirm'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import type { ApiContract } from '../types/contract'
 
 export function ContractDetailPage() {
@@ -14,9 +16,11 @@ export function ContractDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { t, formatMoney, formatDate, interpolate } = useLanguage()
+  const { showToast } = useAppConfirm()
   const [apiContract, setApiContract] = useState<ApiContract | null>(null)
   const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const { askDeleteContract } = useDeleteContractConfirm()
 
   useEffect(() => {
@@ -29,7 +33,8 @@ export function ContractDetailPage() {
         if (alive) setApiContract(contract)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : t.common.errors.contractFailed)
+        logApiError('contract detail load', err)
+        if (alive) setError(getFriendlyErrorMessage(err, 'load', t))
       })
 
     return () => {
@@ -51,7 +56,8 @@ export function ContractDetailPage() {
         if (alive) setPdfObjectUrl(objectUrl)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : t.common.errors.pdfFailed)
+        logApiError('contract pdf preview', err)
+        if (alive) showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
       })
 
     return () => {
@@ -157,7 +163,19 @@ export function ContractDetailPage() {
             <button
               type="button"
               data-testid="contract-detail-download-pdf"
-              onClick={() => downloadPdf(apiContract.id, `${apiContract.contractNumber}.pdf`)}
+              disabled={downloadingPdf}
+              onClick={async () => {
+                setDownloadingPdf(true)
+                try {
+                  await downloadPdf(apiContract.id, `${apiContract.contractNumber}.pdf`)
+                  showToast('success', t.common.toasts.contractPdfDownloaded)
+                } catch (err) {
+                  logApiError('contract pdf download', err)
+                  showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                } finally {
+                  setDownloadingPdf(false)
+                }
+              }}
               className="btn btn-primary w-full sm:w-auto"
             >
               <Download className="h-4 w-4" />

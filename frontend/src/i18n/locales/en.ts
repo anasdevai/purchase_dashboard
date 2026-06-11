@@ -30,6 +30,27 @@ export const en: TranslationSchema = {
       authFailed: 'Authentication failed',
       requestFailed: 'Request failed',
     },
+    friendlyErrors: {
+      generic: 'Something went wrong. Please try again.',
+      save: 'Unable to save. Please try again.',
+      pdf: 'PDF could not be generated. Please try again.',
+      pdfDownload: 'PDF could not be downloaded. Please try again.',
+      upload: 'Upload failed. Please try again.',
+      load: 'Unable to load data. Please try again.',
+      request: 'Request failed. Please try again.',
+    },
+    toasts: {
+      contractCreated: 'Contract created successfully.',
+      contractDraftSaved: 'Draft saved successfully.',
+      contractPdfDownloaded: 'PDF downloaded successfully.',
+      pdfDownloaded: 'PDF downloaded successfully.',
+      repairOrderSaved: 'Repair order saved successfully.',
+      repairOrderPdfGenerated: 'PDF generated successfully.',
+      invoiceSaved: 'Invoice saved successfully.',
+      invoicePdfGenerated: 'PDF generated successfully.',
+      settingsSaved: 'Shop details saved successfully.',
+      logoUpdated: 'Logo updated successfully.',
+    },
   },
   nav: {
     sections: {

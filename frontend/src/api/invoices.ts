@@ -1,5 +1,6 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
 import { getActiveTranslations } from '../i18n/active'
+import type { Language } from '../i18n/types'
 import type { Invoice, InvoicePayload } from '../types/invoice'
 import type { InvoicePaymentStatus } from '../types/invoice'
 
@@ -47,25 +48,28 @@ export async function deleteInvoice(id: string) {
   return apiRequest(`/api/invoices/${id}`, { method: 'DELETE' })
 }
 
-export async function generateInvoicePdf(id: string) {
-  const response = await apiRequest<InvoiceResponse>(`/api/invoices/${id}/pdf`, {
+export async function generateInvoicePdf(id: string, language: Language = 'de') {
+  const response = await apiRequest<InvoiceResponse>(`/api/invoices/${id}/pdf?lang=${language}`, {
     method: 'POST',
   })
   return response.invoice
 }
 
-export async function fetchInvoicePdfBlob(id: string) {
+export async function fetchInvoicePdfBlob(id: string, language: Language = 'de') {
   const token = getToken()
-  const response = await fetch(`${getApiBaseUrl()}/api/invoices/${id}/pdf`, {
+  const response = await fetch(`${getApiBaseUrl()}/api/invoices/${id}/pdf?lang=${language}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
 
-  if (!response.ok) throw new Error(getActiveTranslations().common.errors.pdfFailed)
+  if (!response.ok) {
+    console.error('[API error]', response.status, response.url)
+    throw new Error(getActiveTranslations().common.friendlyErrors.pdfDownload)
+  }
   return response.blob()
 }
 
-export async function downloadInvoicePdf(id: string, filename: string) {
-  const blob = await fetchInvoicePdfBlob(id)
+export async function downloadInvoicePdf(id: string, filename: string, language: Language = 'de') {
+  const blob = await fetchInvoicePdfBlob(id, language)
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url

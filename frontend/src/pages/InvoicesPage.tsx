@@ -5,10 +5,11 @@ import { deleteInvoice, downloadInvoicePdf, fetchInvoices, updateInvoicePaymentS
 import { formatWholeMoney } from '../utils/formatMoney'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import type { Invoice, InvoicePaymentStatus } from '../types/invoice'
 
 export function InvoicesPage() {
-  const { t, interpolate, formatDate } = useLanguage()
+  const { t, interpolate, formatDate, language } = useLanguage()
   const { showToast } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [date, setDate] = useState('')
@@ -33,9 +34,10 @@ export function InvoicesPage() {
           setInvoices(data)
           setError(null)
         })
-        .catch((err) =>
-          setError(err instanceof Error ? err.message : t.invoices.errors.loadFailed),
-        )
+        .catch((err) => {
+          logApiError('invoices list load', err)
+          setError(getFriendlyErrorMessage(err, 'load', t))
+        })
     }, 250)
 
     return () => window.clearTimeout(timeout)
@@ -50,9 +52,8 @@ export function InvoicesPage() {
       await deleteInvoice(invoice.id)
       setInvoices((current) => current.filter((item) => item.id !== invoice.id))
     } catch (err) {
-      const message = err instanceof Error ? err.message : t.invoices.errors.deleteFailed
-      setError(message)
-      showToast('error', message)
+      logApiError('invoice delete', err)
+      showToast('error', getFriendlyErrorMessage(err, 'generic', t))
     } finally {
       setDeletingId(null)
     }
@@ -68,7 +69,8 @@ export function InvoicesPage() {
         ),
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.invoices.errors.paymentStatusFailed)
+      logApiError('invoice payment status', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setUpdatingStatusId(null)
     }
@@ -158,7 +160,15 @@ export function InvoicesPage() {
                             type="button"
                             className="btn btn-secondary h-8 w-8 p-0"
                             title={t.table.download}
-                            onClick={() => downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`)}
+                            onClick={async () => {
+                              try {
+                                await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
+                                showToast('success', t.common.toasts.pdfDownloaded)
+                              } catch (err) {
+                                logApiError('invoice pdf download', err)
+                                showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                              }
+                            }}
                           >
                             <Download className="h-4 w-4" />
                           </button>

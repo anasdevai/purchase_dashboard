@@ -1,4 +1,5 @@
 import { getActiveTranslations } from '../i18n/active'
+import { ApiError } from '../utils/apiErrors'
 
 const API_PORT = '4000'
 
@@ -48,7 +49,15 @@ export function clearToken() {
 }
 
 async function readError(response: Response) {
-  const fallback = getActiveTranslations().common.errors.requestFailed
+  const { friendlyErrors } = getActiveTranslations().common
+  const friendly =
+    response.status >= 500
+      ? friendlyErrors.generic
+      : response.status === 401 || response.status === 403
+        ? friendlyErrors.request
+        : friendlyErrors.request
+
+  let rawMessage: string | undefined
   try {
     const body = (await response.json()) as {
       message?: string
@@ -61,13 +70,16 @@ async function readError(response: Response) {
       : []
     const formMessages = body.errors?.formErrors ?? []
     const details = [...formMessages, ...fieldMessages]
-    if (details.length > 0) {
-      return `${body.message || fallback} (${details.join('; ')})`
-    }
-    return body.message || fallback
+    rawMessage =
+      details.length > 0
+        ? `${body.message ?? ''} (${details.join('; ')})`.trim()
+        : body.message
+    console.error('[API error]', response.status, response.url, rawMessage ?? body)
   } catch {
-    return fallback
+    console.error('[API error]', response.status, response.url)
   }
+
+  return new ApiError(friendly, response.status, rawMessage)
 }
 
 export async function apiRequest<T>(
@@ -91,7 +103,7 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
-    throw new Error(await readError(response))
+    throw await readError(response)
   }
 
   if (response.status === 204) {

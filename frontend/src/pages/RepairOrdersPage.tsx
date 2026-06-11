@@ -7,7 +7,9 @@ import {
   fetchRepairOrders,
   updateRepairOrderStatus,
 } from '../api/repairOrders'
+import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import type { RepairOrder, RepairOrderStatus } from '../types/repairOrder'
 
 const repairStatusValues = [
@@ -21,6 +23,7 @@ const repairStatusValues = [
 
 export function RepairOrdersPage() {
   const { t, interpolate, formatDate, formatMoney } = useLanguage()
+  const { showToast } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
   const [repairOrders, setRepairOrders] = useState<RepairOrder[]>([])
@@ -44,9 +47,10 @@ export function RepairOrdersPage() {
           setRepairOrders(data)
           setError(null)
         })
-        .catch((err) =>
-          setError(err instanceof Error ? err.message : t.repairOrders.errors.loadFailed),
-        )
+        .catch((err) => {
+          logApiError('repair orders list load', err)
+          setError(getFriendlyErrorMessage(err, 'load', t))
+        })
     }, 250)
 
     return () => window.clearTimeout(timeout)
@@ -79,7 +83,8 @@ export function RepairOrdersPage() {
         current.map((item) => (item.id === updated.id ? { ...item, status: updated.status } : item)),
       )
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.repairOrders.errors.statusFailed)
+      logApiError('repair order status update', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setUpdatingStatusId(null)
     }
@@ -183,7 +188,15 @@ export function RepairOrdersPage() {
                             type="button"
                             className="btn btn-secondary h-8 w-8 p-0"
                             title={t.table.download}
-                            onClick={() => downloadRepairOrderPdf(order.id, `${order.repairOrderNumber}.pdf`)}
+                            onClick={async () => {
+                              try {
+                                await downloadRepairOrderPdf(order.id, `${order.repairOrderNumber}.pdf`)
+                                showToast('success', t.common.toasts.pdfDownloaded)
+                              } catch (err) {
+                                logApiError('repair order pdf download', err)
+                                showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                              }
+                            }}
                           >
                             <Download className="h-4 w-4" />
                           </button>

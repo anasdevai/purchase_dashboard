@@ -58,6 +58,27 @@ export type TranslationSchema = {
       authFailed: string
       requestFailed: string
     }
+    friendlyErrors: {
+      generic: string
+      save: string
+      pdf: string
+      pdfDownload: string
+      upload: string
+      load: string
+      request: string
+    }
+    toasts: {
+      contractCreated: string
+      contractDraftSaved: string
+      contractPdfDownloaded: string
+      pdfDownloaded: string
+      repairOrderSaved: string
+      repairOrderPdfGenerated: string
+      invoiceSaved: string
+      invoicePdfGenerated: string
+      settingsSaved: string
+      logoUpdated: string
+    }
   }
   nav: {
     sections: {

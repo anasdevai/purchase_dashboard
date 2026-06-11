@@ -14,7 +14,13 @@ import {
   validateDeviceIdentifiers,
   type ContractDraftPayload,
 } from '../../api/contracts'
+import { useAppConfirm } from '../common/ConfirmDialogProvider'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import {
+  getFriendlyErrorMessage,
+  isDraftAlreadyCompletedError,
+  logApiError,
+} from '../../utils/apiErrors'
 import type { OptionLabels } from '../../i18n/types'
 import { useAuth } from '../../auth/AuthContext'
 import { loadShopSettings } from '../../services/shopSettings'
@@ -166,6 +172,7 @@ export function ContractWizard(props: {
   onCompleted?: (contract: ApiContract) => void
 }) {
   const { t, interpolate, formatMoney } = useLanguage()
+  const { showToast } = useAppConfirm()
   const w = t.contractWizard
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -380,8 +387,9 @@ export function ContractWizard(props: {
       await uploadSelectedFiles(draft.id)
       await uploadSignatures(draft.id, false)
       setMessage(interpolate(w.draftSaved, { contractNumber: draft.contractNumber }))
+      showToast('success', t.common.toasts.contractDraftSaved)
     } catch (err) {
-      if (draftId && err instanceof Error && err.message.includes('Only draft contracts')) {
+      if (isDraftAlreadyCompletedError(err) && draftId) {
         try {
           const latest = await fetchContract(draftId)
           if (latest.status === 'Completed') {
@@ -389,10 +397,11 @@ export function ContractWizard(props: {
             return
           }
         } catch {
-          // Keep the original backend message below.
+          // Fall through to friendly error handling.
         }
       }
-      setError(err instanceof Error ? err.message : w.errors.draftSaveFailed)
+      logApiError('contract draft save', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setIsSubmitting(false)
     }
@@ -414,7 +423,8 @@ export function ContractWizard(props: {
           excludeId: draftId,
         })
       } catch (err) {
-        setError(err instanceof Error ? err.message : w.imeiOrSerialExists)
+        logApiError('contract device identifier validation', err)
+        setError(w.imeiOrSerialExists)
         return false
       }
     }
@@ -498,21 +508,24 @@ export function ContractWizard(props: {
       await uploadSignatures(draft.id, true)
       const completed = await completeContract(draft.id, {}, shopSettings)
       props.onCompleted?.(completed)
+      showToast('success', t.common.toasts.contractCreated)
       navigate(`/contracts/${completed.id}`, { replace: true })
     } catch (err) {
-      if (draftId && err instanceof Error && err.message.includes('Only draft contracts')) {
+      if (isDraftAlreadyCompletedError(err) && draftId) {
         try {
           const latest = await fetchContract(draftId)
           if (latest.status === 'Completed') {
             props.onCompleted?.(latest)
+            showToast('success', t.common.toasts.contractCreated)
             navigate(`/contracts/${latest.id}`, { replace: true })
             return
           }
         } catch {
-          // Keep the original backend message below.
+          // Fall through to friendly error handling.
         }
       }
-      setError(err instanceof Error ? err.message : w.errors.completeFailed)
+      logApiError('contract complete', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setIsSubmitting(false)
     }
@@ -1055,13 +1068,12 @@ function SignatureBox(props: {
         <div className="mt-1 text-xs font-semibold text-emerald-700">{props.savedHint}</div>
       ) : null}
       <div className="mt-3 rounded-xl border border-slate-200 bg-white">
-        <div className="h-[180px] overflow-hidden rounded-t-xl bg-white">
+        <div className="h-[180px] overflow-hidden rounded-t-xl bg-white" data-testid={props.testId}>
           <SignatureCanvas
             ref={props.refSetter}
             onEnd={props.onChange}
             canvasProps={{
               className: 'h-[180px] w-full',
-              'data-testid': props.testId,
             }}
           />
         </div>

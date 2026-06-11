@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../../utils/apiErrors'
 import { AppToast, type ToastState } from './AppToast'
 import { AlertModal } from './AlertModal'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -93,7 +94,8 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
       setConfirmOpen(false)
       setConfirmOptions(null)
     } catch (err) {
-      setConfirmError(err instanceof Error ? err.message : t.common.somethingWentWrong)
+      logApiError('confirm dialog', err)
+      setConfirmError(getFriendlyErrorMessage(err, 'generic', t))
     } finally {
       setConfirmLoading(false)
     }

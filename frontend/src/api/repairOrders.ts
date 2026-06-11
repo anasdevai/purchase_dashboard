@@ -61,7 +61,10 @@ export async function fetchRepairOrderPdfBlob(id: string) {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
 
-  if (!response.ok) throw new Error(getActiveTranslations().common.errors.pdfFailed)
+  if (!response.ok) {
+    console.error('[API error]', response.status, response.url)
+    throw new Error(getActiveTranslations().common.friendlyErrors.pdfDownload)
+  }
   return response.blob()
 }
 

@@ -1,0 +1,118 @@
+export type PdfShopSettings = {
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  ownerName?: string;
+  logoDataUrl?: string;
+  website?: string;
+  vatNumber?: string;
+  companyRegistrationNumber?: string;
+  taxNumber?: string;
+  accountHolder?: string;
+  iban?: string;
+  bicSwift?: string;
+  bankName?: string;
+  street?: string;
+  zipCode?: string;
+  city?: string;
+  country?: string;
+};
+
+export type MoneyLike = { toString: () => string } | number | null | undefined;
+
+export type ContractForPdf = {
+  userId: string;
+  contractNumber: string;
+  status: string;
+  updatedAt: Date;
+  customerName: string | null;
+  customerAddress: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  customerDateOfBirth: Date | null;
+  idDocumentNumber: string | null;
+  deviceType: string | null;
+  brand: string | null;
+  model: string | null;
+  imei: string | null;
+  serialNumber: string | null;
+  storage: string | null;
+  color: string | null;
+  condition: string | null;
+  accessories: string | null;
+  batteryHealth: string | null;
+  damageNotes: string | null;
+  purchasePrice: MoneyLike;
+  paymentMethod: string | null;
+  ownershipConfirmed: boolean;
+  notStolenConfirmed: boolean;
+  icloudRemoved: boolean;
+  googleLockRemoved: boolean;
+  otherLockRemoved: boolean;
+  factoryResetConfirmed: boolean;
+  signaturePath: string | null;
+  shopkeeperSignaturePath: string | null;
+  files: Array<{ fileType: string; filePath: string }>;
+};
+
+export type RepairOrderForPdf = {
+  userId: string;
+  repairOrderNumber: string;
+  createdAt: Date;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  customerAddress: string | null;
+  deviceType: string;
+  brand: string | null;
+  model: string;
+  imeiOrSerial: string | null;
+  passwordPin: string | null;
+  accessoriesReceived: string | null;
+  problemDescription: string;
+  visibleDamage: string | null;
+  technicianNotes: string | null;
+  estimatedPrice: MoneyLike;
+  depositAmount: MoneyLike;
+  expectedCompletionDate: Date | null;
+  status: string;
+};
+
+export type InvoiceForPdf = {
+  userId: string;
+  invoiceNumber: string;
+  invoiceDate: Date;
+  customerName: string;
+  customerAddress: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  deviceSummary: string | null;
+  repairSummary: string | null;
+  paymentMethod: string | null;
+  paymentStatus: string | null;
+  calculatedNetAmount: MoneyLike;
+  calculatedVatAmount: MoneyLike;
+  calculatedGrossTotal: MoneyLike;
+  netAmountOverride: MoneyLike;
+  vatAmountOverride: MoneyLike;
+  grossTotalOverride: MoneyLike;
+  notes: string | null;
+  items: Array<{
+    description: string;
+    quantity: MoneyLike;
+    unitPrice: MoneyLike;
+    vatPercent: MoneyLike;
+    lineNet: MoneyLike;
+    lineVat: MoneyLike;
+    lineTotal: MoneyLike;
+  }>;
+};
+
+export type DocumentMeta = {
+  numberLabel: string;
+  numberValue: string;
+  dateLabel?: string;
+  date?: Date;
+  europeanDate?: boolean;
+};

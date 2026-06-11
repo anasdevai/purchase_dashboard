@@ -12,6 +12,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import type { RepairOrder, RepairOrderPayload } from '../types/repairOrder'
 
 const repairStatusValues = [
@@ -367,12 +368,14 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
           setShowActions(true)
           setError(null)
         } catch (err) {
-          setError(err instanceof Error ? err.message : t.repairOrders.errors.loadDetailFailed)
+          logApiError('repair order form apply', err)
+          setError(getFriendlyErrorMessage(err, 'load', t))
         }
       })
       .catch((err) => {
         if (!alive) return
-        setError(err instanceof Error ? err.message : t.repairOrders.errors.loadDetailFailed)
+        logApiError('repair order detail load', err)
+        setError(getFriendlyErrorMessage(err, 'load', t))
       })
       .finally(() => {
         if (alive) setLoading(false)
@@ -419,10 +422,11 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     try {
       const updated = await generateRepairOrderPdf(order.id)
       setRepairOrder(updated)
-      showToast('success', t.repairOrders.detail.pdfGenerated)
+      showToast('success', t.common.toasts.repairOrderPdfGenerated)
       return updated
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.repairOrders.errors.pdfFailed)
+      logApiError('repair order pdf generate', err)
+      showToast('error', getFriendlyErrorMessage(err, 'pdf', t))
       return null
     } finally {
       setSaving(false)
@@ -430,14 +434,20 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   }
 
   const handleDownloadPdf = async () => {
-    if (!repairOrder) return
-    let current = repairOrder
-    if (!current.pdfPath) {
-      const updated = await handleGeneratePdf(current)
-      if (!updated?.pdfPath) return
-      current = updated
+    if (!repairOrder || saving) return
+    try {
+      let current = repairOrder
+      if (!current.pdfPath) {
+        const updated = await handleGeneratePdf(current)
+        if (!updated?.pdfPath) return
+        current = updated
+      }
+      await downloadRepairOrderPdf(current.id, `${current.repairOrderNumber}.pdf`)
+      showToast('success', t.common.toasts.pdfDownloaded)
+    } catch (err) {
+      logApiError('repair order pdf download', err)
+      showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
     }
-    downloadRepairOrderPdf(current.id, `${current.repairOrderNumber}.pdf`)
   }
 
   const linkedInvoice = repairOrder?.invoices?.[0] ?? null
@@ -465,9 +475,8 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       const invoice = await createInvoiceFromRepairOrder(repairOrder.id)
       navigate(`/invoices/${invoice.id}`)
     } catch (err) {
-      const message = err instanceof Error ? err.message : t.repairOrders.errors.invoiceCreateFailed
-      setError(message)
-      showToast('error', message)
+      logApiError('repair order invoice create', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setSaving(false)
     }
@@ -494,7 +503,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       setSelectedAccessories(next.accessoriesState.selected)
       setAccessoryOtherText(next.accessoriesState.otherText)
       setShowActions(true)
-      showToast('success', t.repairOrders.detail.savedSuccess)
+      showToast('success', t.common.toasts.repairOrderSaved)
 
       if (!repairOrderId) {
         navigate(`/repair-orders/${saved.id}`, { replace: true })
@@ -502,7 +511,8 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
 
       await handleGeneratePdf(saved)
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.repairOrders.errors.saveFailed)
+      logApiError('repair order save', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setSaving(false)
     }

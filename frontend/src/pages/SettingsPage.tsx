@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'rea
 import { Info, Save, Shield, Upload, X } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../auth/AuthContext'
+import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import {
   defaultShopSettings,
   loadShopSettings,
@@ -42,12 +44,12 @@ function FieldLabel(props: { label: string; required?: boolean; optional?: boole
 export function SettingsPage() {
   const { user } = useAuth()
   const { t } = useLanguage()
+  const { showToast } = useAppConfirm()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | undefined>()
   const [fieldErrors, setFieldErrors] = useState<ShopSettingsValidationErrors>({})
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [logoError, setLogoError] = useState<string | null>(null)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [dragActive, setDragActive] = useState(false)
 
   const { register, handleSubmit, reset, setValue, watch } = useForm<ShopSettings>({
@@ -106,16 +108,17 @@ export function SettingsPage() {
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
 
-    setSaveError(null)
+    setSaving(true)
     try {
       const saved = await saveShopSettings(user.id, trimmed)
       reset(saved)
       setLogoPreview(saved.logoDataUrl)
-      setSuccessMessage(t.settings.savedSuccess)
-      setTimeout(() => setSuccessMessage(null), 4000)
+      showToast('success', t.common.toasts.settingsSaved)
     } catch (err) {
-      setSuccessMessage(null)
-      setSaveError(err instanceof Error ? err.message : t.common.errors.settingsSaveFailed)
+      logApiError('settings save', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -142,6 +145,7 @@ export function SettingsPage() {
       }
       setLogoPreview(result)
       setValue('logoDataUrl', result)
+      showToast('success', t.common.toasts.logoUpdated)
     }
     reader.onerror = () => setLogoError(t.settings.errors.logoRead)
     reader.readAsDataURL(file)
@@ -179,21 +183,6 @@ export function SettingsPage() {
         <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{t.pages.settings}</h1>
         <p className="mt-1 max-w-3xl text-sm text-slate-600">{t.settings.description}</p>
       </div>
-
-      {successMessage ? (
-        <div
-          data-testid="settings-success"
-          className="rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 ring-1 ring-emerald-100"
-        >
-          {successMessage}
-        </div>
-      ) : null}
-
-      {saveError ? (
-        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">
-          {saveError}
-        </div>
-      ) : null}
 
       <form
         data-testid="settings-form"
@@ -523,7 +512,8 @@ export function SettingsPage() {
         <button
           type="submit"
           data-testid="settings-save"
-          className="btn btn-primary h-12 min-w-[220px] px-6 text-sm font-semibold"
+          disabled={saving}
+          className="btn btn-primary h-12 min-w-[220px] px-6 text-sm font-semibold disabled:opacity-60"
         >
           <Save className="h-4 w-4" />
           {t.settings.save}

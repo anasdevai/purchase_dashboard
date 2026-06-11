@@ -9,7 +9,8 @@ import {
   searchInvoicesSchema
 } from "../validators/invoiceValidators.js";
 import { generateInvoiceNumber } from "./numberingService.js";
-import { generateInvoicePdf } from "./pdfService.js";
+import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
+import { generateInvoicePdf, renderInvoicePdfBuffer } from "./pdfService.js";
 import { getDefaultVatPercent, getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
 
 const includeItems = {
@@ -68,10 +69,10 @@ export const getInvoiceOrThrow = async (id: string, userId: string) => {
   return invoice;
 };
 
-const attachInvoicePdf = async (id: string, userId: string) => {
+const attachInvoicePdf = async (id: string, userId: string, language: InvoicePdfLanguage = "de") => {
   const invoice = await getInvoiceOrThrow(id, userId);
   const shopSettings = await getShopSettingsForUser(userId);
-  const pdfPath = await generateInvoicePdf(invoice, shopSettingsToPdf(shopSettings));
+  const pdfPath = await generateInvoicePdf(invoice, shopSettingsToPdf(shopSettings), language);
 
   return prisma.invoice.update({
     where: { id },
@@ -241,7 +242,21 @@ export const updateInvoicePaymentStatus = async (
   });
 };
 
-export const generatePdfForInvoice = async (id: string, userId: string) => attachInvoicePdf(id, userId);
+export const generatePdfForInvoice = async (
+  id: string,
+  userId: string,
+  language: InvoicePdfLanguage = "de"
+) => attachInvoicePdf(id, userId, language);
+
+export const streamInvoicePdf = async (
+  id: string,
+  userId: string,
+  language: InvoicePdfLanguage = "de"
+) => {
+  const invoice = await getInvoiceOrThrow(id, userId);
+  const shopSettings = shopSettingsToPdf(await getShopSettingsForUser(userId));
+  return renderInvoicePdfBuffer(invoice, shopSettings, language);
+};
 
 export const deleteInvoice = async (id: string, userId: string) => {
   const invoice = await getInvoiceOrThrow(id, userId);

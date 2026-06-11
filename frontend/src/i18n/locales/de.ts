@@ -30,6 +30,27 @@ export const de: TranslationSchema = {
       authFailed: 'Anmeldung fehlgeschlagen',
       requestFailed: 'Anfrage fehlgeschlagen',
     },
+    friendlyErrors: {
+      generic: 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
+      save: 'Speichern nicht möglich. Bitte versuchen Sie es erneut.',
+      pdf: 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
+      pdfDownload: 'PDF konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.',
+      upload: 'Upload fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      load: 'Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
+      request: 'Anfrage fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    },
+    toasts: {
+      contractCreated: 'Vertrag erfolgreich erstellt.',
+      contractDraftSaved: 'Entwurf erfolgreich gespeichert.',
+      contractPdfDownloaded: 'PDF erfolgreich heruntergeladen.',
+      pdfDownloaded: 'PDF erfolgreich heruntergeladen.',
+      repairOrderSaved: 'Reparaturauftrag erfolgreich gespeichert.',
+      repairOrderPdfGenerated: 'PDF erfolgreich erstellt.',
+      invoiceSaved: 'Rechnung erfolgreich gespeichert.',
+      invoicePdfGenerated: 'PDF erfolgreich erstellt.',
+      settingsSaved: 'Shop-Details erfolgreich gespeichert.',
+      logoUpdated: 'Logo erfolgreich aktualisiert.',
+    },
   },
   nav: {
     sections: {

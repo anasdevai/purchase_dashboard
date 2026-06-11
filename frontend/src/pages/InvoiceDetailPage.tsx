@@ -23,6 +23,7 @@ import {
   type ShopSettings,
 } from '../services/shopSettings'
 import type { Invoice, InvoiceItem, InvoicePayload } from '../types/invoice'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import { formatWholeMoney } from '../utils/formatMoney'
 import {
   normalizeQuantityInput,
@@ -124,7 +125,7 @@ export function NewInvoicePage() {
 
 export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const { user } = useAuth()
-  const { t, interpolate } = useLanguage()
+  const { t, interpolate, language } = useLanguage()
   const { showToast } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
@@ -134,6 +135,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(Boolean(invoiceId))
   const [saving, setSaving] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<{ customerName?: string }>({})
   const [pdfNeedsRegeneration, setPdfNeedsRegeneration] = useState(false)
@@ -185,7 +187,8 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
         setError(null)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : t.invoices.errors.loadDetailFailed)
+        logApiError('invoice detail load', err)
+        if (alive) setError(getFriendlyErrorMessage(err, 'load', t))
       })
       .finally(() => {
         if (alive) setLoading(false)
@@ -242,12 +245,11 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       setInvoice(saved)
       setForm(fromInvoice(saved))
       setPdfNeedsRegeneration(false)
-      if (saved.pdfPath) {
-        showToast('success', t.invoices.detail.pdfGenerated)
-      }
+      showToast('success', t.common.toasts.invoiceSaved)
       if (!invoiceId) navigate(`/invoices/${saved.id}`, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.invoices.errors.saveFailed)
+      logApiError('invoice save', err)
+      showToast('error', getFriendlyErrorMessage(err, 'save', t))
     } finally {
       setSaving(false)
     }
@@ -258,14 +260,13 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     setSaving(true)
     setError(null)
     try {
-      const updated = await generateInvoicePdf(invoice.id)
+      const updated = await generateInvoicePdf(invoice.id, language)
       setInvoice(updated)
       setPdfNeedsRegeneration(false)
-      showToast('success', t.invoices.detail.pdfGenerated)
+      showToast('success', t.common.toasts.invoicePdfGenerated)
     } catch (err) {
-      const message = err instanceof Error ? err.message : t.invoices.errors.pdfFailed
-      setError(message)
-      showToast('error', message)
+      logApiError('invoice pdf generate', err)
+      showToast('error', getFriendlyErrorMessage(err, 'pdf', t))
     } finally {
       setSaving(false)
     }
@@ -646,7 +647,19 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 type="button"
                 data-testid="invoice-download-pdf"
                 className="btn btn-primary h-11 px-5"
-                onClick={() => downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`)}
+                disabled={saving || downloadingPdf}
+                onClick={async () => {
+                  setDownloadingPdf(true)
+                  try {
+                    await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
+                    showToast('success', t.common.toasts.pdfDownloaded)
+                  } catch (err) {
+                    logApiError('invoice pdf download', err)
+                    showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                  } finally {
+                    setDownloadingPdf(false)
+                  }
+                }}
               >
                 <Download className="h-4 w-4" />
                 {t.invoices.detail.downloadPdf}
