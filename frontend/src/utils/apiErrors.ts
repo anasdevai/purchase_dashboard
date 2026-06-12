@@ -3,26 +3,46 @@ import type { TranslationSchema } from '../i18n/types'
 
 export type FriendlyErrorKind =
   | 'generic'
-  | 'save'
+  | 'auth'
+  | 'contractSave'
+  | 'repairOrderSave'
+  | 'invoiceCreate'
+  | 'invoiceSave'
+  | 'settingsSave'
   | 'pdf'
   | 'pdfDownload'
   | 'upload'
   | 'load'
-  | 'request'
 
 export class ApiError extends Error {
   readonly status: number
   readonly rawMessage?: string
+  /** When true, message is safe to show in the UI (e.g. not-found). */
+  readonly userFacing: boolean
 
-  constructor(friendlyMessage: string, status: number, rawMessage?: string) {
+  constructor(
+    friendlyMessage: string,
+    status: number,
+    rawMessage?: string,
+    userFacing = false,
+  ) {
     super(friendlyMessage)
     this.name = 'ApiError'
     this.status = status
     this.rawMessage = rawMessage
+    this.userFacing = userFacing
   }
 }
 
 export function logApiError(context: string, error: unknown) {
+  if (error instanceof ApiError) {
+    console.error(`[${context}]`, {
+      status: error.status,
+      rawMessage: error.rawMessage,
+      message: error.message,
+    })
+    return
+  }
   console.error(`[${context}]`, error)
 }
 
@@ -33,14 +53,24 @@ export function getFriendlyErrorMessage(
 ) {
   const t = translations ?? getActiveTranslations()
 
-  if (error instanceof ApiError) {
+  if (error instanceof ApiError && error.userFacing) {
     return error.message
   }
 
   const messages = t.common.friendlyErrors
   switch (kind) {
-    case 'save':
-      return messages.save
+    case 'auth':
+      return messages.auth
+    case 'contractSave':
+      return messages.contractSave
+    case 'repairOrderSave':
+      return messages.repairOrderSave
+    case 'invoiceCreate':
+      return messages.invoiceCreate
+    case 'invoiceSave':
+      return messages.invoiceSave
+    case 'settingsSave':
+      return messages.settingsSave
     case 'pdf':
       return messages.pdf
     case 'pdfDownload':
@@ -48,9 +78,7 @@ export function getFriendlyErrorMessage(
     case 'upload':
       return messages.upload
     case 'load':
-      return messages.load
-    case 'request':
-      return messages.request
+      return messages.generic
     default:
       return messages.generic
   }

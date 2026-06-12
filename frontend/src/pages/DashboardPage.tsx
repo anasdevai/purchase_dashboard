@@ -16,6 +16,7 @@ import { StatCard } from '../components/dashboard/StatCard'
 import { fetchDashboard, type DashboardSummary } from '../api/contracts'
 import { useAuth } from '../auth/AuthContext'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -29,7 +30,8 @@ export function DashboardPage() {
         if (alive) setDashboard(data)
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : t.common.errors.dashboardFailed)
+        logApiError('dashboard load', err)
+        if (alive) setError(getFriendlyErrorMessage(err, 'load', t))
       })
   }
 

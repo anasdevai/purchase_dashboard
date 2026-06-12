@@ -1,5 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
-import { getActiveTranslations } from '../i18n/active'
+import { ApiError } from '../utils/apiErrors'
 import { shopSettingsForPdf, type ShopSettings } from '../services/shopSettings'
 import type { ApiContract, Contract, ContractStatus } from '../types/contract'
 
@@ -235,7 +235,7 @@ export async function fetchPdfBlob(id: string) {
 
   if (!response.ok) {
     console.error('[API error]', response.status, response.url)
-    throw new Error(getActiveTranslations().common.friendlyErrors.pdfDownload)
+    throw new ApiError('PDF download failed', response.status)
   }
 
   return response.blob()

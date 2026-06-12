@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 
 const CLICK_INTERNET_LOGO = '/company_logo.png'
 const SCELRA_LOGO = '/assets/sclera-logo.png'
@@ -43,7 +44,10 @@ export function LoginPage() {
       }
       navigate(destination, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.common.errors.authFailed)
+      logApiError(mode === 'login' ? 'login' : 'signup', err)
+      setError(
+        getFriendlyErrorMessage(err, mode === 'login' ? 'auth' : 'generic', t),
+      )
     } finally {
       setIsSubmitting(false)
     }

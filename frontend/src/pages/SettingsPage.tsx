@@ -116,7 +116,7 @@ export function SettingsPage() {
       showToast('success', t.common.toasts.settingsSaved)
     } catch (err) {
       logApiError('settings save', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'settingsSave', t))
     } finally {
       setSaving(false)
     }

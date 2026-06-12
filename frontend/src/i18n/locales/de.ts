@@ -32,12 +32,17 @@ export const de: TranslationSchema = {
     },
     friendlyErrors: {
       generic: 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
-      save: 'Speichern nicht möglich. Bitte versuchen Sie es erneut.',
+      auth: 'E-Mail oder Passwort ist falsch.',
+      contractSave: 'Vertrag konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
+      repairOrderSave:
+        'Reparaturauftrag konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
+      invoiceCreate: 'Rechnung konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
+      invoiceSave: 'Rechnung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.',
+      settingsSave:
+        'Shop-Details konnten nicht gespeichert werden. Bitte versuchen Sie es erneut.',
       pdf: 'PDF konnte nicht erstellt werden. Bitte versuchen Sie es erneut.',
       pdfDownload: 'PDF konnte nicht heruntergeladen werden. Bitte versuchen Sie es erneut.',
-      upload: 'Upload fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      load: 'Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
-      request: 'Anfrage fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      upload: 'Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.',
     },
     toasts: {
       contractCreated: 'Vertrag erfolgreich erstellt.',
@@ -595,6 +600,8 @@ export const de: TranslationSchema = {
       loadFailed: 'Reparaturaufträge konnten nicht geladen werden',
       statusFailed: 'Reparaturstatus konnte nicht aktualisiert werden',
       loadDetailFailed: 'Reparaturauftrag konnte nicht geladen werden',
+      notFound:
+        'Reparaturauftrag nicht gefunden. Er wurde möglicherweise gelöscht oder Sie haben keinen Zugriff.',
       saveFailed: 'Reparaturauftrag konnte nicht gespeichert werden',
       invoiceCreateFailed: 'Rechnung konnte nicht erstellt werden',
       pdfFailed: 'Reparatur-PDF konnte nicht erstellt werden',

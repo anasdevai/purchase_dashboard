@@ -249,7 +249,10 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       if (!invoiceId) navigate(`/invoices/${saved.id}`, { replace: true })
     } catch (err) {
       logApiError('invoice save', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast(
+        'error',
+        getFriendlyErrorMessage(err, invoiceId ? 'invoiceSave' : 'invoiceCreate', t),
+      )
     } finally {
       setSaving(false)
     }

@@ -60,12 +60,15 @@ export type TranslationSchema = {
     }
     friendlyErrors: {
       generic: string
-      save: string
+      auth: string
+      contractSave: string
+      repairOrderSave: string
+      invoiceCreate: string
+      invoiceSave: string
+      settingsSave: string
       pdf: string
       pdfDownload: string
       upload: string
-      load: string
-      request: string
     }
     toasts: {
       contractCreated: string
@@ -588,6 +591,7 @@ export type TranslationSchema = {
       loadFailed: string
       statusFailed: string
       loadDetailFailed: string
+      notFound: string
       saveFailed: string
       invoiceCreateFailed: string
       pdfFailed: string

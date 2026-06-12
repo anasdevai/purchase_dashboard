@@ -1,5 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
-import { getActiveTranslations } from '../i18n/active'
+import { ApiError } from '../utils/apiErrors'
 import type { Language } from '../i18n/types'
 import type { Invoice, InvoicePayload } from '../types/invoice'
 import type { InvoicePaymentStatus } from '../types/invoice'
@@ -63,7 +63,7 @@ export async function fetchInvoicePdfBlob(id: string, language: Language = 'de')
 
   if (!response.ok) {
     console.error('[API error]', response.status, response.url)
-    throw new Error(getActiveTranslations().common.friendlyErrors.pdfDownload)
+    throw new ApiError('PDF download failed', response.status)
   }
   return response.blob()
 }

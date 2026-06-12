@@ -14,9 +14,14 @@ import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js"
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
-export const getRepairOrderOrThrow = async (id: string, userId: string) => {
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string) => {
   const repairOrder = await prisma.repairOrder.findFirst({
-    where: { id, userId },
+    where: UUID_RE.test(idOrNumber)
+      ? { id: idOrNumber, userId }
+      : { repairOrderNumber: idOrNumber, userId },
     include: { invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } } }
   });
 

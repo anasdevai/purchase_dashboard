@@ -1,5 +1,6 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
 import { getActiveTranslations } from '../i18n/active'
+import { ApiError } from '../utils/apiErrors'
 import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
 
 type RepairOrderResponse = { repairOrder: RepairOrder }
@@ -15,11 +16,25 @@ export async function fetchRepairOrders(query = '', status = '') {
 }
 
 export async function fetchRepairOrder(id: string) {
-  const response = await apiRequest<RepairOrderResponse>(`/api/repair-orders/${encodeURIComponent(id)}`)
-  if (!response?.repairOrder?.id) {
-    throw new Error(getActiveTranslations().repairOrders.errors.loadDetailFailed)
+  try {
+    const response = await apiRequest<RepairOrderResponse>(
+      `/api/repair-orders/${encodeURIComponent(id)}`,
+    )
+    if (!response?.repairOrder?.id) {
+      throw new ApiError(getActiveTranslations().common.friendlyErrors.generic, 500)
+    }
+    return response.repairOrder
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      throw new ApiError(
+        getActiveTranslations().repairOrders.errors.notFound,
+        404,
+        error.rawMessage,
+        true,
+      )
+    }
+    throw error
   }
-  return response.repairOrder
 }
 
 export async function saveRepairOrder(payload: RepairOrderPayload, id?: string) {
@@ -31,7 +46,7 @@ export async function saveRepairOrder(payload: RepairOrderPayload, id?: string) 
     },
   )
   if (!response?.repairOrder?.id) {
-    throw new Error(getActiveTranslations().repairOrders.errors.saveFailed)
+    throw new ApiError(getActiveTranslations().common.friendlyErrors.generic, 500)
   }
   return response.repairOrder
 }
@@ -63,7 +78,7 @@ export async function fetchRepairOrderPdfBlob(id: string) {
 
   if (!response.ok) {
     console.error('[API error]', response.status, response.url)
-    throw new Error(getActiveTranslations().common.friendlyErrors.pdfDownload)
+    throw new ApiError(getActiveTranslations().common.friendlyErrors.generic, response.status)
   }
   return response.blob()
 }

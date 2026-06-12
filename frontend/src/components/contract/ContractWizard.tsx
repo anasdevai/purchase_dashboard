@@ -401,7 +401,7 @@ export function ContractWizard(props: {
         }
       }
       logApiError('contract draft save', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'contractSave', t))
     } finally {
       setIsSubmitting(false)
     }
@@ -525,7 +525,7 @@ export function ContractWizard(props: {
         }
       }
       logApiError('contract complete', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'contractSave', t))
     } finally {
       setIsSubmitting(false)
     }

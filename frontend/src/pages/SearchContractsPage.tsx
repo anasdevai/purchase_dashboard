@@ -12,6 +12,7 @@ import type { Contract } from '../types/contract'
 import { useAuth } from '../auth/AuthContext'
 import { useDeleteContractConfirm } from '../hooks/useDeleteContractConfirm'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 
 export function SearchContractsPage() {
   const { user } = useAuth()
@@ -31,7 +32,8 @@ export function SearchContractsPage() {
           setError(null)
         })
         .catch((err) => {
-          setError(err instanceof Error ? err.message : t.common.errors.searchFailed)
+          logApiError('contract search', err)
+          setError(getFriendlyErrorMessage(err, 'load', t))
         })
     }, 250)
 

@@ -70,7 +70,7 @@ export function InvoicesPage() {
       )
     } catch (err) {
       logApiError('invoice payment status', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'invoiceSave', t))
     } finally {
       setUpdatingStatusId(null)
     }

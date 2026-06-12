@@ -70,6 +70,9 @@ export function RepairOrdersPage() {
     try {
       await deleteRepairOrder(repairOrder.id)
       setRepairOrders((current) => current.filter((item) => item.id !== repairOrder.id))
+    } catch (err) {
+      logApiError('repair order delete', err)
+      showToast('error', getFriendlyErrorMessage(err, 'generic', t))
     } finally {
       setDeletingId(null)
     }
@@ -84,7 +87,7 @@ export function RepairOrdersPage() {
       )
     } catch (err) {
       logApiError('repair order status update', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'repairOrderSave', t))
     } finally {
       setUpdatingStatusId(null)
     }

@@ -12,6 +12,7 @@ import type { Contract } from '../types/contract'
 import { useAuth } from '../auth/AuthContext'
 import { useDeleteContractConfirm } from '../hooks/useDeleteContractConfirm'
 import { useLanguage } from '../i18n/LanguageProvider'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 
 export function ContractsPage() {
   const { user } = useAuth()
@@ -31,7 +32,8 @@ export function ContractsPage() {
         if (alive) setContracts(data.map(mapContract))
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : t.common.errors.contractsFailed)
+        logApiError('contracts load', err)
+        if (alive) setError(getFriendlyErrorMessage(err, 'load', t))
       })
 
     return () => {

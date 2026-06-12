@@ -8,7 +8,6 @@ import {
   saveRepairOrder,
 } from '../api/repairOrders'
 import { createInvoiceFromRepairOrder } from '../api/invoices'
-import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
@@ -298,7 +297,6 @@ export function NewRepairOrderPage() {
 }
 
 export function RepairOrderDetailPage(props: { mode?: 'new' }) {
-  const { user } = useAuth()
   const { t, interpolate } = useLanguage()
   const { confirm, showToast } = useAppConfirm()
   const params = useParams()
@@ -334,47 +332,35 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   )
 
   useEffect(() => {
-    if (!repairOrderId || !user?.id) {
-      if (!repairOrderId) {
-        setLoading(false)
-        setRepairOrder(null)
-        setForm(emptyForm)
-        setSelectedAccessories(new Set())
-        setAccessoryOtherText('')
-        setShowActions(false)
-        setError(null)
-      }
+    if (!repairOrderId) {
+      setLoading(false)
+      setRepairOrder(null)
+      setForm(emptyForm)
+      setSelectedAccessories(new Set())
+      setAccessoryOtherText('')
+      setShowActions(false)
+      setError(null)
       return
     }
 
     let alive = true
     setLoading(true)
-    setRepairOrder(null)
-    setForm(emptyForm)
-    setSelectedAccessories(new Set())
-    setAccessoryOtherText('')
-    setShowActions(false)
     setError(null)
 
     void fetchRepairOrder(repairOrderId)
       .then((data) => {
         if (!alive) return
-        try {
-          const next = applyRepairOrderToForm(data, t.repairOrders.accessories)
-          setRepairOrder(data)
-          setForm(next.form)
-          setSelectedAccessories(next.accessoriesState.selected)
-          setAccessoryOtherText(next.accessoriesState.otherText)
-          setShowActions(true)
-          setError(null)
-        } catch (err) {
-          logApiError('repair order form apply', err)
-          setError(getFriendlyErrorMessage(err, 'load', t))
-        }
+        const next = applyRepairOrderToForm(data, t.repairOrders.accessories)
+        setRepairOrder(data)
+        setForm(next.form)
+        setSelectedAccessories(next.accessoriesState.selected)
+        setAccessoryOtherText(next.accessoriesState.otherText)
+        setShowActions(true)
       })
       .catch((err) => {
         if (!alive) return
         logApiError('repair order detail load', err)
+        setRepairOrder(null)
         setError(getFriendlyErrorMessage(err, 'load', t))
       })
       .finally(() => {
@@ -384,7 +370,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     return () => {
       alive = false
     }
-  }, [repairOrderId, user?.id, t.repairOrders.accessories, t.repairOrders.errors.loadDetailFailed])
+  }, [repairOrderId, t])
 
   const setField = (name: keyof RepairOrderPayload, value: string) => {
     setForm((current) => ({ ...current, [name]: value }))
@@ -476,7 +462,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       navigate(`/invoices/${invoice.id}`)
     } catch (err) {
       logApiError('repair order invoice create', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'invoiceCreate', t))
     } finally {
       setSaving(false)
     }
@@ -512,7 +498,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       await handleGeneratePdf(saved)
     } catch (err) {
       logApiError('repair order save', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'repairOrderSave', t))
     } finally {
       setSaving(false)
     }
@@ -533,10 +519,6 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
         </Link>
       </div>
     )
-  }
-
-  if (isExistingOrder && !repairOrder) {
-    return <div className="text-sm font-semibold text-slate-600">{t.repairOrders.detail.loading}</div>
   }
 
   return (

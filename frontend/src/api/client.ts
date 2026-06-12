@@ -49,13 +49,7 @@ export function clearToken() {
 }
 
 async function readError(response: Response) {
-  const { friendlyErrors } = getActiveTranslations().common
-  const friendly =
-    response.status >= 500
-      ? friendlyErrors.generic
-      : response.status === 401 || response.status === 403
-        ? friendlyErrors.request
-        : friendlyErrors.request
+  const friendly = getActiveTranslations().common.friendlyErrors.generic
 
   let rawMessage: string | undefined
   try {
