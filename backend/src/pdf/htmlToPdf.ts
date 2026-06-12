@@ -82,6 +82,7 @@ const launchBrowser = async () => {
   const executablePath = await resolveChromiumExecutablePath();
   const launchOptions: Parameters<typeof puppeteer.launch>[0] = {
     headless: true,
+    executablePath: process.env.CHROME_PATH,
     args: LAUNCH_ARGS
   };
 

@@ -1,5 +1,5 @@
 networks:
-  devicePurchsedNet:
+  devicePurcahsedNet:
     external: true
 
 services:
