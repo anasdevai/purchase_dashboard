@@ -16,4 +16,4 @@ services:
     ports:
       - "3001:80"
     networks:
-      - devicePurcSShsedNet
+      - devicePurcahsedNet

@@ -21,6 +21,13 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ttf-freefont
+
 RUN npm ci --omit=dev \
   && npm install prisma@^6.9.0 --no-save \
   && npx prisma generate
