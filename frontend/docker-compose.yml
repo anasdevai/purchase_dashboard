@@ -1,5 +1,5 @@
 networks:
-  devicePurcahsedNet:
+  devicePurchsedNet:
     external: true
 
 services:
@@ -9,11 +9,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # args:
-      #   VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000}
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://100.98.57.25:4000}
     container_name: purchase_dashboard_frontend
     restart: always
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "3001:3001"
     networks:
-      - devicePurcahsedNet
+      - devicePurcSShsedNet
