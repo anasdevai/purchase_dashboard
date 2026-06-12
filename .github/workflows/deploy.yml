@@ -1,0 +1,92 @@
+name: Deploy Device Purchased Project
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+
+      # =========================
+      # 🔹 TAILSCALE
+      # =========================
+      - name: Install Tailscale
+        run: curl -fsSL https://tailscale.com/install.sh | sh
+
+      - name: Connect to Tailscale
+        run: sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }}
+
+      # =========================
+      # 🔹 SSH SETUP
+      # =========================
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Add Known Hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
+      # =========================
+      # 🔹 PULL LATEST CODE
+      # =========================
+      - name: Pull Latest Code
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd ~/DevicePurchased--Project &&
+          git pull origin main
+          "
+
+      # =========================
+      # 🔹 DATABASE
+      # =========================
+      # - name: Start Database
+      #   run: |
+      #     ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+      #     cd ~/DevicePurchased--Project/database &&
+      #     docker compose up -d
+      #     "
+
+      # =========================
+      # 🔹 BACKEND
+      # =========================
+      - name: Deploy Backend
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd ~/DevicePurchased--Project/backend &&
+          docker compose down &&
+          docker compose up -d --build
+          "
+
+      # =========================
+      # 🔹 FRONTEND
+      # =========================
+      - name: Deploy Frontend
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd ~/DevicePurchased--Project/frontend &&
+          docker compose down &&
+          docker compose up -d --build
+          "
+
+      # =========================
+      # 🔹 HEALTH CHECKS
+      # =========================
+      - name: Backend Health Check
+        run: |
+          sleep 20
+          curl http://${{ secrets.SERVER_IP }}:4000
+
+      - name: Frontend Health Check
+        run: |
+          curl http://${{ secrets.SERVER_IP }}:3001
+
