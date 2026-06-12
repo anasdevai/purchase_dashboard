@@ -63,6 +63,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/backend &&
+          cp .env.docker.example .env &&
           docker-compose down &&
           docker-compose up -d --build
           "
@@ -74,6 +75,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/frontend &&
+          cp .env.docker.example .env &&
           docker-compose down &&
           docker-compose up -d --build
           "

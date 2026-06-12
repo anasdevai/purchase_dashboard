@@ -14,6 +14,6 @@ services:
     container_name: purchase_dashboard_frontend
     restart: always
     ports:
-      - "3001:3001"
+      - "3001:80"
     networks:
       - devicePurcSShsedNet
