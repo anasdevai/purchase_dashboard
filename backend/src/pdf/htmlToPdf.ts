@@ -12,7 +12,12 @@ const pdfOptions = {
   }
 };
 
-const LAUNCH_ARGS = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"];
+const LAUNCH_ARGS = [
+  "--no-sandbox",
+  "--disable-setuid-sandbox",
+  "--disable-dev-shm-usage",
+  "--disable-gpu"
+];
 
 const CHROME_INSTALL_HINT =
   "Install Chrome for PDF generation with: npx puppeteer browsers install chrome";
@@ -67,11 +72,12 @@ const resolveChromiumExecutablePath = async (): Promise<string | null> => {
   }
 
   if (process.platform === "linux") {
+    // Alpine Linux (Docker) installs Chromium as chromium-browser.
     return findFirstExisting([
-      "/usr/bin/chromium",
       "/usr/bin/chromium-browser",
-      "/usr/bin/google-chrome",
-      "/usr/bin/google-chrome-stable"
+      "/usr/bin/chromium",
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/google-chrome"
     ]);
   }
 
@@ -82,7 +88,6 @@ const launchBrowser = async () => {
   const executablePath = await resolveChromiumExecutablePath();
   const launchOptions: Parameters<typeof puppeteer.launch>[0] = {
     headless: true,
-    executablePath: process.env.CHROME_PATH,
     args: LAUNCH_ARGS
   };
 
@@ -97,6 +102,7 @@ const launchBrowser = async () => {
     return await puppeteer.launch(launchOptions);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+    console.error("[pdf] Failed to launch Chromium:", message);
     throw new Error(`Failed to launch browser for PDF generation. ${CHROME_INSTALL_HINT}\n${message}`);
   }
 };

@@ -17,6 +17,8 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
@@ -26,6 +28,7 @@ RUN apk add --no-cache \
     nss \
     freetype \
     harfbuzz \
+    ca-certificates \
     ttf-freefont
 
 RUN npm ci --omit=dev \
@@ -36,7 +39,7 @@ COPY --from=builder /app/dist ./dist
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN chmod +x docker-entrypoint.sh \
-  && mkdir -p storage/contracts
+  && mkdir -p storage/contracts storage/repair-orders storage/invoices
 
 EXPOSE 4000
 

@@ -8,11 +8,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
 
       # =========================
       # 🔹 TAILSCALE
@@ -47,25 +45,18 @@ jobs:
           "
 
       # =========================
-      # 🔹 DATABASE
-      # =========================
-      # - name: Start Database
-      #   run: |
-      #     ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
-      #     cd ~/DevicePurchased--Project/database &&
-      #     docker compose up -d
-      #     "
-
-      # =========================
       # 🔹 BACKEND
       # =========================
       - name: Deploy Backend
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/backend &&
-          cp .env.docker.example .env &&
-          docker-compose down &&
-          docker-compose up -d --build
+          if [ ! -f .env ]; then cp .env.docker.example .env; fi &&
+          docker compose down &&
+          docker compose up -d --build &&
+          sleep 20 &&
+          docker compose exec -T backend npx prisma migrate status &&
+          docker compose logs --tail=80 backend
           "
 
       # =========================
@@ -75,9 +66,9 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/frontend &&
-          cp .env.docker.example .env &&
-          docker-compose down &&
-          docker-compose up -d --build
+          if [ ! -f .env ]; then cp .env.docker.example .env; fi &&
+          docker compose down &&
+          docker compose up -d --build
           "
 
       # =========================
@@ -85,10 +76,16 @@ jobs:
       # =========================
       - name: Backend Health Check
         run: |
-          sleep 20
-          curl http://${{ secrets.SERVER_IP }}:4000
+          sleep 10
+          curl -fsS "http://${{ secrets.SERVER_IP }}:4000/"
 
       - name: Frontend Health Check
         run: |
-          curl http://${{ secrets.SERVER_IP }}:3001
+          curl -fsS "http://${{ secrets.SERVER_IP }}:3001/"
 
+      - name: Verify Chromium in backend container
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+          cd ~/DevicePurchased--Project/backend &&
+          docker compose exec -T backend sh -c 'test -x /usr/bin/chromium-browser && echo Chromium OK || (test -x /usr/bin/chromium && echo Chromium OK || exit 1)'
+          "

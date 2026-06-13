@@ -49,5 +49,9 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
   }
 
   console.error(error);
+  if (error instanceof Error && error.message.includes("Failed to launch browser for PDF generation")) {
+    return res.status(500).json({ message: "PDF could not be created. Please try again." });
+  }
+
   return res.status(500).json({ message: "Internal server error" });
 };

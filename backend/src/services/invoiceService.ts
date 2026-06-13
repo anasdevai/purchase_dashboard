@@ -130,7 +130,15 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
       });
 
       await ensureDirectory(getInvoiceStorageDir(userId, invoice.invoiceNumber));
-      return attachInvoicePdf(invoice.id, userId);
+
+      try {
+        return await attachInvoicePdf(invoice.id, userId);
+      } catch (error) {
+        await prisma.invoice.delete({ where: { id: invoice.id } }).catch((deleteError) => {
+          console.error("[invoice] Failed to roll back invoice after PDF error:", deleteError);
+        });
+        throw error;
+      }
     } catch (error) {
       if (attempt === 4) throw error;
     }
@@ -165,7 +173,7 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
     .join(" ");
 
   const shopSettings = await getShopSettingsForUser(userId);
-  const defaultVatPercent = getDefaultVatPercent(shopSettings);
+  const defaultVatPercent = Math.round(getDefaultVatPercent(shopSettings));
 
   return createInvoice(userId, {
     repairOrderId: repairOrder.id,
@@ -183,7 +191,7 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
         unitPrice: repairOrder.estimatedPrice
           ? Math.round(Number(repairOrder.estimatedPrice.toString()))
           : 0,
-        vatPercent: Math.round(defaultVatPercent)
+        vatPercent: defaultVatPercent
       }
     ]
   });
