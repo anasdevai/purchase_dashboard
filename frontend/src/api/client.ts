@@ -1,5 +1,6 @@
 import { getActiveTranslations } from '../i18n/active'
 import { ApiError, resolveApiErrorMessage } from '../utils/apiErrors'
+import { isAuthErrorCode } from '../utils/authErrorCodes'
 
 const API_PORT = '4000'
 
@@ -51,12 +52,15 @@ export function clearToken() {
 async function readError(response: Response) {
   const t = getActiveTranslations()
   let rawMessage: string | undefined
+  let errorCode: string | undefined
 
   try {
     const body = (await response.json()) as {
       message?: string
+      code?: string
       errors?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
     }
+    errorCode = body.code
     const fieldMessages = body.errors?.fieldErrors
       ? Object.entries(body.errors.fieldErrors).flatMap(([field, messages]) =>
           messages.map((message) => `${field}: ${message}`),
@@ -68,13 +72,19 @@ async function readError(response: Response) {
       details.length > 0
         ? `${body.message ?? ''} (${details.join('; ')})`.trim()
         : body.message
-    console.error('[API error]', response.status, response.url, rawMessage ?? body)
+    console.error('[API error]', response.status, response.url, errorCode, rawMessage ?? body)
   } catch {
     console.error('[API error]', response.status, response.url)
   }
 
-  const { message, userFacing } = resolveApiErrorMessage(response.status, rawMessage, t)
-  return new ApiError(message, response.status, rawMessage, userFacing)
+  const resolvedCode = isAuthErrorCode(errorCode) ? errorCode : undefined
+  const { message, userFacing } = resolveApiErrorMessage(
+    response.status,
+    rawMessage,
+    t,
+    resolvedCode,
+  )
+  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode)
 }
 
 export async function apiRequest<T>(

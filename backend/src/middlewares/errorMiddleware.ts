@@ -2,7 +2,17 @@ import type { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
+import { AUTH_ERROR_CODES } from "../constants/authErrorCodes.js";
 import { HttpError } from "../utils/httpError.js";
+
+const readHttpErrorCode = (error: HttpError): string | undefined => {
+  const details = error.details;
+  if (details && typeof details === "object" && "code" in details) {
+    const code = (details as { code?: unknown }).code;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+};
 
 export const notFoundHandler = (req: Request, _res: Response, next: NextFunction) => {
   next(new HttpError(404, `Route not found: ${req.method} ${req.originalUrl}`));
@@ -12,6 +22,7 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
   if (error instanceof ZodError) {
     return res.status(400).json({
       message: "Validation failed",
+      code: AUTH_ERROR_CODES.VALIDATION_FAILED,
       errors: error.flatten()
     });
   }
@@ -28,6 +39,7 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
   if (error instanceof HttpError) {
     return res.status(error.statusCode).json({
       message: error.message,
+      code: readHttpErrorCode(error),
       details: error.details
     });
   }

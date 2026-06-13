@@ -372,6 +372,7 @@ export type TranslationSchema = {
   }
   login: {
     appTitle: string
+    brandTagline: string
     poweredBy: string
     subtitle: string
     signupSubtitle: string

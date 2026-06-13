@@ -7,8 +7,10 @@ import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { getAuthErrorMessage, logApiError } from '../utils/apiErrors'
 
-const CLICK_INTERNET_LOGO = '/company_logo.png'
-const SCELRA_LOGO = '/assets/sclera-logo.png'
+const SCLERA_LOGO = '/Sclera%20logo.png'
+
+const loginInputClassName =
+  'input h-12 border-slate-200 text-sm text-[#111111] placeholder:text-slate-400 focus:border-[#111111] focus:ring-[#111111]/15'
 
 type LoginValues = {
   name?: string
@@ -23,8 +25,8 @@ export function LoginPage() {
   const { t } = useLanguage()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [error, setError] = useState<unknown>(null)
+  const [showSuccess, setShowSuccess] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register, handleSubmit, reset } = useForm<LoginValues>({
     defaultValues: { name: '', email: '', password: '' },
@@ -36,12 +38,12 @@ export function LoginPage() {
 
   const onSubmit = async (values: LoginValues) => {
     setError(null)
-    setSuccess(null)
+    setShowSuccess(false)
     setIsSubmitting(true)
     try {
       if (mode === 'signup') {
         await signup(values.name?.trim() || t.common.defaultStaffUser, values.email, values.password)
-        setSuccess(t.login.accountCreatedSuccess)
+        setShowSuccess(true)
         window.setTimeout(() => {
           navigate(destination, { replace: true })
         }, 900)
@@ -51,7 +53,7 @@ export function LoginPage() {
       }
     } catch (err) {
       logApiError(mode === 'login' ? 'login' : 'signup', err)
-      setError(getAuthErrorMessage(err, t))
+      setError(err)
     } finally {
       setIsSubmitting(false)
     }
@@ -65,13 +67,14 @@ export function LoginPage() {
 
       <div className="flex flex-1 items-center justify-center px-4 pb-10">
         <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200/60">
-          <div className="bg-primary px-8 pb-9 pt-10 text-center text-white">
+          <div className="bg-primary px-8 pb-6 pt-3 text-center text-white">
             <img
-              src={CLICK_INTERNET_LOGO}
-              alt="Click Internet"
-              className="mx-auto h-[4.5rem] w-auto max-w-[240px] object-contain sm:h-20"
+              src={SCLERA_LOGO}
+              alt="Sclera"
+              className="mx-auto h-32 w-auto max-w-[380px] object-contain invert sm:h-36"
+              data-testid="login-logo"
             />
-            <h1 className="mt-6 text-lg font-bold leading-snug tracking-tight">
+            <h1 className="mt-3 text-lg font-bold leading-snug tracking-tight">
               {t.login.appTitle}
             </h1>
             <p className="mt-2 text-sm font-normal text-white/90">
@@ -83,9 +86,9 @@ export function LoginPage() {
             <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} data-testid="login-form">
               {mode === 'signup' ? (
                 <div>
-                  <label className="label">{t.login.name}</label>
+                  <label className="label text-[#111111]">{t.login.name}</label>
                   <input
-                    className="input h-12 text-sm"
+                    className={loginInputClassName}
                     placeholder={t.login.namePlaceholder}
                     data-testid="login-name-input"
                     {...register('name', { required: mode === 'signup' })}
@@ -94,19 +97,19 @@ export function LoginPage() {
               ) : null}
 
               <div>
-                <label className="label">{t.login.email}</label>
+                <label className="label text-[#111111]">{t.login.email}</label>
                 <input
-                  className="input h-12 text-sm"
+                  className={loginInputClassName}
                   placeholder={t.login.emailPlaceholder}
                   data-testid="login-email-input"
                   {...register('email', { required: true })}
                 />
               </div>
               <div>
-                <label className="label">{t.login.password}</label>
+                <label className="label text-[#111111]">{t.login.password}</label>
                 <div className="relative">
                   <input
-                    className="input h-12 pr-11 text-sm"
+                    className={`${loginInputClassName} pr-11`}
                     type={showPassword ? 'text' : 'password'}
                     placeholder={t.login.passwordPlaceholder}
                     autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
@@ -117,7 +120,7 @@ export function LoginPage() {
                     type="button"
                     data-testid="login-toggle-password"
                     onClick={() => setShowPassword((visible) => !visible)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-light"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111]/20"
                     aria-label={showPassword ? t.login.hidePassword : t.login.showPassword}
                   >
                     {showPassword ? (
@@ -129,12 +132,12 @@ export function LoginPage() {
                 </div>
               </div>
 
-              {success ? (
+              {showSuccess ? (
                 <div
                   className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100"
                   data-testid="login-success"
                 >
-                  {success}
+                  {t.login.accountCreatedSuccess}
                 </div>
               ) : null}
 
@@ -142,8 +145,9 @@ export function LoginPage() {
                 <div
                   className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 ring-1 ring-red-100"
                   data-testid="login-error"
+                  role="alert"
                 >
-                  {error}
+                  {getAuthErrorMessage(error, t)}
                 </div>
               ) : null}
 
@@ -168,12 +172,12 @@ export function LoginPage() {
                 data-testid="login-mode-toggle"
                 onClick={() => {
                   setError(null)
-                  setSuccess(null)
+                  setShowSuccess(false)
                   reset()
                   setShowPassword(false)
                   setMode((current) => (current === 'signup' ? 'login' : 'signup'))
                 }}
-                className="font-semibold text-primary hover:text-primary-hover"
+                className="font-semibold text-[#111111] underline-offset-2 hover:underline"
               >
                 {mode === 'signup' ? t.login.login : t.login.signup}
               </button>
@@ -185,8 +189,8 @@ export function LoginPage() {
                   {t.login.poweredBy}
                 </span>
                 <img
-                  src={SCELRA_LOGO}
-                  alt="Scelra"
+                  src={SCLERA_LOGO}
+                  alt="Sclera"
                   className="h-[72px] w-auto max-w-[18rem] object-contain"
                 />
               </div>

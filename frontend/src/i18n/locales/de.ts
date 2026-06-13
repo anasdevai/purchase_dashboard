@@ -373,6 +373,7 @@ export const de: TranslationSchema = {
   },
   login: {
     appTitle: 'Gerätekauf-Vertrags-App',
+    brandTagline: 'IT - XSolutions e.U. / SCLERA.at',
     poweredBy: 'Powered by',
     subtitle: 'Anmelden, um fortzufahren',
     signupSubtitle: 'Mitarbeiterkonto erstellen',

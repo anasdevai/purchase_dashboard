@@ -371,6 +371,7 @@ export const en: TranslationSchema = {
   },
   login: {
     appTitle: 'Device Purchase Contract App',
+    brandTagline: 'IT - XSolutions e.U. / SCLERA.at',
     poweredBy: 'Powered by',
     subtitle: 'Sign in to continue',
     signupSubtitle: 'Create a staff account',

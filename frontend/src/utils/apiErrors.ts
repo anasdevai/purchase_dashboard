@@ -1,5 +1,10 @@
 import { getActiveTranslations } from '../i18n/active'
 import type { TranslationSchema } from '../i18n/types'
+import {
+  AUTH_ERROR_CODES,
+  isAuthErrorCode,
+  type AuthErrorCode,
+} from './authErrorCodes'
 
 export type FriendlyErrorKind =
   | 'generic'
@@ -17,6 +22,7 @@ export type FriendlyErrorKind =
 export class ApiError extends Error {
   readonly status: number
   readonly rawMessage?: string
+  readonly code?: AuthErrorCode
   /** When true, message is safe to show in the UI (e.g. not-found). */
   readonly userFacing: boolean
 
@@ -25,11 +31,13 @@ export class ApiError extends Error {
     status: number,
     rawMessage?: string,
     userFacing = false,
+    code?: AuthErrorCode,
   ) {
     super(friendlyMessage)
     this.name = 'ApiError'
     this.status = status
     this.rawMessage = rawMessage
+    this.code = code
     this.userFacing = userFacing
   }
 }
@@ -38,6 +46,7 @@ export function logApiError(context: string, error: unknown) {
   if (error instanceof ApiError) {
     console.error(`[${context}]`, {
       status: error.status,
+      code: error.code,
       rawMessage: error.rawMessage,
       message: error.message,
     })
@@ -46,29 +55,42 @@ export function logApiError(context: string, error: unknown) {
   console.error(`[${context}]`, error)
 }
 
-const isEmailAlreadyRegisteredMessage = (message?: string) =>
-  Boolean(message?.toLowerCase().includes('email is already registered'))
+function resolveAuthErrorMessage(
+  status: number,
+  code: AuthErrorCode | undefined,
+  translations: TranslationSchema,
+) {
+  const t = translations
 
-const isInvalidCredentialsMessage = (message?: string) =>
-  Boolean(message?.toLowerCase().includes('invalid email or password'))
+  if (code === AUTH_ERROR_CODES.INVALID_CREDENTIALS || status === 401) {
+    return t.common.friendlyErrors.auth
+  }
+
+  if (code === AUTH_ERROR_CODES.EMAIL_ALREADY_REGISTERED || status === 409) {
+    return t.login.emailAlreadyRegistered
+  }
+
+  if (code === AUTH_ERROR_CODES.VALIDATION_FAILED || status === 400) {
+    return t.login.validationFailed
+  }
+
+  return null
+}
 
 export function resolveApiErrorMessage(
   status: number,
-  rawMessage: string | undefined,
+  _rawMessage: string | undefined,
   translations?: TranslationSchema,
+  code?: AuthErrorCode,
 ) {
   const t = translations ?? getActiveTranslations()
 
-  if (status === 401 || isInvalidCredentialsMessage(rawMessage)) {
+  if (code === AUTH_ERROR_CODES.INVALID_CREDENTIALS || status === 401) {
     return { message: t.common.friendlyErrors.auth, userFacing: true }
   }
 
-  if (status === 409 && isEmailAlreadyRegisteredMessage(rawMessage)) {
+  if (code === AUTH_ERROR_CODES.EMAIL_ALREADY_REGISTERED) {
     return { message: t.login.emailAlreadyRegistered, userFacing: true }
-  }
-
-  if (status === 400) {
-    return { message: t.login.validationFailed, userFacing: true }
   }
 
   return { message: t.common.friendlyErrors.generic, userFacing: false }
@@ -78,13 +100,9 @@ export function getAuthErrorMessage(error: unknown, translations?: TranslationSc
   const t = translations ?? getActiveTranslations()
 
   if (error instanceof ApiError) {
-    if (error.userFacing) {
-      return error.message
-    }
-
-    const resolved = resolveApiErrorMessage(error.status, error.rawMessage, t)
-    if (resolved.userFacing) {
-      return resolved.message
+    const authMessage = resolveAuthErrorMessage(error.status, error.code, t)
+    if (authMessage) {
+      return authMessage
     }
   }
 
@@ -99,6 +117,13 @@ export function getFriendlyErrorMessage(
   const t = translations ?? getActiveTranslations()
 
   if (error instanceof ApiError && error.userFacing) {
+    if (error.code && isAuthErrorCode(error.code)) {
+      const authMessage = resolveAuthErrorMessage(error.status, error.code, t)
+      if (authMessage) {
+        return authMessage
+      }
+    }
+
     return error.message
   }
 
