@@ -52,11 +52,11 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/backend &&
           if [ ! -f .env ]; then cp .env.docker.example .env; fi &&
-          docker compose down &&
-          docker compose up -d --build &&
+          docker-compose down &&
+          docker-compose up -d --build &&
           sleep 20 &&
-          docker compose exec -T backend npx prisma migrate status &&
-          docker compose logs --tail=80 backend
+          docker-compose exec -T backend npx prisma migrate status &&
+          docker-compose logs --tail=80 backend
           "
 
       # =========================
@@ -67,8 +67,8 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/frontend &&
           if [ ! -f .env ]; then cp .env.docker.example .env; fi &&
-          docker compose down &&
-          docker compose up -d --build
+          docker-compose down &&
+          docker-compose up -d --build
           "
 
       # =========================
@@ -87,5 +87,5 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
           cd ~/DevicePurchased--Project/backend &&
-          docker compose exec -T backend sh -c 'test -x /usr/bin/chromium-browser && echo Chromium OK || (test -x /usr/bin/chromium && echo Chromium OK || exit 1)'
+          docker-compose exec -T backend sh -c 'test -x /usr/bin/chromium-browser && echo Chromium OK || (test -x /usr/bin/chromium && echo Chromium OK || exit 1)'
           "
