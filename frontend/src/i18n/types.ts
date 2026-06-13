@@ -390,6 +390,9 @@ export type TranslationSchema = {
     continue: string
     alreadyHaveAccount: string
     needAccount: string
+    emailAlreadyRegistered: string
+    accountCreatedSuccess: string
+    validationFailed: string
   }
   settings: {
     description: string

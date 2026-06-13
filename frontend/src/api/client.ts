@@ -1,5 +1,5 @@
 import { getActiveTranslations } from '../i18n/active'
-import { ApiError } from '../utils/apiErrors'
+import { ApiError, resolveApiErrorMessage } from '../utils/apiErrors'
 
 const API_PORT = '4000'
 
@@ -49,9 +49,9 @@ export function clearToken() {
 }
 
 async function readError(response: Response) {
-  const friendly = getActiveTranslations().common.friendlyErrors.generic
-
+  const t = getActiveTranslations()
   let rawMessage: string | undefined
+
   try {
     const body = (await response.json()) as {
       message?: string
@@ -73,7 +73,8 @@ async function readError(response: Response) {
     console.error('[API error]', response.status, response.url)
   }
 
-  return new ApiError(friendly, response.status, rawMessage)
+  const { message, userFacing } = resolveApiErrorMessage(response.status, rawMessage, t)
+  return new ApiError(message, response.status, rawMessage, userFacing)
 }
 
 export async function apiRequest<T>(

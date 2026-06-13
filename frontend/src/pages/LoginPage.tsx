@@ -5,7 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
 import { useLanguage } from '../i18n/LanguageProvider'
-import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
+import { getAuthErrorMessage, logApiError } from '../utils/apiErrors'
 
 const CLICK_INTERNET_LOGO = '/company_logo.png'
 const SCELRA_LOGO = '/assets/sclera-logo.png'
@@ -24,6 +24,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { register, handleSubmit, reset } = useForm<LoginValues>({
     defaultValues: { name: '', email: '', password: '' },
@@ -35,19 +36,22 @@ export function LoginPage() {
 
   const onSubmit = async (values: LoginValues) => {
     setError(null)
+    setSuccess(null)
     setIsSubmitting(true)
     try {
       if (mode === 'signup') {
         await signup(values.name?.trim() || t.common.defaultStaffUser, values.email, values.password)
+        setSuccess(t.login.accountCreatedSuccess)
+        window.setTimeout(() => {
+          navigate(destination, { replace: true })
+        }, 900)
       } else {
         await login(values.email, values.password)
+        navigate(destination, { replace: true })
       }
-      navigate(destination, { replace: true })
     } catch (err) {
       logApiError(mode === 'login' ? 'login' : 'signup', err)
-      setError(
-        getFriendlyErrorMessage(err, mode === 'login' ? 'auth' : 'generic', t),
-      )
+      setError(getAuthErrorMessage(err, t))
     } finally {
       setIsSubmitting(false)
     }
@@ -125,6 +129,15 @@ export function LoginPage() {
                 </div>
               </div>
 
+              {success ? (
+                <div
+                  className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 ring-1 ring-emerald-100"
+                  data-testid="login-success"
+                >
+                  {success}
+                </div>
+              ) : null}
+
               {error ? (
                 <div
                   className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700 ring-1 ring-red-100"
@@ -155,6 +168,7 @@ export function LoginPage() {
                 data-testid="login-mode-toggle"
                 onClick={() => {
                   setError(null)
+                  setSuccess(null)
                   reset()
                   setShowPassword(false)
                   setMode((current) => (current === 'signup' ? 'login' : 'signup'))

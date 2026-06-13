@@ -389,6 +389,9 @@ export const en: TranslationSchema = {
     continue: 'Continue',
     alreadyHaveAccount: 'Already have an account?',
     needAccount: 'Need an account?',
+    emailAlreadyRegistered: 'This email is already registered.',
+    accountCreatedSuccess: 'Account created successfully.',
+    validationFailed: 'Please check your details and try again.',
   },
   settings: {
     description:

@@ -391,6 +391,9 @@ export const de: TranslationSchema = {
     continue: 'Weiter',
     alreadyHaveAccount: 'Bereits ein Konto?',
     needAccount: 'Noch kein Konto?',
+    emailAlreadyRegistered: 'Diese E-Mail ist bereits registriert.',
+    accountCreatedSuccess: 'Konto erfolgreich erstellt.',
+    validationFailed: 'Bitte überprüfen Sie Ihre Angaben und versuchen Sie es erneut.',
   },
   settings: {
     description:

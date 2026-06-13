@@ -46,6 +46,51 @@ export function logApiError(context: string, error: unknown) {
   console.error(`[${context}]`, error)
 }
 
+const isEmailAlreadyRegisteredMessage = (message?: string) =>
+  Boolean(message?.toLowerCase().includes('email is already registered'))
+
+const isInvalidCredentialsMessage = (message?: string) =>
+  Boolean(message?.toLowerCase().includes('invalid email or password'))
+
+export function resolveApiErrorMessage(
+  status: number,
+  rawMessage: string | undefined,
+  translations?: TranslationSchema,
+) {
+  const t = translations ?? getActiveTranslations()
+
+  if (status === 401 || isInvalidCredentialsMessage(rawMessage)) {
+    return { message: t.common.friendlyErrors.auth, userFacing: true }
+  }
+
+  if (status === 409 && isEmailAlreadyRegisteredMessage(rawMessage)) {
+    return { message: t.login.emailAlreadyRegistered, userFacing: true }
+  }
+
+  if (status === 400) {
+    return { message: t.login.validationFailed, userFacing: true }
+  }
+
+  return { message: t.common.friendlyErrors.generic, userFacing: false }
+}
+
+export function getAuthErrorMessage(error: unknown, translations?: TranslationSchema) {
+  const t = translations ?? getActiveTranslations()
+
+  if (error instanceof ApiError) {
+    if (error.userFacing) {
+      return error.message
+    }
+
+    const resolved = resolveApiErrorMessage(error.status, error.rawMessage, t)
+    if (resolved.userFacing) {
+      return resolved.message
+    }
+  }
+
+  return t.common.friendlyErrors.generic
+}
+
 export function getFriendlyErrorMessage(
   error: unknown,
   kind: FriendlyErrorKind = 'generic',
@@ -60,7 +105,7 @@ export function getFriendlyErrorMessage(
   const messages = t.common.friendlyErrors
   switch (kind) {
     case 'auth':
-      return messages.auth
+      return getAuthErrorMessage(error, t)
     case 'contractSave':
       return messages.contractSave
     case 'repairOrderSave':
