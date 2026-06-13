@@ -76,8 +76,17 @@ jobs:
       # =========================
       - name: Backend Health Check
         run: |
-          sleep 10
-          curl -fsS "http://${{ secrets.SERVER_IP }}:4000/"
+          sleep 25
+          if curl -fsS "http://${{ secrets.SERVER_IP }}:4000/health"; then
+            echo "Backend health check passed"
+          else
+            echo "Backend health check failed. Recent backend logs:"
+            ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} "
+            cd ~/DevicePurchased--Project/backend &&
+            docker-compose logs --tail=80 backend
+            "
+            exit 1
+          fi
 
       - name: Frontend Health Check
         run: |
