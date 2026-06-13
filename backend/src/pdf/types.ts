@@ -98,6 +98,8 @@ export type InvoiceForPdf = {
   vatAmountOverride: MoneyLike;
   grossTotalOverride: MoneyLike;
   notes: string | null;
+  signatureDataUrl?: string | null;
+  signatureName?: string | null;
   items: Array<{
     description: string;
     quantity: MoneyLike;

@@ -14,7 +14,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { useLayout } from './LayoutContext'
 
-const LOGO_SRC = '/company_logo.png'
+const LOGO_SRC = '/assets/sclera-logo.png'
 
 type NavItem = {
   to: string
@@ -159,11 +159,13 @@ function SidebarNav(props: { onNavigate?: () => void }) {
   return (
     <>
       <div className="flex shrink-0 flex-col items-center border-b border-white/10 px-5 pb-5 pt-4 text-center">
-        <img
-          src={LOGO_SRC}
-          alt=""
-          className="h-[72px] w-auto max-w-[180px] cursor-pointer object-contain mix-blend-screen transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.03]"
-        />
+        <div className="flex h-[64px] w-full max-w-[200px] items-center justify-center overflow-hidden">
+          <img
+            src={LOGO_SRC}
+            alt="Sclera"
+            className="w-full cursor-pointer object-contain invert transition-transform duration-300 ease-out hover:-translate-y-0.5 hover:scale-[1.03]"
+          />
+        </div>
         <p className="mt-3 text-[11px] font-medium leading-snug text-white/90">
           {t.app.nameLine1} {t.app.nameLine2}
         </p>

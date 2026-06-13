@@ -54,7 +54,7 @@ export const renderInvoicePdfBuffer = async (
   language: InvoicePdfLanguage = "de"
 ) => {
   const html = renderInvoiceHtml(invoice, shopSettings, language);
-  return renderHtmlToPdfBuffer(html);
+  return renderHtmlToPdfBuffer(html, { fullBleed: true });
 };
 
 export const generateInvoicePdf = async (
@@ -67,7 +67,7 @@ export const generateInvoicePdf = async (
 
   const absolutePdfPath = `${storageDir}/invoice.pdf`;
   const html = renderInvoiceHtml(invoice, shopSettings, language);
-  await renderHtmlToPdf(html, absolutePdfPath);
+  await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
 
   return toRelativeStoragePath(absolutePdfPath);
 };

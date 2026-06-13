@@ -1,16 +1,30 @@
 import fs from "node:fs";
 import puppeteer from "puppeteer";
 
-const pdfOptions = {
+export type PdfRenderOptions = {
+  /** When true, render edge-to-edge (no page margins) so the template controls its own padding. */
+  fullBleed?: boolean;
+};
+
+const DEFAULT_MARGIN = {
+  top: "12mm",
+  right: "12mm",
+  bottom: "14mm",
+  left: "12mm"
+};
+
+const ZERO_MARGIN = {
+  top: "0mm",
+  right: "0mm",
+  bottom: "0mm",
+  left: "0mm"
+};
+
+const buildPdfOptions = (options?: PdfRenderOptions) => ({
   format: "A4" as const,
   printBackground: true,
-  margin: {
-    top: "12mm",
-    right: "12mm",
-    bottom: "14mm",
-    left: "12mm"
-  }
-};
+  margin: options?.fullBleed ? ZERO_MARGIN : DEFAULT_MARGIN
+});
 
 const LAUNCH_ARGS = [
   "--no-sandbox",
@@ -107,21 +121,26 @@ const launchBrowser = async () => {
   }
 };
 
-const renderPdfBuffer = async (html: string) => {
+const renderPdfBuffer = async (html: string, options?: PdfRenderOptions) => {
   const browser = await launchBrowser();
 
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
-    return Buffer.from(await page.pdf(pdfOptions));
+    return Buffer.from(await page.pdf(buildPdfOptions(options)));
   } finally {
     await browser.close();
   }
 };
 
-export const renderHtmlToPdfBuffer = (html: string) => renderPdfBuffer(html);
+export const renderHtmlToPdfBuffer = (html: string, options?: PdfRenderOptions) =>
+  renderPdfBuffer(html, options);
 
-export const renderHtmlToPdf = async (html: string, outputPath: string) => {
-  const pdfBuffer = await renderPdfBuffer(html);
+export const renderHtmlToPdf = async (
+  html: string,
+  outputPath: string,
+  options?: PdfRenderOptions
+) => {
+  const pdfBuffer = await renderPdfBuffer(html, options);
   await fs.promises.writeFile(outputPath, pdfBuffer);
 };
