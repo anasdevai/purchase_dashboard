@@ -6,13 +6,17 @@ export function StatCard(props: {
   title: string
   value: string
   subtext?: string
-  subtextTone?: 'up' | 'neutral'
+  subtextTone?: 'up' | 'neutral' | 'warning'
   testId?: string
   layout?: 'horizontal' | 'stacked'
 }) {
   const layout = props.layout ?? 'horizontal'
   const subtextTone =
-    props.subtextTone === 'up' ? 'text-emerald-600' : 'text-slate-400'
+    props.subtextTone === 'up'
+      ? 'text-emerald-600'
+      : props.subtextTone === 'warning'
+        ? 'text-orange-600'
+        : 'text-slate-400'
 
   if (layout === 'stacked') {
     return (

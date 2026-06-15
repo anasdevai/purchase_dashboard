@@ -130,7 +130,7 @@ export function DashboardPage() {
             title={t.dashboard.openInvoiceAmount}
             value={formatMoney(Number(dashboard?.openInvoiceAmount ?? 0))}
             subtext={t.dashboard.openInvoiceAmountSub}
-            subtextTone="neutral"
+            subtextTone="warning"
           />
           <StatCard
             layout="stacked"

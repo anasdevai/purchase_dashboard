@@ -12,47 +12,14 @@ import { generateInvoiceNumber } from "./numberingService.js";
 import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
 import { generateInvoicePdf, renderInvoicePdfBuffer } from "./pdfService.js";
 import { getDefaultVatPercent, getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
+import { calculateInvoiceItems } from "../utils/invoiceCalculations.js";
 
 const includeItems = {
   items: { orderBy: { sortOrder: "asc" as const } },
   repairOrder: { select: { id: true, repairOrderNumber: true } }
 };
 
-const roundWhole = (value: number) => Math.round(value);
-
-const calculateItems = (items: Array<{ description: string; quantity: number; unitPrice: number; vatPercent: number }>) => {
-  let calculatedNetAmount = 0;
-  let calculatedVatAmount = 0;
-
-  const preparedItems = items.map((item, index) => {
-    const lineNet = roundWhole(item.quantity * item.unitPrice);
-    const lineVat = roundWhole(lineNet * (item.vatPercent / 100));
-    const lineTotal = lineNet + lineVat;
-    calculatedNetAmount += lineNet;
-    calculatedVatAmount += lineVat;
-
-    return {
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      vatPercent: item.vatPercent,
-      lineNet,
-      lineVat,
-      lineTotal,
-      sortOrder: index
-    };
-  });
-
-  calculatedNetAmount = roundWhole(calculatedNetAmount);
-  calculatedVatAmount = roundWhole(calculatedVatAmount);
-
-  return {
-    preparedItems,
-    calculatedNetAmount,
-    calculatedVatAmount,
-    calculatedGrossTotal: calculatedNetAmount + calculatedVatAmount
-  };
-};
+const calculateItems = calculateInvoiceItems;
 
 const toData = (input: Record<string, unknown>) => invoiceSchema.parse(input);
 

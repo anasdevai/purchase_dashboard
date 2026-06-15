@@ -578,12 +578,12 @@ export const renderInvoiceHtml = (
         </div>
         <div class="inv-summary__right">
           <div class="inv-total__row">
-            <span>${escapeHtml(t.subtotal)}</span>
+            <span>${escapeHtml(t.netAmount)}</span>
             <span>${formatMoneyDecimal(invoice.calculatedNetAmount)}</span>
           </div>
           ${vatRows}
           <div class="inv-total__row inv-total__row--grand">
-            <span>${escapeHtml(t.total)}</span>
+            <span>${escapeHtml(t.grossTotal)}</span>
             <span>${formatMoneyDecimal(invoice.calculatedGrossTotal)}</span>
           </div>
         </div>

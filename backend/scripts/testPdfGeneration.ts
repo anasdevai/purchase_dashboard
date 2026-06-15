@@ -109,9 +109,9 @@ const run = async () => {
       repairSummary: "Display repair and cable replacement",
       paymentMethod: "Bank transfer",
       paymentStatus: "Unpaid",
-      calculatedNetAmount: 150,
-      calculatedVatAmount: 30,
-      calculatedGrossTotal: 180,
+      calculatedNetAmount: 125,
+      calculatedVatAmount: 25,
+      calculatedGrossTotal: 150,
       netAmountOverride: null,
       vatAmountOverride: null,
       grossTotalOverride: null,
@@ -122,18 +122,18 @@ const run = async () => {
           quantity: 1,
           unitPrice: 80,
           vatPercent: 20,
-          lineNet: 80,
-          lineVat: 16,
-          lineTotal: 96
+          lineNet: 67,
+          lineVat: 13,
+          lineTotal: 80
         },
         {
           description: "Labour (1h)",
           quantity: 1,
           unitPrice: 70,
           vatPercent: 20,
-          lineNet: 70,
-          lineVat: 14,
-          lineTotal: 84
+          lineNet: 58,
+          lineVat: 12,
+          lineTotal: 70
         }
       ]
     },
@@ -154,9 +154,9 @@ const run = async () => {
       repairSummary: "Display repair and cable replacement",
       paymentMethod: "Bank transfer",
       paymentStatus: "Unpaid",
-      calculatedNetAmount: 150,
-      calculatedVatAmount: 30,
-      calculatedGrossTotal: 180,
+      calculatedNetAmount: 125,
+      calculatedVatAmount: 25,
+      calculatedGrossTotal: 150,
       netAmountOverride: null,
       vatAmountOverride: null,
       grossTotalOverride: null,
@@ -167,18 +167,18 @@ const run = async () => {
           quantity: 1,
           unitPrice: 80,
           vatPercent: 20,
-          lineNet: 80,
-          lineVat: 16,
-          lineTotal: 96
+          lineNet: 67,
+          lineVat: 13,
+          lineTotal: 80
         },
         {
           description: "Labour (1h)",
           quantity: 1,
           unitPrice: 70,
           vatPercent: 20,
-          lineNet: 70,
-          lineVat: 14,
-          lineTotal: 84
+          lineNet: 58,
+          lineVat: 12,
+          lineTotal: 70
         }
       ]
     },

@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Eye, Search, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { deleteInvoice, downloadInvoicePdf, fetchInvoices, updateInvoicePaymentStatus } from '../api/invoices'
+import { InvoicePaymentStatusSelect } from '../components/invoices/InvoicePaymentStatusSelect'
 import { formatWholeMoney } from '../utils/formatMoney'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
@@ -17,15 +18,6 @@ export function InvoicesPage() {
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
-
-  const paymentStatuses = useMemo(
-    () =>
-      (['Paid', 'Open', 'Cancelled'] as const).map((value) => ({
-        value,
-        label: t.invoices.paymentStatuses[value],
-      })),
-    [t],
-  )
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -133,19 +125,18 @@ export function InvoicesPage() {
                     <td className="whitespace-nowrap py-3 pr-4">{invoice.customerPhone || t.common.dash}</td>
                     <td className="whitespace-nowrap py-3 pr-4">{formatDate(invoice.invoiceDate.slice(0, 10))}</td>
                     <td className="whitespace-nowrap py-3 pr-4">
-                      <select
-                        data-testid={`invoice-payment-status-${invoice.id}`}
-                        className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700"
+                      <InvoicePaymentStatusSelect
+                        testId={`invoice-payment-status-${invoice.id}`}
+                        className="min-w-[7.5rem]"
+                        size="sm"
                         value={invoice.paymentStatus ?? 'Open'}
                         disabled={updatingStatusId === invoice.id}
-                        onChange={(event) =>
-                          handlePaymentStatusChange(invoice, event.target.value as InvoicePaymentStatus)
-                        }
-                      >
-                        {paymentStatuses.map((status) => (
-                          <option key={status.value} value={status.value}>{status.label}</option>
-                        ))}
-                      </select>
+                        onChange={(paymentStatus) => {
+                          if (paymentStatus) {
+                            handlePaymentStatusChange(invoice, paymentStatus)
+                          }
+                        }}
+                      />
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4">
                       {formatWholeMoney(Number(invoice.calculatedGrossTotal ?? 0))}

@@ -551,6 +551,7 @@ export type TranslationSchema = {
       netAmount: string
       vatAmount: string
       grossTotal: string
+      pricesIncludeVatNote: string
       overrideNet: string
       overrideVat: string
       overrideGross: string

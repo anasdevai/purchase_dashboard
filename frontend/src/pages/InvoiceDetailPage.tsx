@@ -22,7 +22,9 @@ import {
   makeEmptyInvoiceItem,
   type ShopSettings,
 } from '../services/shopSettings'
-import type { Invoice, InvoiceItem, InvoicePayload } from '../types/invoice'
+import { InvoicePaymentStatusBadge } from '../components/invoices/InvoicePaymentStatusBadge'
+import { InvoicePaymentStatusSelect } from '../components/invoices/InvoicePaymentStatusSelect'
+import type { Invoice, InvoiceItem, InvoicePayload, InvoicePaymentStatus } from '../types/invoice'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import { formatWholeMoney } from '../utils/formatMoney'
 import {
@@ -30,6 +32,7 @@ import {
   normalizeWholeInput,
   parseWholeNumber,
 } from '../utils/invoiceNumbers'
+import { calculateInvoiceLine, calculateInvoiceTotals } from '../utils/invoiceCalculations'
 
 const VAT_PRESETS = ['0', '10', '13', '20'] as const
 
@@ -61,21 +64,12 @@ function createEmptyForm(shopSettings: ShopSettings): InvoiceForm {
 }
 
 function calculate(items: InvoiceForm['items']) {
-  return items.reduce(
-    (totals, item) => {
-      const quantity = Math.max(1, parseWholeNumber(item.quantity, 1))
-      const unitPrice = parseWholeNumber(item.unitPrice, 0)
-      const vatPercent = parseWholeNumber(item.vatPercent, 0)
-      const net = quantity * unitPrice
-      const vat = Math.round(net * (vatPercent / 100))
-      return {
-        net: totals.net + net,
-        vat: totals.vat + vat,
-        gross: totals.gross + net + vat,
-      }
-    },
-    { net: 0, vat: 0, gross: 0 },
-  )
+  const lineInputs = items.map((item) => ({
+    quantity: Math.max(1, parseWholeNumber(item.quantity, 1)),
+    unitPrice: parseWholeNumber(item.unitPrice, 0),
+    vatPercent: parseWholeNumber(item.vatPercent, 0),
+  }))
+  return calculateInvoiceTotals(lineInputs)
 }
 
 function fromInvoice(invoice: Invoice): InvoiceForm {
@@ -146,15 +140,6 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       (['Cash', 'BankTransfer', 'Card', 'Other'] as const).map((value) => ({
         value,
         label: t.invoices.paymentMethods[value],
-      })),
-    [t],
-  )
-
-  const paymentStatuses = useMemo(
-    () =>
-      (['Paid', 'Open', 'Cancelled'] as const).map((value) => ({
-        value,
-        label: t.invoices.paymentStatuses[value],
       })),
     [t],
   )
@@ -300,12 +285,18 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
         <div>
           <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{pageTitle}</h1>
           <p className="mt-1 text-sm text-slate-600">{t.invoices.detail.description}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-1 text-sm text-slate-500">
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             <Link to="/invoices" className="font-medium text-slate-600 hover:text-primary">
               {t.invoices.detail.breadcrumbInvoices}
             </Link>
             <ChevronRight className="h-4 w-4 text-slate-400" />
             <span className="font-medium text-slate-800">{breadcrumbCurrent}</span>
+            {form.paymentStatus ? (
+              <InvoicePaymentStatusBadge
+                status={form.paymentStatus as InvoicePaymentStatus}
+                testId="invoice-payment-status-badge"
+              />
+            ) : null}
           </div>
           {invoice?.repairOrder ? (
             <div className="mt-2 text-sm text-slate-600">
@@ -445,18 +436,14 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               </label>
               <label>
                 <span className="label">{t.invoices.detail.paymentStatus}</span>
-                <select
-                  className="input h-11"
+                <InvoicePaymentStatusSelect
+                  className="w-full"
+                  size="md"
+                  allowEmpty
+                  emptyLabel={t.invoices.detail.selectStatus}
                   value={form.paymentStatus ?? ''}
-                  onChange={(event) => setField('paymentStatus', event.target.value)}
-                >
-                  <option value="">{t.invoices.detail.selectStatus}</option>
-                  {paymentStatuses.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setField('paymentStatus', value)}
+                />
               </label>
             </div>
             <Field
@@ -488,6 +475,10 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               {t.invoices.detail.addLineShort}
             </button>
           </div>
+          <div className="flex items-start gap-3 border-b border-blue-100 bg-blue-50 px-5 py-4">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <p className="text-sm text-slate-700">{t.invoices.detail.pricesIncludeVatNote}</p>
+          </div>
           <div className="px-5 py-5">
             <div className="table-scroll rounded-xl border border-slate-200">
               <table className="w-full min-w-[880px]">
@@ -507,8 +498,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                     const quantity = Math.max(1, parseWholeNumber(item.quantity, 1))
                     const unitPrice = parseWholeNumber(item.unitPrice, 0)
                     const vatPercent = parseWholeNumber(item.vatPercent, 0)
-                    const rowNet = quantity * unitPrice
-                    const rowTotal = rowNet + Math.round(rowNet * (vatPercent / 100))
+                    const { lineGross } = calculateInvoiceLine({ quantity, unitPrice, vatPercent })
                     return (
                       <tr key={index} className="border-t border-slate-200">
                         <td className="px-4 py-3 text-sm font-medium text-slate-500">{index + 1}</td>
@@ -556,7 +546,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                           />
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
-                          {formatWholeMoney(rowTotal)}
+                          {formatWholeMoney(lineGross)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <button
