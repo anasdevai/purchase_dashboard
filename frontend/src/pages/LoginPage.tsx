@@ -60,7 +60,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-hidden bg-slate-100">
+    <div className="flex flex-col overflow-auto bg-slate-100">
       <div className="flex shrink-0 justify-end px-4 py-4 sm:px-6">
         <LanguageSwitcher />
       </div>

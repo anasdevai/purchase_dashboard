@@ -10,11 +10,11 @@
   }
 
   html {
-    overflow: hidden;
+    overflow: auto;
   }
 
   body {
-    @apply overflow-hidden bg-slate-50 text-slate-700;
+    @apply  bg-slate-50 text-slate-700;
   }
 }
 
