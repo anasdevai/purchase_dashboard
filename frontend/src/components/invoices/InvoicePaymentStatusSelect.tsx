@@ -36,7 +36,9 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
   const listboxId = useId()
 
   const selectedStatus =
-    props.value && props.value !== '' ? (props.value as InvoicePaymentStatus) : null
+    typeof props.value === 'string' && props.value !== ''
+      ? (props.value as InvoicePaymentStatus)
+      : null
 
   const displayLabel = selectedStatus
     ? t.invoices.paymentStatuses[selectedStatus]
