@@ -13,6 +13,8 @@ import {
   type ShopSettings,
   type ShopSettingsValidationErrors,
 } from '../services/shopSettings'
+import { RepairCompaniesCard } from '../components/settings/RepairCompaniesCard'
+import { FloatingSelect } from '../components/common/FloatingSelect'
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024
 const VAT_RATES = ['20', '10', '13', '0'] as const
@@ -57,6 +59,7 @@ export function SettingsPage() {
   })
 
   const defaultVatRate = watch('defaultVatRate')
+  const country = watch('country')
 
   useEffect(() => {
     if (!user?.id) return
@@ -244,14 +247,18 @@ export function SettingsPage() {
 
               <div>
                 <FieldLabel label={t.settings.country} required />
-                <select className="input h-11" {...register('country')}>
-                  <option value="">{t.settings.countryPlaceholder}</option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
-                </select>
+                <FloatingSelect
+                  value={country ?? ''}
+                  placeholder={t.settings.countryPlaceholder}
+                  options={[
+                    { value: '', label: t.settings.countryPlaceholder },
+                    ...COUNTRIES.map((countryOption) => ({
+                      value: countryOption,
+                      label: countryOption,
+                    })),
+                  ]}
+                  onChange={(value) => setValue('country', value, { shouldDirty: true })}
+                />
               </div>
             </SettingsCard>
 
@@ -508,6 +515,8 @@ export function SettingsPage() {
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
           <p>{t.settings.infoBanner}</p>
         </div>
+
+        <RepairCompaniesCard />
 
         <button
           type="submit"

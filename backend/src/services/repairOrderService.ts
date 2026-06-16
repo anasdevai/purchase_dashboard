@@ -11,18 +11,24 @@ import {
   searchRepairOrdersSchema
 } from "../validators/repairOrderValidators.js";
 import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
+import { assertRepairCompanyAccess } from "./repairCompanyService.js";
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const includeRepairOrder = {
+  invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } },
+  repairCompany: { select: { id: true, name: true, contactInfo: true, notes: true } }
+};
+
 export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string) => {
   const repairOrder = await prisma.repairOrder.findFirst({
     where: UUID_RE.test(idOrNumber)
       ? { id: idOrNumber, userId }
       : { repairOrderNumber: idOrNumber, userId },
-    include: { invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } } }
+    include: includeRepairOrder
   });
 
   if (!repairOrder) {
@@ -35,6 +41,7 @@ export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string) 
 export const createRepairOrder = async (userId: string, input: Record<string, unknown>) => {
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
+  await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const repairOrderNumber = await generateRepairOrderNumber(userId);
@@ -49,7 +56,7 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
       });
 
       await ensureDirectory(getRepairOrderStorageDir(userId, repairOrder.repairOrderNumber));
-      return repairOrder;
+      return getRepairOrderOrThrow(repairOrder.id, userId);
     } catch (error) {
       if (attempt === 2) throw error;
     }
@@ -62,6 +69,7 @@ export const updateRepairOrder = async (id: string, userId: string, input: Recor
   await getRepairOrderOrThrow(id, userId);
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
+  await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
 
   await prisma.repairOrder.update({
     where: { id },
@@ -132,12 +140,20 @@ export const searchRepairOrders = async (userId: string, query: Record<string, u
   if (parsed.phone) where.customerPhone = { contains: parsed.phone, mode: "insensitive" };
   if (parsed.model) where.model = { contains: parsed.model, mode: "insensitive" };
   if (parsed.imeiOrSerial) where.imeiOrSerial = { contains: parsed.imeiOrSerial, mode: "insensitive" };
-  if (parsed.status) where.status = parsed.status;
+
+  if (parsed.filter === "active") {
+    where.status = { notIn: ["Completed", "Cancelled"] };
+  } else if (parsed.filter) {
+    where.status = parsed.filter;
+  } else if (parsed.status) {
+    where.status = parsed.status;
+  }
 
   return prisma.repairOrder.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    take: 100
+    take: 100,
+    include: includeRepairOrder
   });
 };
 

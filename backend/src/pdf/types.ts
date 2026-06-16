@@ -77,6 +77,12 @@ export type RepairOrderForPdf = {
   depositAmount: MoneyLike;
   expectedCompletionDate: Date | null;
   status: string;
+  repairCompanyNotes: string | null;
+  repairCompany: {
+    name: string;
+    contactInfo: string | null;
+    notes: string | null;
+  } | null;
 };
 
 export type InvoiceForPdf = {

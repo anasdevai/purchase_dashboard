@@ -51,7 +51,7 @@ export const generateRepairOrderPdf = async (
 export const renderInvoicePdfBuffer = async (
   invoice: InvoiceForPdf,
   shopSettings?: PdfShopSettings,
-  language: InvoicePdfLanguage = "de"
+  language: InvoicePdfLanguage = "en"
 ) => {
   const html = renderInvoiceHtml(invoice, shopSettings, language);
   return renderHtmlToPdfBuffer(html, { fullBleed: true });
@@ -60,7 +60,7 @@ export const renderInvoicePdfBuffer = async (
 export const generateInvoicePdf = async (
   invoice: InvoiceForPdf,
   shopSettings?: PdfShopSettings,
-  language: InvoicePdfLanguage = "de"
+  language: InvoicePdfLanguage = "en"
 ) => {
   const storageDir = getInvoiceStorageDir(invoice.userId, invoice.invoiceNumber);
   await ensureDirectory(storageDir);

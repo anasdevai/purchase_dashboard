@@ -226,7 +226,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     setSaving(true)
     setError(null)
     try {
-      const saved = await saveInvoice(cleanForm(form), invoiceId)
+      const saved = await saveInvoice(cleanForm(form), invoiceId, language)
       setInvoice(saved)
       setForm(fromInvoice(saved))
       setPdfNeedsRegeneration(false)

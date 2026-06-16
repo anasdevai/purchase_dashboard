@@ -19,6 +19,18 @@ const repairAccessoryLabels: Record<string, string> = {
   other: "Other"
 };
 
+const repairOrderStatusLabels: Record<string, string> = {
+  Open: "Open",
+  WorkPending: "Work Pending",
+  SentToRepairCompany: "Sent to Repair Company",
+  AppointmentScheduled: "Appointment Scheduled",
+  Completed: "Completed",
+  Cancelled: "Cancelled"
+};
+
+const formatRepairOrderStatus = (status: string | null | undefined) =>
+  repairOrderStatusLabels[status ?? ""] ?? status ?? "-";
+
 const formatAccessoriesReceived = (value: string | null | undefined) => {
   if (!value?.trim()) return "-";
 
@@ -92,9 +104,23 @@ export const renderRepairOrderHtml = (
               : "-",
             half: true
           },
-          { label: "Status:", value: repairOrder.status, half: true }
+          { label: "Status:", value: formatRepairOrderStatus(repairOrder.status), half: true }
         ])}
       </section>
+
+      ${
+        repairOrder.repairCompany
+          ? `<section class="section avoid-break">
+        <h2 class="section-title">External Repair Company</h2>
+        ${buildKvGridHtml([
+          { label: "Company:", value: repairOrder.repairCompany.name, half: true },
+          { label: "Contact:", value: repairOrder.repairCompany.contactInfo, half: true },
+          { label: "Company notes:", value: repairOrder.repairCompany.notes },
+          { label: "Send notes:", value: repairOrder.repairCompanyNotes }
+        ])}
+      </section>`
+          : ""
+      }
 
       <section class="panel panel--highlight avoid-break">
         <div class="panel__title">Estimate</div>

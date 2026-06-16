@@ -25,10 +25,10 @@ enum ContractFileType {
 }
 
 enum RepairOrderStatus {
-  Received
-  InProgress
-  WaitingForParts
-  ReadyForPickup
+  Open
+  WorkPending
+  SentToRepairCompany
+  AppointmentScheduled
   Completed
   Cancelled
 }
@@ -53,9 +53,10 @@ model User {
   passwordHash String        @map("password_hash")
   createdAt    DateTime      @default(now()) @map("created_at")
   contracts    Contract[]
-  repairOrders RepairOrder[]
-  invoices     Invoice[]
-  shopSettings ShopSettings?
+  repairOrders    RepairOrder[]
+  invoices        Invoice[]
+  shopSettings    ShopSettings?
+  repairCompanies RepairCompany[]
 
   @@map("users")
 }
@@ -153,6 +154,22 @@ model ContractFile {
   @@map("contract_files")
 }
 
+model RepairCompany {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  name        String
+  contactInfo String?       @map("contact_info")
+  notes       String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairOrders RepairOrder[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("repair_companies")
+}
+
 model RepairOrder {
   id                     String            @id @default(uuid())
   userId                 String            @map("user_id")
@@ -173,11 +190,14 @@ model RepairOrder {
   estimatedPrice         Decimal?          @map("estimated_price") @db.Decimal(12, 2)
   depositAmount          Decimal?          @map("deposit_amount") @db.Decimal(12, 2)
   expectedCompletionDate DateTime?         @map("expected_completion_date") @db.Date
-  status                 RepairOrderStatus @default(Received)
+  status                 RepairOrderStatus @default(Open)
+  repairCompanyId        String?           @map("repair_company_id")
+  repairCompanyNotes     String?           @map("repair_company_notes")
   pdfPath                String?           @map("pdf_path")
   createdAt              DateTime          @default(now()) @map("created_at")
   updatedAt              DateTime          @updatedAt @map("updated_at")
   user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairCompany          RepairCompany?    @relation(fields: [repairCompanyId], references: [id], onDelete: SetNull)
   invoices               Invoice[]
 
   @@unique([userId, repairOrderNumber])
@@ -188,6 +208,7 @@ model RepairOrder {
   @@index([model])
   @@index([imeiOrSerial])
   @@index([status])
+  @@index([repairCompanyId])
   @@index([createdAt])
   @@map("repair_orders")
 }

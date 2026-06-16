@@ -1,12 +1,17 @@
 import { z } from "zod";
 
 export const repairOrderStatuses = [
-  "Received",
-  "InProgress",
-  "WaitingForParts",
-  "ReadyForPickup",
+  "Open",
+  "WorkPending",
+  "SentToRepairCompany",
+  "AppointmentScheduled",
   "Completed",
   "Cancelled"
+] as const;
+
+export const repairOrderListFilters = [
+  "active",
+  ...repairOrderStatuses
 ] as const;
 
 const optionalText = z.preprocess(
@@ -51,7 +56,12 @@ export const repairOrderSchema = z.object({
   estimatedPrice: optionalMoney,
   depositAmount: optionalMoney,
   expectedCompletionDate: optionalDate,
-  status: z.enum(repairOrderStatuses).optional()
+  status: z.enum(repairOrderStatuses).optional(),
+  repairCompanyId: z.preprocess(
+    (value) => (value === "" || value === null || value === undefined ? undefined : value),
+    z.string().uuid().optional()
+  ),
+  repairCompanyNotes: optionalText
 });
 
 export const searchRepairOrdersSchema = z.object({
@@ -61,7 +71,8 @@ export const searchRepairOrdersSchema = z.object({
   phone: optionalText,
   model: optionalText,
   imeiOrSerial: optionalText,
-  status: z.enum(repairOrderStatuses).optional()
+  status: z.enum(repairOrderStatuses).optional(),
+  filter: z.enum(repairOrderListFilters).optional()
 });
 
 export const repairOrderStatusSchema = z.object({

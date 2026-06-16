@@ -9,7 +9,7 @@ export function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="grid min-h-screen place-items-center bg-slate-50 text-sm font-semibold text-slate-600">
+      <div className="grid min-h-screen place-items-center bg-app-bg text-sm font-semibold text-slate-600">
         {t.common.loading}
       </div>
     )

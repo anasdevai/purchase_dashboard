@@ -1,8 +1,8 @@
 export type RepairOrderStatus =
-  | 'Received'
-  | 'InProgress'
-  | 'WaitingForParts'
-  | 'ReadyForPickup'
+  | 'Open'
+  | 'WorkPending'
+  | 'SentToRepairCompany'
+  | 'AppointmentScheduled'
   | 'Completed'
   | 'Cancelled'
 
@@ -26,6 +26,14 @@ export type RepairOrder = {
   depositAmount?: string | number | null
   expectedCompletionDate?: string | null
   status: RepairOrderStatus
+  repairCompanyId?: string | null
+  repairCompanyNotes?: string | null
+  repairCompany?: {
+    id: string
+    name: string
+    contactInfo?: string | null
+    notes?: string | null
+  } | null
   pdfPath?: string | null
   createdAt: string
   updatedAt: string
@@ -51,4 +59,6 @@ export type RepairOrderPayload = {
   depositAmount?: number
   expectedCompletionDate?: string
   status?: RepairOrderStatus
+  repairCompanyId?: string
+  repairCompanyNotes?: string
 }

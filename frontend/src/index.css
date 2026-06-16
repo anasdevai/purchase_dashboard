@@ -13,8 +13,13 @@
     overflow: auto;
   }
 
+  body,
+  #root {
+    background-color: rgb(245, 245, 245);
+  }
+
   body {
-    @apply  bg-slate-50 text-slate-700;
+    @apply text-slate-700;
   }
 }
 

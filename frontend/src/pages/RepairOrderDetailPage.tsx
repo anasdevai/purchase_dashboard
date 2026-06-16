@@ -8,20 +8,16 @@ import {
   saveRepairOrder,
 } from '../api/repairOrders'
 import { createInvoiceFromRepairOrder } from '../api/invoices'
+import { fetchRepairCompanies } from '../api/repairCompanies'
+import { RepairCompanyFields } from '../components/repairOrders/RepairCompanyFields'
+import { RepairOrderStatusSelect } from '../components/repairOrders/RepairOrderStatusSelect'
+import { FloatingSelect } from '../components/common/FloatingSelect'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
-import type { RepairOrder, RepairOrderPayload } from '../types/repairOrder'
-
-const repairStatusValues = [
-  'Received',
-  'InProgress',
-  'WaitingForParts',
-  'ReadyForPickup',
-  'Completed',
-  'Cancelled',
-] as const
+import type { RepairCompany } from '../types/repairCompany'
+import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
 
 const accessoryOptionKeys = [
   'charger',
@@ -97,7 +93,7 @@ const emptyForm: RepairOrderPayload = {
   problemDescription: '',
   visibleDamage: '',
   technicianNotes: '',
-  status: 'Received',
+  status: 'Open',
 }
 
 function labelToAccessoryKey(
@@ -198,6 +194,8 @@ function fromRepairOrder(order: RepairOrder): RepairOrderPayload {
         : Number(order.depositAmount),
     expectedCompletionDate: formatDateInputValue(order.expectedCompletionDate),
     status: order.status,
+    repairCompanyId: order.repairCompanyId ?? undefined,
+    repairCompanyNotes: order.repairCompanyNotes ?? '',
   }
 }
 
@@ -288,6 +286,8 @@ function validateForm(
       estimatedPrice: estimated.value,
       depositAmount: deposit.value,
       expectedCompletionDate,
+      repairCompanyId: form.repairCompanyId?.trim() || undefined,
+      repairCompanyNotes: form.repairCompanyNotes?.trim() || undefined,
     },
   }
 }
@@ -297,7 +297,7 @@ export function NewRepairOrderPage() {
 }
 
 export function RepairOrderDetailPage(props: { mode?: 'new' }) {
-  const { t, interpolate } = useLanguage()
+  const { t, interpolate, language } = useLanguage()
   const { confirm, showToast } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
@@ -311,16 +311,9 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showActions, setShowActions] = useState(false)
+  const [repairCompanies, setRepairCompanies] = useState<RepairCompany[]>([])
+  const [repairCompaniesLoading, setRepairCompaniesLoading] = useState(false)
   const isExistingOrder = Boolean(repairOrderId)
-
-  const repairStatuses = useMemo(
-    () =>
-      repairStatusValues.map((value) => ({
-        value,
-        label: t.repairOrders.statuses[value],
-      })),
-    [t],
-  )
 
   const accessoryOptions = useMemo(
     () =>
@@ -330,6 +323,25 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       })),
     [t],
   )
+
+  useEffect(() => {
+    let alive = true
+    setRepairCompaniesLoading(true)
+    fetchRepairCompanies()
+      .then((data) => {
+        if (alive) setRepairCompanies(data)
+      })
+      .catch((err) => {
+        logApiError('repair companies load', err)
+      })
+      .finally(() => {
+        if (alive) setRepairCompaniesLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!repairOrderId) {
@@ -458,7 +470,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     setSaving(true)
     setError(null)
     try {
-      const invoice = await createInvoiceFromRepairOrder(repairOrder.id)
+      const invoice = await createInvoiceFromRepairOrder(repairOrder.id, language)
       navigate(`/invoices/${invoice.id}`)
     } catch (err) {
       logApiError('repair order invoice create', err)
@@ -792,19 +804,27 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
               />
               <label>
                 <span className="label">{t.repairOrders.detail.status}</span>
-                <select
-                  className="input"
-                  value={form.status ?? 'Received'}
-                  onChange={(event) => setField('status', event.target.value)}
-                >
-                  {repairStatuses.map((status) => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
+                <RepairOrderStatusSelect
+                  className="w-full"
+                  size="md"
+                  value={(form.status ?? 'Open') as RepairOrderStatus}
+                  onChange={(value) => setField('status', value)}
+                />
               </label>
             </div>
+
+            {form.status === 'SentToRepairCompany' ? (
+              <div className="mt-4">
+                <RepairCompanyFields
+                  repairCompanyId={form.repairCompanyId}
+                  repairCompanyNotes={form.repairCompanyNotes}
+                  companies={repairCompanies}
+                  loading={repairCompaniesLoading}
+                  onRepairCompanyIdChange={(value) => setField('repairCompanyId', value)}
+                  onNotesChange={(value) => setField('repairCompanyNotes', value)}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -835,12 +855,19 @@ function PresetSelectField(props: {
   return (
     <div>
       <label className="label">{props.label}</label>
-      <select
-        className="input"
-        data-testid={props.testId}
+      <FloatingSelect
+        testId={props.testId}
         value={preset}
-        onChange={(event) => {
-          const nextPreset = event.target.value
+        options={[
+          ...(props.presets as readonly string[])
+            .filter((option) => option !== 'Other')
+            .map((option) => ({
+              value: option,
+              label: props.presetLabels?.[option] ?? option,
+            })),
+          { value: 'Other', label: props.otherLabel },
+        ]}
+        onChange={(nextPreset) => {
           const isCustomCurrently = preset === 'Other'
 
           if (nextPreset === 'Other' && !isCustomCurrently) {
@@ -849,14 +876,7 @@ function PresetSelectField(props: {
             props.onChange(nextPreset)
           }
         }}
-      >
-        {(props.presets as readonly string[]).filter((option) => option !== 'Other').map((option) => (
-          <option key={option} value={option}>
-            {props.presetLabels?.[option] ?? option}
-          </option>
-        ))}
-        <option value="Other">{props.otherLabel}</option>
-      </select>
+      />
       {preset === 'Other' ? (
         <input
           className="input mt-2"

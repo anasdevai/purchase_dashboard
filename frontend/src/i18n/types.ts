@@ -458,6 +458,26 @@ export type TranslationSchema = {
     vatCustomPlaceholder: string
     save: string
     savedSuccess: string
+    repairCompanies: {
+      title: string
+      description: string
+      addCompany: string
+      editCompany: string
+      saveCompany: string
+      companyName: string
+      companyNamePlaceholder: string
+      contactInfo: string
+      contactInfoPlaceholder: string
+      companyNotes: string
+      companyNotesPlaceholder: string
+      empty: string
+      confirmDelete: string
+      savedSuccess: string
+      deletedSuccess: string
+      errors: {
+        nameRequired: string
+      }
+    }
     errors: {
       required: string
       invalidEmail: string
@@ -590,6 +610,7 @@ export type TranslationSchema = {
     newRepairOrder: string
     searchPlaceholder: string
     allStatuses: string
+    filterActive: string
     noResults: string
     confirmDelete: string
     errors: {
@@ -623,13 +644,14 @@ export type TranslationSchema = {
       estimate: string
       date: string
       status: string
+      repairCompany: string
       action: string
     }
     statuses: {
-      Received: string
-      InProgress: string
-      WaitingForParts: string
-      ReadyForPickup: string
+      Open: string
+      WorkPending: string
+      SentToRepairCompany: string
+      AppointmentScheduled: string
       Completed: string
       Cancelled: string
     }
@@ -678,6 +700,14 @@ export type TranslationSchema = {
       depositAmount: string
       expectedCompletionDate: string
       status: string
+      externalRepairCompany: string
+      externalRepairCompanyHint: string
+      repairCompany: string
+      selectRepairCompany: string
+      repairCompanyNotes: string
+      repairCompanyNotesPlaceholder: string
+      manageRepairCompanies: string
+      noRepairCompanies: string
       repairOrderNumber: string
       savedSuccess: string
       actionsTitle: string

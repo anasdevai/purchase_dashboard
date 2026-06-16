@@ -1,15 +1,16 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
 import { getActiveTranslations } from '../i18n/active'
 import { ApiError } from '../utils/apiErrors'
+import type { RepairOrderListFilter } from '../constants/repairOrderStatuses'
 import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
 
 type RepairOrderResponse = { repairOrder: RepairOrder }
 type RepairOrderListResponse = { repairOrders: RepairOrder[] }
 
-export async function fetchRepairOrders(query = '', status = '') {
+export async function fetchRepairOrders(query = '', filter: RepairOrderListFilter = 'active') {
   const params = new URLSearchParams()
   if (query.trim()) params.set('q', query.trim())
-  if (status.trim()) params.set('status', status.trim())
+  params.set('filter', filter)
   const suffix = params.toString() ? `?${params}` : ''
   const response = await apiRequest<RepairOrderListResponse>(`/api/repair-orders/search${suffix}`)
   return response.repairOrders

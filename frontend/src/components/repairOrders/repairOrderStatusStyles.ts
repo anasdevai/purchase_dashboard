@@ -1,0 +1,40 @@
+import clsx from 'clsx'
+import type { RepairOrderStatus } from '../../types/repairOrder'
+
+export function repairOrderStatusColors(status: RepairOrderStatus | null | undefined) {
+  switch (status) {
+    case 'Open':
+      return 'bg-sky-50 text-sky-700 border-sky-200'
+    case 'WorkPending':
+      return 'bg-amber-50 text-amber-700 border-amber-200'
+    case 'SentToRepairCompany':
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200'
+    case 'AppointmentScheduled':
+      return 'bg-cyan-50 text-cyan-700 border-cyan-200'
+    case 'Completed':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    case 'Cancelled':
+      return 'bg-rose-50 text-rose-700 border-rose-200'
+    default:
+      return 'bg-slate-50 text-slate-700 border-slate-200'
+  }
+}
+
+export function repairOrderStatusBadgeClass(status: RepairOrderStatus | null | undefined) {
+  return clsx(
+    'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold',
+    repairOrderStatusColors(status),
+  )
+}
+
+export function repairOrderStatusTriggerClass(
+  status: RepairOrderStatus | null | undefined,
+  options?: { size?: 'sm' | 'md' },
+) {
+  const sizeClass = options?.size === 'md' ? 'h-11 px-3 text-sm' : 'h-8 px-3 text-xs'
+  return clsx(
+    'cursor-pointer rounded-full border font-semibold disabled:cursor-not-allowed disabled:opacity-60',
+    sizeClass,
+    status ? repairOrderStatusColors(status) : 'border-slate-200 bg-white text-slate-700',
+  )
+}

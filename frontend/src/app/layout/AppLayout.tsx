@@ -8,7 +8,7 @@ export function AppLayout() {
   return (
     <ConfirmDialogProvider>
     <LayoutProvider>
-      <div className="h-screen overflow-hidden bg-slate-50">
+      <div className="h-screen overflow-hidden bg-app-bg">
         <Sidebar />
         <div className="flex h-screen min-w-0 flex-col lg:pl-sidebar">
           <Topbar />

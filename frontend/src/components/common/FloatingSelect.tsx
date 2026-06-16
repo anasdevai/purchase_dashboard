@@ -3,22 +3,23 @@ import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import clsx from 'clsx'
 import { useFloatingMenu } from '../../hooks/useFloatingMenu'
-import { useLanguage } from '../../i18n/LanguageProvider'
-import type { InvoicePaymentStatus } from '../../types/invoice'
-import { floatingMenuListClass } from '../common/floatingMenuStyles'
-import { invoicePaymentStatusColors } from './invoicePaymentStatusStyles'
+import { floatingMenuListClass } from './floatingMenuStyles'
 
-const STATUSES: InvoicePaymentStatus[] = ['Paid', 'Open', 'Cancelled']
+export type FloatingSelectOption = {
+  value: string
+  label: string
+}
 
-type InvoicePaymentStatusSelectProps = {
-  value: InvoicePaymentStatus | '' | null | undefined
-  onChange: (value: InvoicePaymentStatus | '') => void
+type FloatingSelectProps = {
+  value: string
+  onChange: (value: string) => void
+  options: FloatingSelectOption[]
   disabled?: boolean
-  size?: 'sm' | 'md'
   testId?: string
   className?: string
-  allowEmpty?: boolean
-  emptyLabel?: string
+  triggerClassName?: string
+  placeholder?: string
+  'aria-label'?: string
 }
 
 function optionClass(selected: boolean) {
@@ -28,8 +29,7 @@ function optionClass(selected: boolean) {
   )
 }
 
-export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProps) {
-  const { t } = useLanguage()
+export function FloatingSelect(props: FloatingSelectProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -37,16 +37,8 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
   const listboxId = useId()
   const menuStyle = useFloatingMenu(open, buttonRef, menuRef)
 
-  const selectedStatus =
-    typeof props.value === 'string' && props.value !== ''
-      ? (props.value as InvoicePaymentStatus)
-      : null
-
-  const displayLabel = selectedStatus
-    ? t.invoices.paymentStatuses[selectedStatus]
-    : props.emptyLabel ?? t.invoices.detail.selectStatus
-
-  const sizeClass = props.size === 'md' ? 'h-11 px-3 text-sm' : 'h-8 px-3 text-xs'
+  const selectedOption = props.options.find((option) => option.value === props.value)
+  const displayLabel = selectedOption?.label ?? props.placeholder ?? ''
 
   useEffect(() => {
     if (!open) return
@@ -69,8 +61,8 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
     }
   }, [open])
 
-  const handleSelect = (status: InvoicePaymentStatus | '') => {
-    props.onChange(status)
+  const handleSelect = (value: string) => {
+    props.onChange(value)
     setOpen(false)
   }
 
@@ -80,13 +72,10 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
         ref={buttonRef}
         type="button"
         data-testid={props.testId}
+        aria-label={props['aria-label']}
         className={clsx(
-          'inline-flex w-full items-center justify-between gap-2 rounded-full border font-semibold transition',
-          'disabled:cursor-not-allowed disabled:opacity-60',
-          sizeClass,
-          selectedStatus
-            ? invoicePaymentStatusColors(selectedStatus)
-            : 'border-slate-200 bg-white text-slate-700',
+          'input inline-flex h-11 w-full items-center justify-between gap-2 text-left',
+          props.triggerClassName,
         )}
         disabled={props.disabled}
         aria-haspopup="listbox"
@@ -96,9 +85,9 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
           if (!props.disabled) setOpen((current) => !current)
         }}
       >
-        <span className="truncate">{displayLabel}</span>
+        <span className={clsx('truncate', !selectedOption && 'text-slate-400')}>{displayLabel}</span>
         <ChevronDown
-          className={clsx('h-3.5 w-3.5 shrink-0 opacity-70 transition', open && 'rotate-180')}
+          className={clsx('h-4 w-4 shrink-0 text-slate-400 transition', open && 'rotate-180')}
           aria-hidden
         />
       </button>
@@ -112,27 +101,16 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
               style={menuStyle}
               className={floatingMenuListClass}
             >
-              {props.allowEmpty ? (
+              {props.options.map((option) => (
                 <button
+                  key={option.value || '__empty__'}
                   type="button"
                   role="option"
-                  aria-selected={!selectedStatus}
-                  className={optionClass(!selectedStatus)}
-                  onClick={() => handleSelect('')}
+                  aria-selected={props.value === option.value}
+                  className={optionClass(props.value === option.value)}
+                  onClick={() => handleSelect(option.value)}
                 >
-                  {props.emptyLabel ?? t.invoices.detail.selectStatus}
-                </button>
-              ) : null}
-              {STATUSES.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  role="option"
-                  aria-selected={selectedStatus === status}
-                  className={optionClass(selectedStatus === status)}
-                  onClick={() => handleSelect(status)}
-                >
-                  {t.invoices.paymentStatuses[status]}
+                  {option.label}
                 </button>
               ))}
             </div>,

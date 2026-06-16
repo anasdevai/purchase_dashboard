@@ -4,6 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        'app-bg': 'rgb(245, 245, 245)',
         primary: {
           DEFAULT: '#1B48AC',
           hover: '#163d94',

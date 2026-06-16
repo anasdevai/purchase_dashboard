@@ -66,7 +66,7 @@ export const getDashboardSummary = async (userId: string) => {
     prisma.contract.count({ where: { userId, status: "Draft" } }),
     prisma.repairOrder.count({ where: createdTodayWhere }),
     prisma.repairOrder.count({
-      where: { userId, status: "ReadyForPickup" },
+      where: { userId, status: "AppointmentScheduled" },
     }),
     sumInvoiceGrossTotals({
       ...createdTodayWhere,

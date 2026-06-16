@@ -36,7 +36,7 @@ export const getInvoiceOrThrow = async (id: string, userId: string) => {
   return invoice;
 };
 
-const attachInvoicePdf = async (id: string, userId: string, language: InvoicePdfLanguage = "de") => {
+const attachInvoicePdf = async (id: string, userId: string, language: InvoicePdfLanguage = "en") => {
   const invoice = await getInvoiceOrThrow(id, userId);
   const shopSettings = await getShopSettingsForUser(userId);
   const pdfPath = await generateInvoicePdf(invoice, shopSettingsToPdf(shopSettings), language);
@@ -61,7 +61,11 @@ const assertRepairOrderAccess = async (repairOrderId: string | undefined, userId
   }
 };
 
-export const createInvoice = async (userId: string, input: Record<string, unknown>) => {
+export const createInvoice = async (
+  userId: string,
+  input: Record<string, unknown>,
+  language: InvoicePdfLanguage = "en"
+) => {
   const parsed = toData(input);
   await assertRepairOrderAccess(parsed.repairOrderId, userId);
   const totals = calculateItems(parsed.items);
@@ -99,7 +103,7 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
       await ensureDirectory(getInvoiceStorageDir(userId, invoice.invoiceNumber));
 
       try {
-        return await attachInvoicePdf(invoice.id, userId);
+        return await attachInvoicePdf(invoice.id, userId, language);
       } catch (error) {
         await prisma.invoice.delete({ where: { id: invoice.id } }).catch((deleteError) => {
           console.error("[invoice] Failed to roll back invoice after PDF error:", deleteError);
@@ -114,7 +118,11 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
   throw new HttpError(500, "Unable to generate invoice number");
 };
 
-export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId: string) => {
+export const createInvoiceFromRepairOrder = async (
+  userId: string,
+  repairOrderId: string,
+  language: InvoicePdfLanguage = "en"
+) => {
   const repairOrder = await prisma.repairOrder.findFirst({
     where: { id: repairOrderId, userId }
   });
@@ -142,29 +150,38 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
   const shopSettings = await getShopSettingsForUser(userId);
   const defaultVatPercent = Math.round(getDefaultVatPercent(shopSettings));
 
-  return createInvoice(userId, {
-    repairOrderId: repairOrder.id,
-    customerName: repairOrder.customerName,
-    customerAddress: repairOrder.customerAddress,
-    customerPhone: repairOrder.customerPhone,
-    customerEmail: repairOrder.customerEmail,
-    deviceSummary,
-    repairSummary: repairOrder.problemDescription,
-    paymentStatus: "Open",
-    items: [
-      {
-        description: repairOrder.problemDescription || "Repair service",
-        quantity: 1,
-        unitPrice: repairOrder.estimatedPrice
-          ? Math.round(Number(repairOrder.estimatedPrice.toString()))
-          : 0,
-        vatPercent: defaultVatPercent
-      }
-    ]
-  });
+  return createInvoice(
+    userId,
+    {
+      repairOrderId: repairOrder.id,
+      customerName: repairOrder.customerName,
+      customerAddress: repairOrder.customerAddress,
+      customerPhone: repairOrder.customerPhone,
+      customerEmail: repairOrder.customerEmail,
+      deviceSummary,
+      repairSummary: repairOrder.problemDescription,
+      paymentStatus: "Open",
+      items: [
+        {
+          description: repairOrder.problemDescription || "Repair service",
+          quantity: 1,
+          unitPrice: repairOrder.estimatedPrice
+            ? Math.round(Number(repairOrder.estimatedPrice.toString()))
+            : 0,
+          vatPercent: defaultVatPercent
+        }
+      ]
+    },
+    language
+  );
 };
 
-export const updateInvoice = async (id: string, userId: string, input: Record<string, unknown>) => {
+export const updateInvoice = async (
+  id: string,
+  userId: string,
+  input: Record<string, unknown>,
+  language: InvoicePdfLanguage = "en"
+) => {
   await getInvoiceOrThrow(id, userId);
   const parsed = toData(input);
   await assertRepairOrderAccess(parsed.repairOrderId, userId);
@@ -199,7 +216,7 @@ export const updateInvoice = async (id: string, userId: string, input: Record<st
     });
   });
 
-  return attachInvoicePdf(id, userId);
+  return attachInvoicePdf(id, userId, language);
 };
 
 export const updateInvoicePaymentStatus = async (
@@ -220,13 +237,13 @@ export const updateInvoicePaymentStatus = async (
 export const generatePdfForInvoice = async (
   id: string,
   userId: string,
-  language: InvoicePdfLanguage = "de"
+  language: InvoicePdfLanguage = "en"
 ) => attachInvoicePdf(id, userId, language);
 
 export const streamInvoicePdf = async (
   id: string,
   userId: string,
-  language: InvoicePdfLanguage = "de"
+  language: InvoicePdfLanguage = "en"
 ) => {
   const invoice = await getInvoiceOrThrow(id, userId);
   const shopSettings = shopSettingsToPdf(await getShopSettingsForUser(userId));

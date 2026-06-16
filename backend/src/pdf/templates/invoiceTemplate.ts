@@ -1,4 +1,9 @@
-import { getInvoicePdfLabels, type InvoicePdfLanguage } from "../i18n/invoicePdfI18n.js";
+import {
+  getInvoicePdfLabels,
+  translateInvoicePaymentMethod,
+  translateInvoicePaymentStatus,
+  type InvoicePdfLanguage
+} from "../i18n/invoicePdfI18n.js";
 import type { InvoiceForPdf, PdfShopSettings } from "../types.js";
 import {
   displayValue,
@@ -196,8 +201,12 @@ const getInvoiceStyles = () => `
     width: 80px;
   }
 
+  .inv-table .col-unit {
+    width: 95px;
+  }
+
   .inv-table .col-amount {
-    width: 110px;
+    width: 95px;
   }
 
   .inv-item__name {
@@ -217,7 +226,18 @@ const getInvoiceStyles = () => `
     border-bottom: 0;
   }
 
-  /* ----- Summary (payment + totals) ----- */
+  .inv-notes {
+    padding: 6mm 14mm 0;
+    font-size: 8.5pt;
+    color: #374151;
+  }
+
+  .inv-notes__title {
+    font-weight: 700;
+    color: ${INK};
+    margin-bottom: 4px;
+  }
+
   .inv-summary {
     display: flex;
     justify-content: space-between;
@@ -386,7 +406,7 @@ const renderDescriptionCell = (description: unknown) => {
 export const renderInvoiceHtml = (
   invoice: InvoiceForPdf,
   shopSettings?: PdfShopSettings,
-  language: InvoicePdfLanguage = "de"
+  language: InvoicePdfLanguage = "en"
 ) => {
   const t = getInvoicePdfLabels(language);
 
@@ -438,14 +458,46 @@ export const renderInvoiceHtml = (
       <span class="inv-info__label">${escapeHtml(t.invoiceTo)}</span>
       <span class="inv-info__value">${invoiceToValue}</span>
     </div>
+    ${
+      hasText(invoice.customerPhone)
+        ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.phoneLabel)}</span>
+      <span class="inv-info__value">${escapeHtml(String(invoice.customerPhone).trim())}</span>
+    </div>`
+        : ""
+    }
+    ${
+      hasText(invoice.customerEmail)
+        ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.emailLabel)}</span>
+      <span class="inv-info__value">${escapeHtml(String(invoice.customerEmail).trim())}</span>
+    </div>`
+        : ""
+    }
     <div class="inv-info__row">
-      <span class="inv-info__label">${escapeHtml(t.invoiceShort)}</span>
+      <span class="inv-info__label">${escapeHtml(t.invoiceNumber)}</span>
       <span class="inv-info__value">${escapeHtml(invoice.invoiceNumber)}</span>
     </div>
     <div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.date)}</span>
       <span class="inv-info__value">${formatDateEuropean(invoice.invoiceDate)}</span>
     </div>
+    ${
+      hasText(invoice.paymentStatus)
+        ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.paymentStatus)}</span>
+      <span class="inv-info__value">${escapeHtml(translateInvoicePaymentStatus(invoice.paymentStatus, language))}</span>
+    </div>`
+        : ""
+    }
+    ${
+      hasText(invoice.paymentMethod)
+        ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.paymentMethod)}</span>
+      <span class="inv-info__value">${escapeHtml(translateInvoicePaymentMethod(invoice.paymentMethod, language))}</span>
+    </div>`
+        : ""
+    }
   `;
 
   const itemRows = invoice.items
@@ -454,12 +506,13 @@ export const renderInvoiceHtml = (
         <td class="pos">${index + 1}</td>
         <td>${renderDescriptionCell(item.description)}</td>
         <td class="num col-qty">${escapeHtml(numericValue(item.quantity))}</td>
+        <td class="num col-unit">${formatMoneyDecimal(item.unitPrice)}</td>
         <td class="num col-amount">${formatMoneyDecimal(item.lineTotal)}</td>
       </tr>`
     )
     .join("");
 
-  const spacerRow = `<tr class="inv-table__spacer"><td colspan="4"></td></tr>`;
+  const spacerRow = `<tr class="inv-table__spacer"><td colspan="5"></td></tr>`;
 
   // Group VAT by percentage so the totals reflect each rate (e.g. "VAT 20%").
   const vatBreakdown = new Map<string, number>();
@@ -534,6 +587,13 @@ export const renderInvoiceHtml = (
         )}</footer>`
       : "";
 
+  const notesBlock = hasText(invoice.notes)
+    ? `<section class="inv-notes avoid-break">
+        <div class="inv-notes__title">${escapeHtml(t.notes)}</div>
+        <div>${escapeHtml(String(invoice.notes).trim())}</div>
+      </section>`
+    : "";
+
   const titleText = t.titleBlock;
 
   const body = `
@@ -560,17 +620,20 @@ export const renderInvoiceHtml = (
           <thead>
             <tr>
               <th class="pos">${escapeHtml(t.position)}</th>
-              <th>${escapeHtml(t.description)}</th>
+              <th>${escapeHtml(t.serviceDescription)}</th>
               <th class="num col-qty">${escapeHtml(t.quantity)}</th>
+              <th class="num col-unit">${escapeHtml(t.unitPrice)}</th>
               <th class="num col-amount">${escapeHtml(t.gross)}</th>
             </tr>
           </thead>
           <tbody>
-            ${itemRows || `<tr><td colspan="4">-</td></tr>`}
+            ${itemRows || `<tr><td colspan="5">-</td></tr>`}
             ${spacerRow}
           </tbody>
         </table>
       </section>
+
+      ${notesBlock}
 
       <section class="inv-summary avoid-break">
         <div class="inv-summary__left">
@@ -583,7 +646,7 @@ export const renderInvoiceHtml = (
           </div>
           ${vatRows}
           <div class="inv-total__row inv-total__row--grand">
-            <span>${escapeHtml(t.grossTotal)}</span>
+            <span>${escapeHtml(t.total)}</span>
             <span>${formatMoneyDecimal(invoice.calculatedGrossTotal)}</span>
           </div>
         </div>

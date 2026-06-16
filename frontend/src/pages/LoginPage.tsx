@@ -7,7 +7,7 @@ import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { getAuthErrorMessage, logApiError } from '../utils/apiErrors'
 
-const SCLERA_LOGO = '/Sclera%20logo.png'
+const SCLERA_LOGO = '/assets/sclera-logo.png'
 
 const loginInputClassName =
   'input h-12 border-slate-200 text-sm text-[#111111] placeholder:text-slate-400 focus:border-[#111111] focus:ring-[#111111]/15'
@@ -60,18 +60,18 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col overflow-auto bg-slate-100">
+    <div className="flex min-h-screen flex-col overflow-auto bg-app-bg">
       <div className="flex shrink-0 justify-end px-4 py-4 sm:px-6">
         <LanguageSwitcher />
       </div>
 
       <div className="flex flex-1 items-center justify-center px-4 pb-10">
         <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200/60">
-          <div className="bg-primary px-8 pb-6 pt-3 text-center text-white">
+        <div className="bg-primary px-8 pb-3 pt-2 text-center text-white">
             <img
               src={SCLERA_LOGO}
               alt="Sclera"
-              className="mx-auto h-32 w-auto max-w-[380px] object-contain invert sm:h-36"
+              className="mx-auto h-28 w-auto max-w-[380px] object-contain invert sm:h-32"
               data-testid="login-logo"
             />
             <h1 className="mt-3 text-lg font-bold leading-snug tracking-tight">
@@ -191,7 +191,7 @@ export function LoginPage() {
                 <img
                   src={SCLERA_LOGO}
                   alt="Sclera"
-                  className="h-[72px] w-auto max-w-[18rem] object-contain"
+                  className="h-[102px] w-auto max-w-[10rem] object-contain"
                 />
               </div>
             </div>
