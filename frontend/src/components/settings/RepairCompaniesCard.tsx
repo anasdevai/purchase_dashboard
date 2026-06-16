@@ -77,7 +77,7 @@ export function RepairCompaniesCard() {
       resetForm()
     } catch (err) {
       logApiError('repair company save', err)
-      showToast('error', getFriendlyErrorMessage(err, 'save', t))
+      showToast('error', getFriendlyErrorMessage(err, 'generic', t))
     } finally {
       setSaving(false)
     }
