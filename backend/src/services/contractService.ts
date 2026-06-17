@@ -137,9 +137,9 @@ const toCompletionValidationInput = (contract: ContractWithFiles) => ({
   factoryResetConfirmed: contract.factoryResetConfirmed
 });
 
-export const getContractOrThrow = async (id: string, userId: string) => {
+export const getContractOrThrow = async (id: string, userId: string, isAdmin = false) => {
   const contract = await prisma.contract.findFirst({
-    where: { id, userId },
+    where: isAdmin ? { id } : { id, userId },
     include: includeFiles
   });
 
@@ -266,14 +266,14 @@ export const completeContract = async (
   });
 };
 
-export const cancelContract = async (id: string, userId: string) => {
-  const contract = await getContractOrThrow(id, userId);
+export const cancelContract = async (id: string, userId: string, isAdmin = false) => {
+  const contract = await getContractOrThrow(id, userId, isAdmin);
 
   await prisma.contract.delete({
     where: { id }
   });
 
-  await fs.promises.rm(getContractStorageDir(userId, contract.contractNumber), {
+  await fs.promises.rm(getContractStorageDir(contract.userId, contract.contractNumber), {
     recursive: true,
     force: true
   });

@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  admin
+  staff
+}
+
 enum ContractStatus {
   Draft
   Completed
@@ -51,6 +56,8 @@ model User {
   name         String
   email        String        @unique
   passwordHash String        @map("password_hash")
+  role         UserRole      @default(staff)
+  isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at")
   contracts    Contract[]
   repairOrders    RepairOrder[]

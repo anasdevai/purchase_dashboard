@@ -19,7 +19,11 @@ export const updateDraft = async (req: Request, res: Response) => {
 };
 
 export const getContract = async (req: Request, res: Response) => {
-  const contract = await contractService.getContractOrThrow(paramId(req), userId(req));
+  const contract = await contractService.getContractOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
   res.json({ contract });
 };
 
@@ -53,7 +57,11 @@ export const complete = async (req: Request, res: Response) => {
 };
 
 export const cancel = async (req: Request, res: Response) => {
-  const contract = await contractService.cancelContract(paramId(req), userId(req));
+  const contract = await contractService.cancelContract(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
   res.json({ deleted: true, contract });
 };
 
@@ -73,7 +81,11 @@ export const dashboard = async (req: Request, res: Response) => {
 };
 
 export const openPdf = async (req: Request, res: Response) => {
-  const contract = await contractService.getContractOrThrow(paramId(req), userId(req));
+  const contract = await contractService.getContractOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
 
   if (!contract.pdfPath) {
     throw new HttpError(404, "PDF has not been generated for this contract");
@@ -83,7 +95,11 @@ export const openPdf = async (req: Request, res: Response) => {
 };
 
 export const downloadPdf = async (req: Request, res: Response) => {
-  const contract = await contractService.getContractOrThrow(paramId(req), userId(req));
+  const contract = await contractService.getContractOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
 
   if (!contract.pdfPath) {
     throw new HttpError(404, "PDF has not been generated for this contract");

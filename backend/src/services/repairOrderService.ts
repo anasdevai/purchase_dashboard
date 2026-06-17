@@ -23,11 +23,11 @@ const includeRepairOrder = {
   repairCompany: { select: { id: true, name: true, contactInfo: true, notes: true } }
 };
 
-export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string) => {
+export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, isAdmin = false) => {
   const repairOrder = await prisma.repairOrder.findFirst({
     where: UUID_RE.test(idOrNumber)
-      ? { id: idOrNumber, userId }
-      : { repairOrderNumber: idOrNumber, userId },
+      ? (isAdmin ? { id: idOrNumber } : { id: idOrNumber, userId })
+      : (isAdmin ? { repairOrderNumber: idOrNumber } : { repairOrderNumber: idOrNumber, userId }),
     include: includeRepairOrder
   });
 
@@ -65,8 +65,13 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
   throw new HttpError(500, "Unable to generate repair order number");
 };
 
-export const updateRepairOrder = async (id: string, userId: string, input: Record<string, unknown>) => {
-  await getRepairOrderOrThrow(id, userId);
+export const updateRepairOrder = async (
+  id: string,
+  userId: string,
+  input: Record<string, unknown>,
+  isAdmin = false
+) => {
+  await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
   await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
@@ -76,15 +81,16 @@ export const updateRepairOrder = async (id: string, userId: string, input: Recor
     data: orderData
   });
 
-  return getRepairOrderOrThrow(id, userId);
+  return getRepairOrderOrThrow(id, userId, isAdmin);
 };
 
 export const updateRepairOrderStatus = async (
   id: string,
   userId: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  isAdmin = false
 ) => {
-  await getRepairOrderOrThrow(id, userId);
+  await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = repairOrderStatusSchema.parse(input);
 
   await prisma.repairOrder.update({
@@ -92,12 +98,12 @@ export const updateRepairOrderStatus = async (
     data: { status: parsed.status }
   });
 
-  return getRepairOrderOrThrow(id, userId);
+  return getRepairOrderOrThrow(id, userId, isAdmin);
 };
 
-export const generatePdfForRepairOrder = async (id: string, userId: string) => {
-  const repairOrder = await getRepairOrderOrThrow(id, userId);
-  const shopSettings = await getShopSettingsForUser(userId);
+export const generatePdfForRepairOrder = async (id: string, userId: string, isAdmin = false) => {
+  const repairOrder = await getRepairOrderOrThrow(id, userId, isAdmin);
+  const shopSettings = await getShopSettingsForUser(repairOrder.userId);
   const pdfPath = await generateRepairOrderPdf(repairOrder, shopSettingsToPdf(shopSettings));
 
   return prisma.repairOrder.update({
@@ -106,11 +112,11 @@ export const generatePdfForRepairOrder = async (id: string, userId: string) => {
   });
 };
 
-export const deleteRepairOrder = async (id: string, userId: string) => {
-  const repairOrder = await getRepairOrderOrThrow(id, userId);
+export const deleteRepairOrder = async (id: string, userId: string, isAdmin = false) => {
+  const repairOrder = await getRepairOrderOrThrow(id, userId, isAdmin);
 
   await prisma.repairOrder.delete({ where: { id } });
-  await fs.promises.rm(getRepairOrderStorageDir(userId, repairOrder.repairOrderNumber), {
+  await fs.promises.rm(getRepairOrderStorageDir(repairOrder.userId, repairOrder.repairOrderNumber), {
     recursive: true,
     force: true
   });

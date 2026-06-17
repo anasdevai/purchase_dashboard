@@ -12,17 +12,31 @@ export const create = async (req: Request, res: Response) => {
 };
 
 export const update = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.updateRepairOrder(paramId(req), userId(req), req.body);
+  const repairOrder = await repairOrderService.updateRepairOrder(
+    paramId(req),
+    userId(req),
+    req.body,
+    req.user?.role === "admin"
+  );
   res.json({ repairOrder });
 };
 
 export const updateStatus = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.updateRepairOrderStatus(paramId(req), userId(req), req.body);
+  const repairOrder = await repairOrderService.updateRepairOrderStatus(
+    paramId(req),
+    userId(req),
+    req.body,
+    req.user?.role === "admin"
+  );
   res.json({ repairOrder });
 };
 
 export const get = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.getRepairOrderOrThrow(paramId(req), userId(req));
+  const repairOrder = await repairOrderService.getRepairOrderOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
   res.json({ repairOrder });
 };
 
@@ -32,17 +46,29 @@ export const search = async (req: Request, res: Response) => {
 };
 
 export const generatePdf = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req));
+  const repairOrder = await repairOrderService.generatePdfForRepairOrder(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
   res.json({ repairOrder });
 };
 
 export const remove = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.deleteRepairOrder(paramId(req), userId(req));
+  const repairOrder = await repairOrderService.deleteRepairOrder(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
   res.json({ deleted: true, repairOrder });
 };
 
 export const openPdf = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.getRepairOrderOrThrow(paramId(req), userId(req));
+  const repairOrder = await repairOrderService.getRepairOrderOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
 
   if (!repairOrder.pdfPath) {
     throw new HttpError(404, "PDF has not been generated for this repair order");
@@ -52,7 +78,11 @@ export const openPdf = async (req: Request, res: Response) => {
 };
 
 export const downloadPdf = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.getRepairOrderOrThrow(paramId(req), userId(req));
+  const repairOrder = await repairOrderService.getRepairOrderOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
 
   if (!repairOrder.pdfPath) {
     throw new HttpError(404, "PDF has not been generated for this repair order");
