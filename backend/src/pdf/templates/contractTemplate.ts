@@ -48,7 +48,19 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
   const contractDate = formatDateShort(contract.updatedAt);
   const dob = contract.customerDateOfBirth
     ? contract.customerDateOfBirth.toISOString().slice(0, 10)
-    : "-";
+    : null;
+
+  const displayFirstName = contract.customerFirstName;
+  const displayLastName = contract.customerLastName;
+  const displaySalutation = contract.salutation;
+  const fullName =
+    displayFirstName || displayLastName
+      ? [displaySalutation, displayFirstName, displayLastName].filter(Boolean).join(" ")
+      : contract.customerName ?? "-";
+
+  const addressLine1 = contract.customerStreet?.trim() || null;
+  const addressLine2 = [contract.customerZipCode, contract.customerCity].filter(Boolean).join(" ") || null;
+  const legacyAddress = contract.customerAddress ?? null;
 
   const customerSignature = filePathToDataUrl(contract.signaturePath);
   const shopkeeperSignature = filePathToDataUrl(contract.shopkeeperSignaturePath);
@@ -70,12 +82,23 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
     <section class="section avoid-break">
       <h2 class="section-title">Customer / Seller Information</h2>
       ${buildKvGridHtml([
-        { label: "Name:", value: contract.customerName, half: true },
+        { label: "Name:", value: fullName, half: true },
         { label: "Phone:", value: contract.customerPhone, half: true },
         { label: "Email:", value: contract.customerEmail, half: true },
-        { label: "DOB:", value: dob, half: true },
-        { label: "Address:", value: contract.customerAddress },
-        { label: "ID Type:", value: contract.idDocumentNumber ? "Document" : "-", half: true },
+        ...(dob ? [{ label: "DOB:", value: dob, half: true }] : []),
+        ...(addressLine1 || addressLine2
+          ? [
+              { label: "Street:", value: addressLine1 ?? "-", half: false },
+              { label: "ZIP / City:", value: addressLine2 ?? "-", half: false }
+            ]
+          : legacyAddress
+            ? [{ label: "Address:", value: legacyAddress, half: false }]
+            : []),
+        {
+          label: "ID Type:",
+          value: contract.idType ?? (contract.idDocumentNumber ? "Document" : null),
+          half: true
+        },
         { label: "ID Number:", value: contract.idDocumentNumber, half: true }
       ])}
     </section>
@@ -87,12 +110,22 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
         { label: "Brand:", value: contract.brand, half: true },
         { label: "Model:", value: contract.model, half: true },
         { label: "Storage:", value: contract.storage, half: true },
-        { label: "IMEI / Serial:", value: contract.imei || contract.serialNumber, half: true },
+        { label: "IMEI:", value: contract.imei, half: true },
+        { label: "Serial Number:", value: contract.serialNumber, half: true },
         { label: "Color:", value: contract.color, half: true },
         { label: "Condition:", value: contract.condition, half: true },
-        { label: "Battery:", value: contract.batteryHealth, half: true },
+        { label: "Battery Health:", value: contract.batteryHealth, half: true },
+        { label: "OS Version:", value: contract.osVersion, half: true },
+        { label: "iCloud Status:", value: contract.icloudStatus, half: true },
+        { label: "MDM Status:", value: contract.mdmStatus, half: true },
+        { label: "Warranty:", value: contract.warranty, half: true },
+        {
+          label: "Receipt Available:",
+          value: contract.purchaseReceiptAvailable ? "Yes" : "No",
+          half: true
+        },
         { label: "Accessories:", value: contract.accessories },
-        { label: "Damage:", value: contract.damageNotes }
+        { label: "Visible Damage:", value: contract.damageNotes }
       ])}
     </section>
 
@@ -106,7 +139,28 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
         <span>Payment Method</span>
         <span>${escapeHtml(displayValue(contract.paymentMethod))}</span>
       </div>
+      ${
+        contract.paymentStatus
+          ? `
+      <div class="panel__row">
+        <span>Payment Status</span>
+        <span>${escapeHtml(displayValue(contract.paymentStatus))}</span>
+      </div>
+      `
+          : ""
+      }
     </section>
+
+    ${
+      contract.notes
+        ? `
+    <section class="section avoid-break">
+      <h2 class="section-title">General Notes</h2>
+      <div style="font-size: 11px; line-height: 1.5; color: #334155; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px; white-space: pre-wrap;">${escapeHtml(contract.notes)}</div>
+    </section>
+    `
+        : ""
+    }
 
     <section class="two-col avoid-break">
       <div class="panel">

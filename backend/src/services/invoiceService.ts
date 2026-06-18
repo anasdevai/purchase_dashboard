@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.js";
 import { getDayRange } from "../utils/date.js";
 import { HttpError } from "../utils/httpError.js";
@@ -19,6 +20,20 @@ const includeItems = {
   repairOrder: { select: { id: true, repairOrderNumber: true } }
 };
 
+const isDev = process.env.NODE_ENV !== "production";
+
+const devLog = (message: string, details?: Record<string, unknown>) => {
+  if (!isDev) return;
+  if (details) {
+    console.log(`[invoice:dev] ${message}`, details);
+    return;
+  }
+  console.log(`[invoice:dev] ${message}`);
+};
+
+const isUniqueConstraintError = (error: unknown) =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+
 const calculateItems = calculateInvoiceItems;
 
 const toData = (input: Record<string, unknown>) => invoiceSchema.parse(input);
@@ -38,14 +53,34 @@ export const getInvoiceOrThrow = async (id: string, userId: string, isAdmin = fa
 
 const attachInvoicePdf = async (id: string, userId: string, language: InvoicePdfLanguage = "en") => {
   const invoice = await getInvoiceOrThrow(id, userId);
-  const shopSettings = await getShopSettingsForUser(userId);
-  const pdfPath = await generateInvoicePdf(invoice, shopSettingsToPdf(shopSettings), language);
-
-  return prisma.invoice.update({
-    where: { id },
-    data: { pdfPath },
-    include: includeItems
+  devLog("PDF generation started", {
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    itemCount: invoice.items.length,
+    net: invoice.calculatedNetAmount.toString(),
+    vat: invoice.calculatedVatAmount.toString(),
+    gross: invoice.calculatedGrossTotal.toString(),
+    language,
   });
+
+  try {
+    const shopSettings = await getShopSettingsForUser(userId);
+    const pdfPath = await generateInvoicePdf(invoice, shopSettingsToPdf(shopSettings), language);
+    devLog("PDF generation completed", { invoiceId: invoice.id, pdfPath });
+
+    return prisma.invoice.update({
+      where: { id },
+      data: { pdfPath },
+      include: includeItems
+    });
+  } catch (error) {
+    devLog("PDF generation failed", {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 };
 
 const assertRepairOrderAccess = async (repairOrderId: string | undefined, userId: string) => {
@@ -69,6 +104,16 @@ export const createInvoice = async (
   const parsed = toData(input);
   await assertRepairOrderAccess(parsed.repairOrderId, userId);
   const totals = calculateItems(parsed.items);
+
+  devLog("create started", {
+    userId,
+    customerName: parsed.customerName,
+    itemCount: parsed.items.length,
+    net: totals.calculatedNetAmount,
+    vat: totals.calculatedVatAmount,
+    gross: totals.calculatedGrossTotal,
+    language,
+  });
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const invoiceNumber = await generateInvoiceNumber(userId);
@@ -100,18 +145,24 @@ export const createInvoice = async (
         include: includeItems
       });
 
+      devLog("invoice saved", { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber });
+
       await ensureDirectory(getInvoiceStorageDir(userId, invoice.invoiceNumber));
 
       try {
         return await attachInvoicePdf(invoice.id, userId, language);
       } catch (error) {
-        await prisma.invoice.delete({ where: { id: invoice.id } }).catch((deleteError) => {
-          console.error("[invoice] Failed to roll back invoice after PDF error:", deleteError);
+        devLog("PDF generation failed after create; invoice kept without pdfPath", {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
         });
-        throw error;
+        return invoice;
       }
     } catch (error) {
-      if (attempt === 4) throw error;
+      if (isUniqueConstraintError(error) && attempt < 4) {
+        continue;
+      }
+      throw error;
     }
   }
 

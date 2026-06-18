@@ -101,12 +101,19 @@ model Contract {
   id                      String         @id @default(uuid())
   userId                  String         @map("user_id")
   contractNumber          String         @map("contract_number")
+  salutation              String?
+  customerFirstName       String?        @map("customer_first_name")
+  customerLastName        String?        @map("customer_last_name")
   customerName            String?        @map("customer_name")
+  customerStreet          String?        @map("customer_street")
+  customerZipCode         String?        @map("customer_zip_code")
+  customerCity            String?        @map("customer_city")
   customerAddress         String?        @map("customer_address")
   customerPhone           String?        @map("customer_phone")
   customerEmail           String?        @map("customer_email")
   customerDateOfBirth     DateTime?      @map("customer_date_of_birth") @db.Date
   idDocumentNumber        String?        @map("id_document_number")
+  idType                  String?        @map("id_type")
   deviceType              String?        @map("device_type")
   brand                   String?
   model                   String?
@@ -117,10 +124,17 @@ model Contract {
   condition               String?
   accessories             String?
   batteryHealth           String?        @map("battery_health")
+  osVersion               String?        @map("os_version")
+  icloudStatus            String?        @map("icloud_status")
+  mdmStatus               String?        @map("mdm_status")
+  warranty                String?
+  purchaseReceiptAvailable Boolean?      @default(false) @map("purchase_receipt_available")
   damageNotes             String?        @map("damage_notes")
   internalNotes           String?        @map("internal_notes")
   purchasePrice           Decimal?       @map("purchase_price") @db.Decimal(12, 2)
   paymentMethod           String?        @map("payment_method")
+  paymentStatus           String?        @map("payment_status")
+  notes                   String?
   ownershipConfirmed      Boolean        @default(false) @map("ownership_confirmed")
   notStolenConfirmed      Boolean        @default(false) @map("not_stolen_confirmed")
   icloudRemoved           Boolean        @default(false) @map("icloud_removed")
@@ -129,6 +143,8 @@ model Contract {
   factoryResetConfirmed   Boolean        @default(false) @map("factory_reset_confirmed")
   signaturePath           String?        @map("signature_path")
   shopkeeperSignaturePath String?        @map("shopkeeper_signature_path")
+  signatureToken          String?        @map("signature_token")
+  signatureStatus         String?        @map("signature_status")
   pdfPath                 String?        @map("pdf_path")
   status                  ContractStatus @default(Draft)
   createdAt               DateTime       @default(now()) @map("created_at")
@@ -145,6 +161,7 @@ model Contract {
   @@index([serialNumber])
   @@index([model])
   @@index([createdAt])
+  @@index([signatureToken])
   @@map("contracts")
 }
 

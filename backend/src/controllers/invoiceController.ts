@@ -1,10 +1,12 @@
 import type { Request, Response } from "express";
+import * as emailService from "../services/emailService.js";
 import * as invoiceService from "../services/invoiceService.js";
 import { HttpError } from "../utils/httpError.js";
 import { invoicePdfLanguageFromRequest } from "../utils/invoicePdfLanguage.js";
 
 const paramId = (req: Request) => String(req.params.id);
 const userId = (req: Request) => req.user!.id;
+const pdfLanguage = (req: Request) => invoicePdfLanguageFromRequest(req);
 
 export const create = async (req: Request, res: Response) => {
   const language = invoicePdfLanguageFromRequest(req);
@@ -69,10 +71,6 @@ export const openPdf = async (req: Request, res: Response) => {
     req.user?.role === "admin"
   );
 
-  if (!invoice.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this invoice");
-  }
-
   const language = invoicePdfLanguageFromRequest(req);
   const pdfBuffer = await invoiceService.streamInvoicePdf(
     paramId(req),
@@ -92,10 +90,6 @@ export const downloadPdf = async (req: Request, res: Response) => {
     req.user?.role === "admin"
   );
 
-  if (!invoice.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this invoice");
-  }
-
   const language = invoicePdfLanguageFromRequest(req);
   const pdfBuffer = await invoiceService.streamInvoicePdf(
     paramId(req),
@@ -106,4 +100,35 @@ export const downloadPdf = async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="${invoice.invoiceNumber}.pdf"`);
   res.send(pdfBuffer);
+};
+
+export const sendEmail = async (req: Request, res: Response) => {
+  const invoice = await invoiceService.getInvoiceOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
+
+  if (!invoice.customerEmail) {
+    throw new HttpError(400, "Invoice does not have a customer email address configured");
+  }
+
+  if (!invoice.pdfPath) {
+    await invoiceService.generatePdfForInvoice(paramId(req), userId(req), pdfLanguage(req));
+  }
+
+  const updatedInvoice = await invoiceService.getInvoiceOrThrow(
+    paramId(req),
+    userId(req),
+    req.user?.role === "admin"
+  );
+
+  await emailService.sendInvoicePdfEmail(
+    updatedInvoice.customerEmail!,
+    updatedInvoice.invoiceNumber,
+    updatedInvoice.pdfPath,
+    updatedInvoice.customerName
+  );
+
+  res.json({ success: true });
 };

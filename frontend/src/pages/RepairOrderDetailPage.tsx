@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Download, Eye, FileText, Pencil, Save } from 'lucide-react'
+import { Download, Eye, FileText, Mail, Pencil, Save } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   downloadRepairOrderPdf,
+  emailRepairOrderPdf,
   fetchRepairOrder,
   generateRepairOrderPdf,
   saveRepairOrder,
@@ -10,12 +11,15 @@ import {
 import { createInvoiceFromRepairOrder } from '../api/invoices'
 import { fetchRepairCompanies } from '../api/repairCompanies'
 import { RepairCompanyFields } from '../components/repairOrders/RepairCompanyFields'
+import { RepairOrderOcrScan } from '../components/repairOrders/RepairOrderOcrScan'
 import { RepairOrderStatusSelect } from '../components/repairOrders/RepairOrderStatusSelect'
 import { FloatingSelect } from '../components/common/FloatingSelect'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
-import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
+import { getFriendlyErrorMessage, logApiError, ApiError } from '../utils/apiErrors'
+import { mergeOcrIntoRepairOrderForm } from '../utils/repairOrderOcr'
+import type { RepairOrderOcrResult } from '../api/ocr'
 import type { RepairCompany } from '../types/repairCompany'
 import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
 
@@ -309,6 +313,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(Boolean(repairOrderId))
   const [saving, setSaving] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showActions, setShowActions] = useState(false)
   const [repairCompanies, setRepairCompanies] = useState<RepairCompany[]>([])
@@ -345,13 +350,6 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
 
   useEffect(() => {
     if (!repairOrderId) {
-      setLoading(false)
-      setRepairOrder(null)
-      setForm(emptyForm)
-      setSelectedAccessories(new Set())
-      setAccessoryOtherText('')
-      setShowActions(false)
-      setError(null)
       return
     }
 
@@ -382,7 +380,9 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     return () => {
       alive = false
     }
-  }, [repairOrderId, t])
+    // Load only when the repair order id changes — not when UI language changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repairOrderId])
 
   const setField = (name: keyof RepairOrderPayload, value: string) => {
     setForm((current) => ({ ...current, [name]: value }))
@@ -448,6 +448,41 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     }
   }
 
+  const handleSendEmail = () => {
+    if (!repairOrder?.customerEmail) {
+      showToast('error', t.repairOrders.detail.emailSendFailed)
+      return
+    }
+
+    confirm({
+      title: t.repairOrders.detail.sendEmailConfirmTitle,
+      message: interpolate(t.repairOrders.detail.sendEmailConfirmMessage, {
+        email: repairOrder.customerEmail,
+      }),
+      onConfirm: async () => {
+        setSendingEmail(true)
+        try {
+          let current = repairOrder
+          if (!current.pdfPath) {
+            const updated = await handleGeneratePdf(current)
+            if (!updated?.pdfPath) {
+              showToast('error', t.repairOrders.detail.emailSendFailed)
+              return
+            }
+            current = updated
+          }
+          await emailRepairOrderPdf(current.id)
+          showToast('success', t.repairOrders.detail.emailSentSuccess)
+        } catch (err) {
+          logApiError('repair order email send', err)
+          showToast('error', t.repairOrders.detail.emailSendFailed)
+        } finally {
+          setSendingEmail(false)
+        }
+      },
+    })
+  }
+
   const linkedInvoice = repairOrder?.invoices?.[0] ?? null
 
   const handleCreateInvoice = async () => {
@@ -473,11 +508,36 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       const invoice = await createInvoiceFromRepairOrder(repairOrder.id, language)
       navigate(`/invoices/${invoice.id}`)
     } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.status === 409 &&
+        err.details &&
+        typeof err.details === 'object' &&
+        'invoiceId' in err.details &&
+        typeof (err.details as { invoiceId?: unknown }).invoiceId === 'string'
+      ) {
+        navigate(`/invoices/${(err.details as { invoiceId: string }).invoiceId}`)
+        return
+      }
       logApiError('repair order invoice create', err)
       showToast('error', getFriendlyErrorMessage(err, 'invoiceCreate', t))
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleOcrApply = (result: RepairOrderOcrResult) => {
+    const merged = mergeOcrIntoRepairOrderForm(
+      form,
+      result,
+      { selected: selectedAccessories, otherText: accessoryOtherText },
+      (value) => parseAccessories(value, t.repairOrders.accessories),
+    )
+    setForm(merged.form)
+    setSelectedAccessories(merged.accessoriesState.selected)
+    setAccessoryOtherText(merged.accessoriesState.otherText)
+    setFieldErrors({})
+    showToast('success', t.repairOrders.detail.ocrSuccess)
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -595,6 +655,18 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
                 <Download className="h-4 w-4" />
                 {t.repairOrders.detail.downloadPdf}
               </button>
+              {repairOrder.customerEmail ? (
+                <button
+                  type="button"
+                  data-testid="repair-order-send-email"
+                  className="btn btn-secondary"
+                  onClick={handleSendEmail}
+                  disabled={saving || sendingEmail}
+                >
+                  <Mail className="h-4 w-4" />
+                  {sendingEmail ? t.common.pleaseWait : t.repairOrders.detail.sendEmailBtn}
+                </button>
+              ) : null}
               {linkedInvoice ? (
                 <Link
                   to={`/invoices/${linkedInvoice.id}`}
@@ -626,6 +698,24 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       {error ? (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">
           {error}
+        </div>
+      ) : null}
+
+      {!isExistingOrder ? (
+        <div className="card">
+          <div className="card-header">
+            <div className="text-sm font-semibold text-slate-900">
+              {t.repairOrders.detail.ocrSectionTitle}
+            </div>
+          </div>
+          <div className="card-body">
+            <p className="mb-3 text-sm text-slate-600">{t.repairOrders.detail.ocrSectionHint}</p>
+            <RepairOrderOcrScan
+              disabled={saving}
+              onApply={handleOcrApply}
+              onError={(message) => showToast('error', message)}
+            />
+          </div>
         </div>
       ) : null}
 

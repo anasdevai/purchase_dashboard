@@ -44,10 +44,22 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
     });
   }
 
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    return res.status(409).json({
-      message: "IMEI or serial number already exists in another contract"
-    });
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        message: "IMEI or serial number already exists in another contract"
+      });
+    }
+
+    if (error.code === "P2022") {
+      console.error(error);
+      return res.status(500).json({
+        message:
+          "Database schema is out of date. Run `npx prisma migrate deploy` in the backend folder.",
+        code: error.code,
+        ...(process.env.NODE_ENV !== "production" ? { detail: error.message } : {})
+      });
+    }
   }
 
   if (
@@ -65,5 +77,11 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
     return res.status(500).json({ message: "PDF could not be created. Please try again." });
   }
 
-  return res.status(500).json({ message: "Internal server error" });
+  const isDev = process.env.NODE_ENV !== "production";
+  return res.status(500).json({
+    message: isDev && error instanceof Error ? error.message : "Internal server error",
+    ...(isDev && error instanceof Error
+      ? { error: error.name, detail: error.message, stack: error.stack }
+      : {})
+  });
 };

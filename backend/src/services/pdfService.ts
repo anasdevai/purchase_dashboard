@@ -67,7 +67,28 @@ export const generateInvoicePdf = async (
 
   const absolutePdfPath = `${storageDir}/invoice.pdf`;
   const html = renderInvoiceHtml(invoice, shopSettings, language);
-  await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[invoice:pdf] Rendering invoice PDF", {
+      invoiceNumber: invoice.invoiceNumber,
+      outputPath: absolutePdfPath,
+      language,
+    });
+  }
+
+  try {
+    await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[invoice:pdf] Puppeteer render failed", { invoiceNumber: invoice.invoiceNumber, message });
+    }
+    throw error;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[invoice:pdf] Invoice PDF written", { outputPath: absolutePdfPath });
+  }
 
   return toRelativeStoragePath(absolutePdfPath);
 };

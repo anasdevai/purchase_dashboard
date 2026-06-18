@@ -146,24 +146,22 @@ export function InvoicesPage() {
                         <Link className="btn btn-secondary h-8 w-8 p-0" data-testid={`invoice-view-${invoice.id}`} to={`/invoices/${invoice.id}`} title={t.table.open}>
                           <Eye className="h-4 w-4" />
                         </Link>
-                        {invoice.pdfPath ? (
-                          <button
-                            type="button"
-                            className="btn btn-secondary h-8 w-8 p-0"
-                            title={t.table.download}
-                            onClick={async () => {
-                              try {
-                                await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
-                                showToast('success', t.common.toasts.pdfDownloaded)
-                              } catch (err) {
-                                logApiError('invoice pdf download', err)
-                                showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
-                              }
-                            }}
-                          >
-                            <Download className="h-4 w-4" />
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          className="btn btn-secondary h-8 w-8 p-0"
+                          title={t.table.download}
+                          onClick={async () => {
+                            try {
+                              await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
+                              showToast('success', t.common.toasts.pdfDownloaded)
+                            } catch (err) {
+                              logApiError('invoice pdf download', err)
+                              showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                            }
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
                         <button
                           type="button"
                           data-testid={`invoice-delete-${invoice.id}`}

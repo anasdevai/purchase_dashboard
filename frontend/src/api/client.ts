@@ -4,10 +4,14 @@ import { isAuthErrorCode } from '../utils/authErrorCodes'
 
 const API_PORT = '4000'
 
+function firstEnvUrl(value: string | undefined) {
+  return value?.split(",")[0]?.trim() || undefined
+}
+
 function resolveApiBaseUrl() {
   const fromEnv =
-    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+    firstEnvUrl(import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+    firstEnvUrl(import.meta.env.VITE_API_URL as string | undefined)
 
   if (typeof window !== 'undefined') {
     const { hostname, protocol } = window.location
@@ -54,13 +58,16 @@ async function readError(response: Response) {
   const t = getActiveTranslations()
   let rawMessage: string | undefined
   let errorCode: string | undefined
+  let errorDetails: unknown
 
   try {
     const body = (await response.json()) as {
       message?: string
       code?: string
+      details?: unknown
       errors?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
     }
+    errorDetails = body.details
     errorCode = body.code
     const fieldMessages = body.errors?.fieldErrors
       ? Object.entries(body.errors.fieldErrors).flatMap(([field, messages]) =>
@@ -85,7 +92,7 @@ async function readError(response: Response) {
     t,
     resolvedCode,
   )
-  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode)
+  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode, errorDetails)
 }
 
 export async function apiRequest<T>(

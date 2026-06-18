@@ -15,6 +15,7 @@ import { NewRepairOrderPage, RepairOrderDetailPage } from './pages/RepairOrderDe
 import { RepairOrdersPage } from './pages/RepairOrdersPage'
 import { SearchContractsPage } from './pages/SearchContractsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { MobileSignaturePage } from './pages/MobileSignaturePage'
 
 import { AdminLayout } from './admin-panel/components/AdminLayout'
 import { AdminDashboardPage } from './admin-panel/pages/AdminDashboardPage'
@@ -32,6 +33,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signature/:token" element={<MobileSignaturePage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>

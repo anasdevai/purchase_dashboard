@@ -13,6 +13,7 @@ repairOrderRouter.get("/:id", asyncHandler(repairOrderController.get));
 repairOrderRouter.patch("/:id", asyncHandler(repairOrderController.update));
 repairOrderRouter.patch("/:id/status", asyncHandler(repairOrderController.updateStatus));
 repairOrderRouter.post("/:id/pdf", asyncHandler(repairOrderController.generatePdf));
+repairOrderRouter.post("/:id/email", asyncHandler(repairOrderController.sendEmail));
 repairOrderRouter.get("/:id/pdf", asyncHandler(repairOrderController.openPdf));
 repairOrderRouter.get("/:id/pdf/download", asyncHandler(repairOrderController.downloadPdf));
 repairOrderRouter.delete("/:id", asyncHandler(repairOrderController.remove));

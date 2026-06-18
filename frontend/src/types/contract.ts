@@ -15,12 +15,19 @@ export type Contract = {
 export type ApiContract = {
   id: string
   contractNumber: string
+  salutation?: string | null
+  customerFirstName?: string | null
+  customerLastName?: string | null
   customerName: string | null
+  customerStreet?: string | null
+  customerZipCode?: string | null
+  customerCity?: string | null
   customerAddress?: string | null
   customerPhone?: string | null
   customerEmail?: string | null
   customerDateOfBirth?: string | null
   idDocumentNumber?: string | null
+  idType?: string | null
   deviceType?: string | null
   brand?: string | null
   model: string | null
@@ -31,10 +38,17 @@ export type ApiContract = {
   condition?: string | null
   accessories?: string | null
   batteryHealth?: string | null
+  osVersion?: string | null
+  icloudStatus?: string | null
+  mdmStatus?: string | null
+  warranty?: string | null
+  purchaseReceiptAvailable?: boolean | null
   damageNotes?: string | null
   internalNotes?: string | null
   purchasePrice: string | number | null
   paymentMethod?: string | null
+  paymentStatus?: string | null
+  notes?: string | null
   ownershipConfirmed?: boolean
   notStolenConfirmed?: boolean
   icloudRemoved?: boolean
@@ -43,6 +57,9 @@ export type ApiContract = {
   factoryResetConfirmed?: boolean
   signaturePath?: string | null
   shopkeeperSignaturePath?: string | null
+  signatureToken?: string | null
+  signatureStatus?: string | null
+  qrUrl?: string | null
   pdfPath: string | null
   status: 'Draft' | 'Completed' | 'Cancelled'
   createdAt: string

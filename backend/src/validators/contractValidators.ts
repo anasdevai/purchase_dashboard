@@ -10,12 +10,37 @@ export const deviceTypes = [
   "Other"
 ] as const;
 
-export const conditions = ["Like new", "Very good", "Good", "Used", "Defective"] as const;
+export const conditions = [
+  "New",
+  "Like new",
+  "Very good",
+  "Good",
+  "Acceptable",
+  "Used",
+  "Defective"
+] as const;
+export const icloudStatuses = ["Unlocked", "Locked"] as const;
+export const mdmStatuses = ["Yes", "No"] as const;
+export const warrantyOptions = ["AppleCare+", "Manufacturer warranty", "None"] as const;
 
-export const paymentMethods = ["Cash", "Bank transfer", "Card", "Other"] as const;
+export const paymentMethods = [
+  "Cash",
+  "Bank transfer",
+  "Card",
+  "Debit card",
+  "PayPal",
+  "Other"
+] as const;
+export const paymentStatuses = ["Paid", "Pending", "Partial payment"] as const;
 
 const optionalText = z
   .preprocess((value) => (value === "" ? undefined : value), z.string().trim().max(1000).optional());
+
+const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.enum(values).optional()
+  );
 
 const optionalImei = z.preprocess(
   (value) => (value === "" || value === undefined || value === null ? undefined : value),
@@ -32,9 +57,18 @@ const optionalPrice = z.preprocess(
   z.coerce.number().positive().optional()
 );
 
+const SALUTATIONS = ["Mr", "Ms", "Diverse"] as const;
+const ID_TYPES = ["ID card", "Passport", "Driver's license"] as const;
+
 export const draftContractSchema = z.object({
+  salutation: optionalEnum(SALUTATIONS),
+  customerFirstName: optionalText,
+  customerLastName: optionalText,
   customerName: optionalText,
   customerAddress: optionalText,
+  customerStreet: optionalText,
+  customerZipCode: optionalText,
+  customerCity: optionalText,
   customerPhone: optionalText,
   customerEmail: z.preprocess(
     (value) => (value === "" || value === undefined || value === null ? undefined : value),
@@ -42,7 +76,7 @@ export const draftContractSchema = z.object({
   ),
   customerDateOfBirth: optionalDate,
   idDocumentNumber: optionalText,
-  // Allow arbitrary device types (presets + custom "Other" values).
+  idType: optionalEnum(ID_TYPES),
   deviceType: optionalText,
   brand: optionalText,
   model: optionalText,
@@ -50,13 +84,23 @@ export const draftContractSchema = z.object({
   serialNumber: optionalText,
   storage: optionalText,
   color: optionalText,
-  condition: z.enum(conditions).optional(),
+  condition: optionalEnum(conditions),
   accessories: optionalText,
   batteryHealth: optionalText,
+  osVersion: optionalText,
+  icloudStatus: optionalEnum(icloudStatuses),
+  mdmStatus: optionalEnum(mdmStatuses),
+  warranty: optionalEnum(warrantyOptions),
+  purchaseReceiptAvailable: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce.boolean().optional()
+  ),
   damageNotes: optionalText,
   internalNotes: optionalText,
   purchasePrice: optionalPrice,
-  paymentMethod: z.enum(paymentMethods).optional(),
+  paymentMethod: optionalEnum(paymentMethods),
+  paymentStatus: optionalEnum(paymentStatuses),
+  notes: optionalText,
   ownershipConfirmed: z.coerce.boolean().optional(),
   notStolenConfirmed: z.coerce.boolean().optional(),
   icloudRemoved: z.coerce.boolean().optional(),
@@ -67,12 +111,16 @@ export const draftContractSchema = z.object({
 
 export const completeContractSchema = draftContractSchema
   .extend({
-    customerName: z.string().trim().min(1).max(100),
-    customerAddress: z.string().trim().min(1).max(500),
+    customerFirstName: z.string().trim().min(1).max(100),
+    customerLastName: z.string().trim().min(1).max(100),
+    customerStreet: z.string().trim().min(1).max(200),
+    customerZipCode: z.string().trim().min(1).max(20),
+    customerCity: z.string().trim().min(1).max(100),
     customerPhone: z.string().trim().min(5).max(50),
     customerEmail: z.string().trim().email().max(150),
-    customerDateOfBirth: z.coerce.date(),
-    idDocumentNumber: z.string().trim().min(1).max(1000),
+    customerDateOfBirth: z.coerce.date().optional(),
+    idDocumentNumber: z.string().trim().min(1).max(1000).optional(),
+    idType: z.enum(ID_TYPES).optional(),
     deviceType: z.string().trim().min(1).max(1000),
     brand: z.string().trim().min(1).max(100),
     model: z.string().trim().min(1).max(100),
@@ -81,12 +129,19 @@ export const completeContractSchema = draftContractSchema
     storage: z.string().trim().min(1).max(1000),
     color: z.string().trim().min(1).max(1000),
     condition: z.enum(conditions),
-    accessories: z.string().trim().min(1).max(1000),
-    batteryHealth: z.string().trim().min(1).max(1000),
+    accessories: optionalText,
+    batteryHealth: optionalText,
+    osVersion: optionalText,
+    icloudStatus: z.enum(icloudStatuses),
+    mdmStatus: z.enum(mdmStatuses).optional(),
+    warranty: z.enum(warrantyOptions).optional(),
+    purchaseReceiptAvailable: z.coerce.boolean().optional(),
     damageNotes: optionalText,
     internalNotes: optionalText,
     purchasePrice: z.coerce.number().positive(),
     paymentMethod: z.enum(paymentMethods),
+    paymentStatus: z.enum(paymentStatuses).optional(),
+    notes: optionalText,
     ownershipConfirmed: z.literal(true),
     notStolenConfirmed: z.literal(true),
     icloudRemoved: z.literal(true),

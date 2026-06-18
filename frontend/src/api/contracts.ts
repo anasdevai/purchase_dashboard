@@ -33,12 +33,19 @@ export type DashboardSummary = {
 }
 
 export type ContractDraftPayload = {
+  salutation?: string
+  customerFirstName?: string
+  customerLastName?: string
   customerName?: string
+  customerStreet?: string
+  customerZipCode?: string
+  customerCity?: string
   customerAddress?: string
   customerPhone?: string
   customerEmail?: string
   customerDateOfBirth?: string
   idDocumentNumber?: string
+  idType?: string
   deviceType?: string
   brand?: string
   model?: string
@@ -49,10 +56,17 @@ export type ContractDraftPayload = {
   condition?: string
   accessories?: string
   batteryHealth?: string
+  osVersion?: string
+  icloudStatus?: string
+  mdmStatus?: string
+  warranty?: string
+  purchaseReceiptAvailable?: boolean
   damageNotes?: string
   internalNotes?: string
   purchasePrice?: number
   paymentMethod?: string
+  paymentStatus?: string
+  notes?: string
   ownershipConfirmed?: boolean
   notStolenConfirmed?: boolean
   icloudRemoved?: boolean
@@ -62,8 +76,18 @@ export type ContractDraftPayload = {
 }
 
 export function contractToDraftPayload(contract: ApiContract): ContractDraftPayload {
+  const legacyName = contract.customerName?.trim() || ''
+  const legacyAddress = contract.customerAddress?.trim() || ''
+
   return {
+    salutation: contract.salutation ?? undefined,
+    customerFirstName:
+      contract.customerFirstName ?? (legacyName && !contract.customerLastName ? legacyName : undefined),
+    customerLastName: contract.customerLastName ?? undefined,
     customerName: contract.customerName ?? undefined,
+    customerStreet: contract.customerStreet ?? (legacyAddress || undefined),
+    customerZipCode: contract.customerZipCode ?? undefined,
+    customerCity: contract.customerCity ?? undefined,
     customerAddress: contract.customerAddress ?? undefined,
     customerPhone: contract.customerPhone ?? undefined,
     customerEmail: contract.customerEmail ?? undefined,
@@ -71,6 +95,7 @@ export function contractToDraftPayload(contract: ApiContract): ContractDraftPayl
       ? contract.customerDateOfBirth.slice(0, 10)
       : undefined,
     idDocumentNumber: contract.idDocumentNumber ?? undefined,
+    idType: contract.idType ?? undefined,
     deviceType: contract.deviceType ?? undefined,
     brand: contract.brand ?? undefined,
     model: contract.model ?? undefined,
@@ -81,10 +106,17 @@ export function contractToDraftPayload(contract: ApiContract): ContractDraftPayl
     condition: contract.condition ?? undefined,
     accessories: contract.accessories ?? undefined,
     batteryHealth: contract.batteryHealth ?? undefined,
+    osVersion: contract.osVersion ?? undefined,
+    icloudStatus: contract.icloudStatus ?? undefined,
+    mdmStatus: contract.mdmStatus ?? undefined,
+    warranty: contract.warranty ?? undefined,
+    purchaseReceiptAvailable: contract.purchaseReceiptAvailable ?? undefined,
     damageNotes: contract.damageNotes ?? undefined,
     internalNotes: contract.internalNotes ?? undefined,
     purchasePrice: contract.purchasePrice ? Number(contract.purchasePrice) : undefined,
     paymentMethod: contract.paymentMethod ?? undefined,
+    paymentStatus: contract.paymentStatus ?? undefined,
+    notes: contract.notes ?? undefined,
     ownershipConfirmed: contract.ownershipConfirmed,
     notStolenConfirmed: contract.notStolenConfirmed,
     icloudRemoved: contract.icloudRemoved,
@@ -251,4 +283,36 @@ export async function downloadPdf(id: string, filename: string) {
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
+}
+
+export async function generateSignatureQr(id: string) {
+  return apiRequest<{ token: string; status: string; qrUrl?: string | null }>(
+    `/api/contracts/${id}/signature-qr`,
+    { method: 'POST' },
+  )
+}
+
+export async function fetchSignatureStatus(id: string) {
+  return apiRequest<{ status: string; token: string | null }>(`/api/contracts/${id}/signature-status`)
+}
+
+export async function fetchSignatureContract(token: string) {
+  const response = await apiRequest<{ contract: ApiContract }>(
+    `/api/contracts/public/signature/${token}`,
+    { auth: false },
+  )
+  return response.contract
+}
+
+export async function submitSignatureByToken(token: string, signature: Blob) {
+  const formData = new FormData()
+  formData.append('signature', signature, 'signature.png')
+  return apiRequest<{ success: true; status: string }>(
+    `/api/contracts/public/signature/${token}`,
+    { method: 'POST', body: formData, auth: false },
+  )
+}
+
+export async function emailContractPdf(id: string) {
+  return apiRequest<{ success: true }>(`/api/contracts/${id}/email`, { method: 'POST' })
 }

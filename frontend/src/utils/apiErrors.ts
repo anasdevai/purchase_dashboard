@@ -23,6 +23,7 @@ export class ApiError extends Error {
   readonly status: number
   readonly rawMessage?: string
   readonly code?: AuthErrorCode
+  readonly details?: unknown
   /** When true, message is safe to show in the UI (e.g. not-found). */
   readonly userFacing: boolean
 
@@ -32,12 +33,14 @@ export class ApiError extends Error {
     rawMessage?: string,
     userFacing = false,
     code?: AuthErrorCode,
+    details?: unknown,
   ) {
     super(friendlyMessage)
     this.name = 'ApiError'
     this.status = status
     this.rawMessage = rawMessage
     this.code = code
+    this.details = details
     this.userFacing = userFacing
   }
 }
@@ -66,6 +69,10 @@ function resolveAuthErrorMessage(
     return t.common.friendlyErrors.auth
   }
 
+  if (status === 403) {
+    return t.login.accountDeactivated
+  }
+
   if (code === AUTH_ERROR_CODES.EMAIL_ALREADY_REGISTERED || status === 409) {
     return t.login.emailAlreadyRegistered
   }
@@ -91,6 +98,10 @@ export function resolveApiErrorMessage(
 
   if (code === AUTH_ERROR_CODES.EMAIL_ALREADY_REGISTERED) {
     return { message: t.login.emailAlreadyRegistered, userFacing: true }
+  }
+
+  if (status === 403) {
+    return { message: t.login.accountDeactivated, userFacing: true }
   }
 
   return { message: t.common.friendlyErrors.generic, userFacing: false }

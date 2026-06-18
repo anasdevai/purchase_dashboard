@@ -10,10 +10,32 @@ const getLanUrls = () =>
     .filter((item) => item.family === "IPv4" && !item.internal)
     .map((item) => `http://${item.address}:${env.PORT}`);
 
+const getDatabaseTarget = () => {
+  try {
+    const url = new URL(env.DATABASE_URL);
+    const database = url.pathname.replace(/^\//, "") || "postgres";
+    return `${url.hostname}:${url.port || "5432"}/${database}`;
+  } catch {
+    return "unknown";
+  }
+};
+
 const start = async () => {
   await ensureDirectory(contractsRoot);
   await ensureDirectory(repairOrdersRoot);
   await ensureDirectory(invoicesRoot);
+
+  try {
+    await prisma.$connect();
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[db] Connected to PostgreSQL");
+      console.log(`[db] Target: ${getDatabaseTarget()}`);
+    }
+  } catch (error) {
+    console.error("[db] Failed to connect to PostgreSQL. Check DATABASE_URL and that the database is running.");
+    console.error(error);
+    process.exit(1);
+  }
 
   const server = app.listen(env.PORT, env.HOST, () => {
     console.log(`Backend API listening on ${env.HOST}:${env.PORT}`);

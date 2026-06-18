@@ -104,3 +104,15 @@ export async function downloadInvoicePdf(id: string, filename: string, language?
   link.remove()
   URL.revokeObjectURL(url)
 }
+
+export async function openInvoicePdf(id: string, language?: Language) {
+  const lang = resolveLanguage(language)
+  const blob = await fetchInvoicePdfBlob(id, lang)
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank', 'noopener,noreferrer')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
+export async function emailInvoicePdf(id: string) {
+  return apiRequest<{ success: true }>(`/api/invoices/${id}/email`, { method: 'POST' })
+}

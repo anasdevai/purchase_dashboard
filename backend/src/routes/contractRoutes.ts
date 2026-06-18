@@ -6,6 +6,16 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const contractRouter = Router();
 
+contractRouter.options("/public/signature/:token", (_req, res) => {
+  res.sendStatus(204);
+});
+contractRouter.get("/public/signature/:token", asyncHandler(contractController.getSignatureContract));
+contractRouter.post(
+  "/public/signature/:token",
+  upload.single("signature"),
+  asyncHandler(contractController.submitSignatureByToken)
+);
+
 contractRouter.use(requireAuth);
 
 contractRouter.get("/search", asyncHandler(contractController.search));
@@ -15,6 +25,9 @@ contractRouter.get("/:id", asyncHandler(contractController.getContract));
 contractRouter.patch("/:id/draft", asyncHandler(contractController.updateDraft));
 contractRouter.post("/:id/files", upload.single("file"), asyncHandler(contractController.uploadFile));
 contractRouter.post("/:id/signature", upload.single("signature"), asyncHandler(contractController.uploadSignature));
+contractRouter.post("/:id/signature-qr", asyncHandler(contractController.generateSignatureQr));
+contractRouter.get("/:id/signature-status", asyncHandler(contractController.getSignatureStatus));
+contractRouter.post("/:id/email", asyncHandler(contractController.sendEmail));
 contractRouter.post("/:id/complete", asyncHandler(contractController.complete));
 contractRouter.post("/:id/cancel", asyncHandler(contractController.cancel));
 contractRouter.delete("/:id", asyncHandler(contractController.cancel));

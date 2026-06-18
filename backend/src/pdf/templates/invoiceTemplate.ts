@@ -409,6 +409,8 @@ export const renderInvoiceHtml = (
   language: InvoicePdfLanguage = "en"
 ) => {
   const t = getInvoicePdfLabels(language);
+  const items = Array.isArray(invoice.items) ? invoice.items : [];
+  const customerName = hasText(invoice.customerName) ? String(invoice.customerName).trim() : "-";
 
   const addressLines = getStructuredAddressLines(shopSettings);
   const addressText = addressLines.join(", ");
@@ -445,7 +447,7 @@ export const renderInvoiceHtml = (
   }
 
   const invoiceToValue = [
-    `<span class="inv-info__value-line"><strong>${escapeHtml(invoice.customerName)}</strong></span>`,
+    `<span class="inv-info__value-line"><strong>${escapeHtml(customerName)}</strong></span>`,
     hasText(invoice.customerAddress)
       ? `<span class="inv-info__value-line">${escapeHtml(String(invoice.customerAddress).trim())}</span>`
       : ""
@@ -500,7 +502,7 @@ export const renderInvoiceHtml = (
     }
   `;
 
-  const itemRows = invoice.items
+  const itemRows = items
     .map(
       (item, index) => `<tr>
         <td class="pos">${index + 1}</td>
@@ -516,7 +518,7 @@ export const renderInvoiceHtml = (
 
   // Group VAT by percentage so the totals reflect each rate (e.g. "VAT 20%").
   const vatBreakdown = new Map<string, number>();
-  invoice.items.forEach((item) => {
+  items.forEach((item) => {
     const key = numericValue(item.vatPercent);
     vatBreakdown.set(key, (vatBreakdown.get(key) ?? 0) + Number(item.lineVat?.toString() ?? 0));
   });

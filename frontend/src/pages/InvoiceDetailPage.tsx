@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileText,
   Info,
+  Mail,
   Plus,
   Save,
   ShoppingCart,
@@ -12,7 +13,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { downloadInvoicePdf, fetchInvoice, generateInvoicePdf, saveInvoice } from '../api/invoices'
+import { downloadInvoicePdf, emailInvoicePdf, fetchInvoice, generateInvoicePdf, openInvoicePdf, saveInvoice } from '../api/invoices'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
@@ -120,7 +121,7 @@ export function NewInvoicePage() {
 export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const { user } = useAuth()
   const { t, interpolate, language } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { showToast, confirm } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
   const invoiceId = props.mode === 'new' ? undefined : params.invoiceId
@@ -130,8 +131,13 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const [loading, setLoading] = useState(Boolean(invoiceId))
   const [saving, setSaving] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<{ customerName?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{
+    customerName?: string
+    customerEmail?: string
+    items?: string
+  }>({})
   const [pdfNeedsRegeneration, setPdfNeedsRegeneration] = useState(false)
   const totals = useMemo(() => calculate(form.items), [form.items])
 
@@ -184,8 +190,13 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     }
   }, [invoiceId, t.invoices.errors.loadDetailFailed])
 
+  const markPdfOutdated = () => {
+    if (invoice) setPdfNeedsRegeneration(true)
+  }
+
   const setField = (name: keyof InvoiceForm, value: string) => {
     setForm((current) => ({ ...current, [name]: value }))
+    markPdfOutdated()
   }
 
   const setItem = (index: number, name: keyof InvoiceForm['items'][number], value: string) => {
@@ -195,6 +206,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
         itemIndex === index ? { ...item, [name]: value } : item,
       ),
     }))
+    markPdfOutdated()
   }
 
   const setQuantity = (index: number, value: string) => {
@@ -217,8 +229,26 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+    const errors: {
+      customerName?: string
+      customerEmail?: string
+      items?: string
+    } = {}
+
     if (!form.customerName.trim()) {
-      setFieldErrors({ customerName: t.invoices.validation.customerNameRequired })
+      errors.customerName = t.invoices.validation.customerNameRequired
+    }
+
+    if (form.customerEmail?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) {
+      errors.customerEmail = t.invoices.validation.emailInvalid
+    }
+
+    if (!form.items.some((item) => item.description.trim())) {
+      errors.items = t.invoices.validation.itemDescriptionRequired
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
       return
     }
 
@@ -230,7 +260,12 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       setInvoice(saved)
       setForm(fromInvoice(saved))
       setPdfNeedsRegeneration(false)
-      showToast('success', t.common.toasts.invoiceSaved)
+      if (saved.pdfPath) {
+        showToast('success', t.common.toasts.invoiceSaved)
+      } else {
+        showToast('success', t.common.toasts.invoiceSaved)
+        showToast('error', t.invoices.errors.pdfFailed)
+      }
       if (!invoiceId) navigate(`/invoices/${saved.id}`, { replace: true })
     } catch (err) {
       logApiError('invoice save', err)
@@ -260,11 +295,38 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     }
   }
 
+  const handleSendEmail = () => {
+    if (!invoice?.customerEmail) {
+      showToast('error', t.invoices.detail.emailSendFailed)
+      return
+    }
+
+    confirm({
+      title: t.invoices.detail.sendEmailConfirmTitle,
+      message: interpolate(t.invoices.detail.sendEmailConfirmMessage, {
+        email: invoice.customerEmail,
+      }),
+      onConfirm: async () => {
+        setSendingEmail(true)
+        try {
+          await emailInvoicePdf(invoice.id)
+          showToast('success', t.invoices.detail.emailSentSuccess)
+        } catch (err) {
+          logApiError('invoice email send', err)
+          showToast('error', t.invoices.detail.emailSendFailed)
+        } finally {
+          setSendingEmail(false)
+        }
+      },
+    })
+  }
+
   const addLineItem = () => {
     setForm((current) => ({
       ...current,
       items: [...current.items, makeEmptyInvoiceItem(shopSettings)],
     }))
+    markPdfOutdated()
   }
 
   if (loading) {
@@ -383,7 +445,13 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               type="email"
               placeholder={t.invoices.detail.customerEmailPlaceholder}
               value={form.customerEmail ?? ''}
-              onChange={(value) => setField('customerEmail', value)}
+              error={fieldErrors.customerEmail}
+              onChange={(value) => {
+                setField('customerEmail', value)
+                if (fieldErrors.customerEmail) {
+                  setFieldErrors((current) => ({ ...current, customerEmail: undefined }))
+                }
+              }}
             />
             <Field
               testId="invoice-customer-phone"
@@ -579,6 +647,9 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               <Plus className="h-4 w-4" />
               {t.invoices.detail.addAnotherLine}
             </button>
+            {fieldErrors.items ? (
+              <p className="mt-2 text-xs font-medium text-red-600">{fieldErrors.items}</p>
+            ) : null}
           </div>
         </section>
 
@@ -635,27 +706,61 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 {t.invoices.detail.generatePdf}
               </button>
             ) : null}
-            {invoice?.pdfPath ? (
+            {invoice ? (
+              <>
+                <button
+                  type="button"
+                  data-testid="invoice-open-pdf"
+                  className="btn btn-primary h-11 px-5"
+                  disabled={saving || downloadingPdf}
+                  onClick={async () => {
+                    setDownloadingPdf(true)
+                    try {
+                      await openInvoicePdf(invoice.id, language)
+                    } catch (err) {
+                      logApiError('invoice pdf open', err)
+                      showToast('error', getFriendlyErrorMessage(err, 'pdf', t))
+                    } finally {
+                      setDownloadingPdf(false)
+                    }
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  {t.invoices.detail.openPdf}
+                </button>
+                <button
+                  type="button"
+                  data-testid="invoice-download-pdf"
+                  className="btn btn-primary h-11 px-5"
+                  disabled={saving || downloadingPdf}
+                  onClick={async () => {
+                    setDownloadingPdf(true)
+                    try {
+                      await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
+                      showToast('success', t.common.toasts.pdfDownloaded)
+                    } catch (err) {
+                      logApiError('invoice pdf download', err)
+                      showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                    } finally {
+                      setDownloadingPdf(false)
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  {t.invoices.detail.downloadPdf}
+                </button>
+              </>
+            ) : null}
+            {invoice?.customerEmail ? (
               <button
                 type="button"
-                data-testid="invoice-download-pdf"
-                className="btn btn-primary h-11 px-5"
-                disabled={saving || downloadingPdf}
-                onClick={async () => {
-                  setDownloadingPdf(true)
-                  try {
-                    await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
-                    showToast('success', t.common.toasts.pdfDownloaded)
-                  } catch (err) {
-                    logApiError('invoice pdf download', err)
-                    showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
-                  } finally {
-                    setDownloadingPdf(false)
-                  }
-                }}
+                data-testid="invoice-send-email"
+                className="btn btn-secondary h-11 px-5"
+                disabled={saving || sendingEmail}
+                onClick={handleSendEmail}
               >
-                <Download className="h-4 w-4" />
-                {t.invoices.detail.downloadPdf}
+                <Mail className="h-4 w-4" />
+                {sendingEmail ? t.common.pleaseWait : t.invoices.detail.sendEmailBtn}
               </button>
             ) : null}
           </div>

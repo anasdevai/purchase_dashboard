@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
 import SignatureCanvas from 'react-signature-canvas'
 import { useNavigate } from 'react-router-dom'
@@ -8,6 +8,8 @@ import {
   completeContract,
   createDraft,
   fetchContract,
+  fetchSignatureStatus,
+  generateSignatureQr,
   updateDraft,
   uploadContractFile,
   uploadSignature,
@@ -28,12 +30,17 @@ import type { ApiContract } from '../../types/contract'
 import { DOCUMENT_IMAGE_ACCEPT, isAcceptedDocumentImage } from '../../utils/imageUpload'
 
 type FormValues = {
-  customerName: string
+  salutation?: string
+  customerFirstName: string
+  customerLastName: string
   customerEmail?: string
   customerPhone: string
   customerDateOfBirth?: string
-  customerAddress: string
+  customerStreet: string
+  customerZipCode: string
+  customerCity: string
   idDocumentNumber?: string
+  idType?: string
   deviceType: string
   brand: string
   model: string
@@ -44,10 +51,17 @@ type FormValues = {
   condition: string
   accessories?: string
   batteryHealth?: string
+  osVersion?: string
+  icloudStatus?: string
+  mdmStatus?: string
+  warranty?: string
+  purchaseReceiptAvailable?: boolean
   damageNotes?: string
   internalNotes?: string
   purchasePrice: number
   paymentMethod: string
+  paymentStatus?: string
+  notes?: string
   ownershipConfirmed: boolean
   notStolenConfirmed: boolean
   icloudRemoved: boolean
@@ -92,8 +106,14 @@ const BRAND_PRESETS = [
   'Other',
 ] as const
 
-const CONDITIONS = ['Like new', 'Very good', 'Good', 'Used', 'Defective'] as const
-const PAYMENT_METHODS = ['Cash', 'Bank transfer', 'Card', 'Other'] as const
+const CONDITIONS = ['New', 'Like new', 'Very good', 'Good', 'Acceptable', 'Used', 'Defective'] as const
+const PAYMENT_METHODS = ['Cash', 'Bank transfer', 'Card', 'Debit card', 'PayPal', 'Other'] as const
+const PAYMENT_STATUSES = ['Paid', 'Pending', 'Partial payment'] as const
+const SALUTATIONS = ['Mr', 'Ms', 'Diverse'] as const
+const ID_TYPES = ['ID card', 'Passport', "Driver's license"] as const
+const ICLOUD_STATUSES = ['Unlocked', 'Locked'] as const
+const MDM_STATUSES = ['Yes', 'No'] as const
+const WARRANTY_OPTIONS = ['AppleCare+', 'Manufacturer warranty', 'None'] as const
 const ACCESSORY_OPTIONS = ['Ladegerät', 'Netzteil', 'Controller', 'Kabel', 'Tragetasche', 'Sonstiges'] as const
 
 const requiredFileFields: FileField[] = ['id_front', 'device_front', 'device_back']
@@ -101,11 +121,14 @@ const maxDocumentUploadMb = 20
 
 const stepFields: Record<number, Array<keyof FormValues>> = {
   0: [
-    'customerName',
+    'customerFirstName',
+    'customerLastName',
     'customerEmail',
     'customerPhone',
     'customerDateOfBirth',
-    'customerAddress',
+    'customerStreet',
+    'customerZipCode',
+    'customerCity',
     'idDocumentNumber',
   ],
   1: [
@@ -117,6 +140,7 @@ const stepFields: Record<number, Array<keyof FormValues>> = {
     'storage',
     'color',
     'condition',
+    'icloudStatus',
     'purchasePrice',
     'paymentMethod',
     'accessories',
@@ -188,6 +212,11 @@ export function ContractWizard(props: {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [signatureMethod, setSignatureMethod] = useState<'onsite' | 'qr'>('onsite')
+  const [qrToken, setQrToken] = useState<string | null>(props.initialContract?.signatureToken ?? null)
+  const [qrStatus, setQrStatus] = useState<string | null>(props.initialContract?.signatureStatus ?? null)
+  const [qrUrl, setQrUrl] = useState<string | null>(props.initialContract?.qrUrl ?? null)
+  const [signatureLinkCopied, setSignatureLinkCopied] = useState(false)
 
   const requiredText = useMemo(
     () => (message: string) => ({
@@ -257,12 +286,16 @@ export function ContractWizard(props: {
   } = useForm<FormValues>({
     shouldUnregister: false,
     defaultValues: {
-      customerName: '',
+      customerFirstName: '',
+      customerLastName: '',
+      customerStreet: '',
+      customerZipCode: '',
+      customerCity: '',
       customerPhone: '',
-      customerAddress: '',
       deviceType: 'iPhone',
       brand: 'Apple',
       condition: 'Good',
+      icloudStatus: 'Unlocked',
       paymentMethod: 'Cash',
       ownershipConfirmed: false,
       notStolenConfirmed: false,
@@ -273,6 +306,33 @@ export function ContractWizard(props: {
       ...(props.initialContract ? contractToDraftPayload(props.initialContract) : {}),
     },
   })
+
+  useEffect(() => {
+    if (signatureMethod !== 'qr' || !draftId || qrStatus === 'SIGNED') return
+
+    let active = true
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetchSignatureStatus(draftId)
+        if (!active) return
+
+        if (res.status === 'SIGNED') {
+          setQrStatus('SIGNED')
+          showToast('success', w.qrSignatureStatusSigned)
+          clearInterval(interval)
+        } else {
+          setQrStatus(res.status)
+        }
+      } catch (err) {
+        console.error('Error polling signature status:', err)
+      }
+    }, 2000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [signatureMethod, draftId, qrStatus, w.qrSignatureStatusSigned, showToast])
 
   const values = watch()
   const title = props.compact ? w.titleCompact : w.titleFull
@@ -294,7 +354,8 @@ export function ContractWizard(props: {
   const hasCustomerSignature =
     Boolean(props.initialContract?.signaturePath) ||
     Boolean(customerSignatureDataUrl) ||
-    Boolean(getLiveSignatureDataUrl(customerSigRef.current))
+    Boolean(getLiveSignatureDataUrl(customerSigRef.current)) ||
+    (signatureMethod === 'qr' && qrStatus === 'SIGNED')
   const hasShopkeeperSignature =
     Boolean(props.initialContract?.shopkeeperSignaturePath) ||
     Boolean(shopkeeperSignatureDataUrl) ||
@@ -447,8 +508,12 @@ export function ContractWizard(props: {
     }
 
     if (step === 4) {
-      if (!hasCustomerSignature) {
+      if (signatureMethod === 'onsite' && !hasCustomerSignature) {
         setError(w.errors.customerSignatureRequired)
+        return false
+      }
+      if (signatureMethod === 'qr' && qrStatus !== 'SIGNED' && !props.initialContract?.signaturePath) {
+        setError(w.qrSignatureStatusWaiting)
         return false
       }
       if (!hasShopkeeperSignature) {
@@ -463,6 +528,58 @@ export function ContractWizard(props: {
   const goNext = async () => {
     if (await validateCurrentStep()) {
       setStep((current) => Math.min(steps.length - 1, current + 1))
+    }
+  }
+
+  const handleGenerateQr = async () => {
+    setError(null)
+    setMessage(null)
+    setIsSubmitting(true)
+    try {
+      const draft = await persistDraft(getValues())
+      await uploadSelectedFiles(draft.id)
+
+      const res = await generateSignatureQr(draft.id)
+      setQrToken(res.token)
+      setQrStatus(res.status)
+      setQrUrl(res.qrUrl ?? null)
+      showToast('success', t.common.toasts.contractDraftSaved)
+    } catch (err) {
+      logApiError('generate QR signature token', err)
+      setError(getFriendlyErrorMessage(err, 'contractSave', t))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const customerDisplayName = [values.salutation, values.customerFirstName, values.customerLastName]
+    .filter(Boolean)
+    .join(' ')
+  const customerDisplayAddress = [
+    values.customerStreet,
+    [values.customerZipCode, values.customerCity].filter(Boolean).join(' '),
+  ]
+    .filter(Boolean)
+    .join(', ')
+  const signaturePageUrl = (() => {
+    if (!qrToken) return qrUrl
+    const { hostname, origin } = window.location
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
+    if (!isLocalHost) return `${origin}/signature/${qrToken}`
+    return qrUrl ?? `${origin}/signature/${qrToken}`
+  })()
+  const qrCodeSrc = signaturePageUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(signaturePageUrl)}`
+    : null
+
+  const handleCopySignatureLink = async () => {
+    if (!signaturePageUrl) return
+    try {
+      await navigator.clipboard.writeText(signaturePageUrl)
+      setSignatureLinkCopied(true)
+      window.setTimeout(() => setSignatureLinkCopied(false), 2000)
+    } catch {
+      setError(w.copySignatureLink)
     }
   }
 
@@ -598,8 +715,33 @@ export function ContractWizard(props: {
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
               {w.customerInformation}
             </div>
-            <Field label={w.fullName} error={errors.customerName?.message || (errors.customerName && w.fullNameRequired)}>
-              <input className="input" data-testid="wizard-customer-name" placeholder={w.fullNamePlaceholder} {...register('customerName', requiredText(w.fullNameRequired))} />
+            <SelectField
+              label={w.salutation}
+              options={SALUTATIONS}
+              optionLabels={w.options}
+              register={register('salutation')}
+            />
+            <Field
+              label={w.firstName}
+              error={errors.customerFirstName?.message || (errors.customerFirstName && w.firstNameRequired)}
+            >
+              <input
+                className="input"
+                data-testid="wizard-customer-first-name"
+                placeholder={w.firstNamePlaceholder}
+                {...register('customerFirstName', requiredText(w.firstNameRequired))}
+              />
+            </Field>
+            <Field
+              label={w.lastName}
+              error={errors.customerLastName?.message || (errors.customerLastName && w.lastNameRequired)}
+            >
+              <input
+                className="input"
+                data-testid="wizard-customer-last-name"
+                placeholder={w.lastNamePlaceholder}
+                {...register('customerLastName', requiredText(w.lastNameRequired))}
+              />
             </Field>
             <Field label={w.email} error={errors.customerEmail?.message}>
               <input
@@ -628,13 +770,54 @@ export function ContractWizard(props: {
               />
             </Field>
             <Field label={w.dob} error={errors.customerDateOfBirth?.message}>
-              <input className="input" type="date" data-testid="wizard-customer-dob" {...register('customerDateOfBirth', requiredText(w.dobRequired))} />
+              <input className="input" type="date" data-testid="wizard-customer-dob" {...register('customerDateOfBirth')} />
             </Field>
-            <Field label={w.address} error={errors.customerAddress?.message || (errors.customerAddress && w.addressRequired)} wide>
-              <textarea className="input min-h-24 py-2" data-testid="wizard-customer-address" placeholder={w.addressPlaceholder} {...register('customerAddress', requiredText(w.addressRequired))} />
+            <Field
+              label={w.street}
+              error={errors.customerStreet?.message || (errors.customerStreet && w.streetRequired)}
+            >
+              <input
+                className="input"
+                data-testid="wizard-customer-street"
+                placeholder={w.streetPlaceholder}
+                {...register('customerStreet', requiredText(w.streetRequired))}
+              />
             </Field>
+            <Field
+              label={w.zipCode}
+              error={errors.customerZipCode?.message || (errors.customerZipCode && w.zipCodeRequired)}
+            >
+              <input
+                className="input"
+                data-testid="wizard-customer-zip"
+                placeholder={w.zipCodePlaceholder}
+                {...register('customerZipCode', requiredText(w.zipCodeRequired))}
+              />
+            </Field>
+            <Field
+              label={w.city}
+              error={errors.customerCity?.message || (errors.customerCity && w.cityRequired)}
+            >
+              <input
+                className="input"
+                data-testid="wizard-customer-city"
+                placeholder={w.cityPlaceholder}
+                {...register('customerCity', requiredText(w.cityRequired))}
+              />
+            </Field>
+            <SelectField
+              label={w.idType}
+              options={ID_TYPES}
+              optionLabels={w.options}
+              register={register('idType')}
+            />
             <Field label={w.idDocument} error={errors.idDocumentNumber?.message} wide>
-              <input className="input" data-testid="wizard-id-document" placeholder={w.idDocumentPlaceholder} {...register('idDocumentNumber', requiredText(w.idDocumentRequired))} />
+              <input
+                className="input"
+                data-testid="wizard-id-document"
+                placeholder={w.idDocumentPlaceholder}
+                {...register('idDocumentNumber')}
+              />
             </Field>
           </section>
         ) : null}
@@ -793,11 +976,57 @@ export function ContractWizard(props: {
             <Field label={w.batteryHealth} error={errors.batteryHealth?.message}>
               <input className="input" data-testid="wizard-battery" placeholder={w.batteryHealthPlaceholder} {...register('batteryHealth', requiredText(w.batteryHealthRequired))} />
             </Field>
+            <Field label={w.osVersion} error={errors.osVersion?.message}>
+              <input className="input" placeholder={w.osVersionPlaceholder} {...register('osVersion')} />
+            </Field>
+            <SelectField
+              label={w.icloudStatus}
+              options={ICLOUD_STATUSES}
+              optionLabels={w.options}
+              register={register('icloudStatus', { required: w.icloudStatusRequired })}
+            />
+            <SelectField
+              label={w.mdmStatus}
+              options={MDM_STATUSES}
+              optionLabels={w.options}
+              register={register('mdmStatus')}
+            />
+            <SelectField
+              label={w.warranty}
+              options={WARRANTY_OPTIONS}
+              optionLabels={w.options}
+              register={register('warranty')}
+            />
+            <Field label={w.purchaseReceiptAvailable}>
+              <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-primary"
+                  checked={Boolean(values.purchaseReceiptAvailable)}
+                  onChange={(event) => {
+                    setValue('purchaseReceiptAvailable', event.target.checked, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }}
+                />
+                {w.purchaseReceiptAvailable}
+              </label>
+            </Field>
+            <SelectField
+              label={w.paymentStatus}
+              options={PAYMENT_STATUSES}
+              optionLabels={w.options}
+              register={register('paymentStatus')}
+            />
             <Field label={w.damageNotes} error={errors.damageNotes?.message} wide>
               <textarea className="input min-h-20 py-2" placeholder={w.damageNotesPlaceholder} {...register('damageNotes')} />
             </Field>
             <Field label={w.internalNotes} error={errors.internalNotes?.message} wide>
               <textarea className="input min-h-20 py-2" placeholder={w.internalNotesPlaceholder} {...register('internalNotes')} />
+            </Field>
+            <Field label={w.notes} error={errors.notes?.message} wide>
+              <textarea className="input min-h-20 py-2" placeholder={w.notesPlaceholder} {...register('notes')} />
             </Field>
           </section>
         ) : null}
@@ -844,45 +1073,115 @@ export function ContractWizard(props: {
         ) : null}
 
         {step === 4 ? (
-          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <SignatureBox
-              testId="wizard-signature-customer"
-              title={w.customerSignatureTitle}
-              clearLabel={w.clear}
-              savedHint={w.savedSignatureReplace}
-              refSetter={(ref) => {
-                customerSigRef.current = ref
-              }}
-              onChange={() => {
-                const dataUrl = getLiveSignatureDataUrl(customerSigRef.current)
-                setCustomerSignatureDataUrl(dataUrl)
-                setError(null)
-              }}
-              onClear={() => {
-                customerSigRef.current?.clear()
-                setCustomerSignatureDataUrl(null)
-              }}
-              saved={Boolean(props.initialContract?.signaturePath)}
-            />
-            <SignatureBox
-              testId="wizard-signature-shopkeeper"
-              title={w.shopkeeperSignatureTitle}
-              clearLabel={w.clear}
-              savedHint={w.savedSignatureReplace}
-              refSetter={(ref) => {
-                shopkeeperSigRef.current = ref
-              }}
-              onChange={() => {
-                const dataUrl = getLiveSignatureDataUrl(shopkeeperSigRef.current)
-                setShopkeeperSignatureDataUrl(dataUrl)
-                setError(null)
-              }}
-              onClear={() => {
-                shopkeeperSigRef.current?.clear()
-                setShopkeeperSignatureDataUrl(null)
-              }}
-              saved={Boolean(props.initialContract?.shopkeeperSignaturePath)}
-            />
+          <section className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={clsx(
+                  'btn h-9 px-3 text-xs',
+                  signatureMethod === 'onsite' ? 'btn-primary' : 'btn-secondary',
+                )}
+                onClick={() => setSignatureMethod('onsite')}
+              >
+                {w.signatureMethodOnsite}
+              </button>
+              <button
+                type="button"
+                className={clsx(
+                  'btn h-9 px-3 text-xs',
+                  signatureMethod === 'qr' ? 'btn-primary' : 'btn-secondary',
+                )}
+                onClick={() => setSignatureMethod('qr')}
+              >
+                {w.signatureMethodQr}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {signatureMethod === 'onsite' ? (
+                <SignatureBox
+                  testId="wizard-signature-customer"
+                  title={w.customerSignatureTitle}
+                  clearLabel={w.clear}
+                  savedHint={w.savedSignatureReplace}
+                  refSetter={(ref) => {
+                    customerSigRef.current = ref
+                  }}
+                  onChange={() => {
+                    const dataUrl = getLiveSignatureDataUrl(customerSigRef.current)
+                    setCustomerSignatureDataUrl(dataUrl)
+                    setError(null)
+                  }}
+                  onClear={() => {
+                    customerSigRef.current?.clear()
+                    setCustomerSignatureDataUrl(null)
+                  }}
+                  saved={Boolean(props.initialContract?.signaturePath)}
+                />
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs font-semibold text-slate-700">{w.qrSignatureTitle}</div>
+                  <p className="mt-2 text-sm text-slate-600">{w.qrSignatureInstructions}</p>
+                  {qrCodeSrc ? (
+                    <div className="mt-4 flex flex-col items-center gap-3">
+                      <img src={qrCodeSrc} alt="QR code" className="h-[180px] w-[180px] rounded-lg bg-white p-2 ring-1 ring-slate-200" />
+                      <div className="w-full space-y-2 rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="text-xs font-semibold text-slate-700">{w.customerSignatureLink}</div>
+                        <a
+                          href={signaturePageUrl ?? '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          {w.openSignaturePage}
+                        </a>
+                        <p className="break-all text-xs text-slate-500">{signaturePageUrl}</p>
+                        <button
+                          type="button"
+                          className="btn btn-ghost h-8 px-3 text-xs"
+                          onClick={handleCopySignatureLink}
+                        >
+                          {signatureLinkCopied ? w.signatureLinkCopied : w.copySignatureLink}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="mt-3 text-sm font-medium text-slate-700">
+                    {qrStatus === 'SIGNED'
+                      ? w.qrSignatureStatusSigned
+                      : w.qrSignatureStatusWaiting}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={handleGenerateQr}
+                    className="btn btn-primary mt-4 w-full disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {w.qrSignatureGenerateBtn}
+                  </button>
+                </div>
+              )}
+
+              <SignatureBox
+                testId="wizard-signature-shopkeeper"
+                title={w.shopkeeperSignatureTitle}
+                clearLabel={w.clear}
+                savedHint={w.savedSignatureReplace}
+                refSetter={(ref) => {
+                  shopkeeperSigRef.current = ref
+                }}
+                onChange={() => {
+                  const dataUrl = getLiveSignatureDataUrl(shopkeeperSigRef.current)
+                  setShopkeeperSignatureDataUrl(dataUrl)
+                  setError(null)
+                }}
+                onClear={() => {
+                  shopkeeperSigRef.current?.clear()
+                  setShopkeeperSignatureDataUrl(null)
+                }}
+                saved={Boolean(props.initialContract?.shopkeeperSignaturePath)}
+              />
+            </div>
           </section>
         ) : null}
 
@@ -894,10 +1193,11 @@ export function ContractWizard(props: {
                 title={w.review.customer}
                 dash={t.common.dash}
                 rows={[
-                  [w.review.name, values.customerName],
+                  [w.review.name, customerDisplayName],
                   [w.review.phone, values.customerPhone],
                   [w.review.email, values.customerEmail],
-                  [w.review.address, values.customerAddress],
+                  [w.review.address, customerDisplayAddress],
+                  [w.review.notes, values.notes],
                 ]}
               />
               <ReviewCard

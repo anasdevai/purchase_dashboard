@@ -19,14 +19,24 @@ Run all commands from the `backend/` directory (or use `npm run <script> --prefi
 4. Generate Prisma client and apply migrations:
    ```powershell
    npm run prisma:generate
-   npm run prisma:migrate
+   npm run prisma:migrate:dev
    ```
-5. Start the server:
+5. Seed a local development admin user (safe for dev only):
+   ```powershell
+   npm run seed
+   ```
+   Default dev credentials:
+   - Email: `admin@example.com`
+   - Password: `Admin123456`
+   - Role: `admin`
+6. Start the server:
    ```powershell
    npm run dev
    ```
+   On startup you should see `[db] Connected to PostgreSQL` and `[db] Target: host:port/database`.
+   Run `npm run seed` and `npm run dev` from the **same** `backend/` folder so they use the same `DATABASE_URL`.
 
-For local schema changes during development, use `npm run prisma:migrate:dev` instead of `prisma:migrate`.
+For production deployments, use `npm run prisma:migrate` instead of `prisma:migrate:dev`, and do **not** rely on the dev seed password.
 
 ## Main API
 

@@ -196,6 +196,44 @@ export type TranslationSchema = {
     photosAndDocuments: string
     photosRequiredHint: string
     checkAndSave: string
+    salutation: string
+    firstName: string
+    firstNamePlaceholder: string
+    firstNameRequired: string
+    lastName: string
+    lastNamePlaceholder: string
+    lastNameRequired: string
+    street: string
+    streetPlaceholder: string
+    streetRequired: string
+    zipCode: string
+    zipCodePlaceholder: string
+    zipCodeRequired: string
+    city: string
+    cityPlaceholder: string
+    cityRequired: string
+    idType: string
+    osVersion: string
+    osVersionPlaceholder: string
+    icloudStatus: string
+    icloudStatusRequired: string
+    mdmStatus: string
+    warranty: string
+    purchaseReceiptAvailable: string
+    paymentStatus: string
+    notes: string
+    notesPlaceholder: string
+    signatureMethodOnsite: string
+    signatureMethodQr: string
+    qrSignatureTitle: string
+    qrSignatureInstructions: string
+    qrSignatureStatusWaiting: string
+    qrSignatureStatusSigned: string
+    qrSignatureGenerateBtn: string
+    customerSignatureLink: string
+    openSignaturePage: string
+    copySignatureLink: string
+    signatureLinkCopied: string
     fullName: string
     fullNamePlaceholder: string
     fullNameRequired: string
@@ -316,6 +354,7 @@ export type TranslationSchema = {
       phone: string
       email: string
       address: string
+      notes: string
       imeiSerial: string
       condition: string
       price: string
@@ -369,6 +408,21 @@ export type TranslationSchema = {
     openPdf: string
     pdfIframeTitle: string
     pdfPending: string
+    sendEmailBtn: string
+    sendEmailConfirmTitle: string
+    sendEmailConfirmMessage: string
+    emailSentSuccess: string
+    emailSendFailed: string
+  }
+  mobileSignature: {
+    title: string
+    signHint: string
+    submit: string
+    successTitle: string
+    successMessage: string
+    missingToken: string
+    contractNotFound: string
+    networkError: string
   }
   login: {
     appTitle: string
@@ -392,6 +446,7 @@ export type TranslationSchema = {
     alreadyHaveAccount: string
     needAccount: string
     emailAlreadyRegistered: string
+    accountDeactivated: string
     accountCreatedSuccess: string
     validationFailed: string
   }
@@ -507,6 +562,8 @@ export type TranslationSchema = {
     confirmDelete: string
     validation: {
       customerNameRequired: string
+      emailInvalid: string
+      itemDescriptionRequired: string
     }
     errors: {
       loadFailed: string
@@ -543,6 +600,7 @@ export type TranslationSchema = {
       description: string
       backToList: string
       generatePdf: string
+      openPdf: string
       downloadPdf: string
       saveInvoice: string
       saving: string
@@ -595,6 +653,11 @@ export type TranslationSchema = {
       rowNumber: string
       notesPlaceholder: string
       notesHelper: string
+      sendEmailBtn: string
+      sendEmailConfirmTitle: string
+      sendEmailConfirmMessage: string
+      emailSentSuccess: string
+      emailSendFailed: string
       pdfFooterNote: string
       customerNamePlaceholder: string
       customerEmailPlaceholder: string
@@ -719,6 +782,19 @@ export type TranslationSchema = {
       invoiceExistsTitle: string
       invoiceExistsMessage: string
       openExistingInvoice: string
+      sendEmailBtn: string
+      sendEmailConfirmTitle: string
+      sendEmailConfirmMessage: string
+      emailSentSuccess: string
+      emailSendFailed: string
+      ocrSectionTitle: string
+      ocrSectionHint: string
+      ocrScanButton: string
+      ocrScanning: string
+      ocrSuccess: string
+      ocrConfidence: string
+      ocrUnclearFields: string
+      ocrAppliedHint: string
     }
   }
   language: {

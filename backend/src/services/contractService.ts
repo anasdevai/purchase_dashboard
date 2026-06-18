@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
+import type { Prisma } from "@prisma/client";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { completeContractSchema, draftContractSchema, searchContractsSchema } from "../validators/contractValidators.js";
@@ -9,6 +11,7 @@ import { ensureDirectory, getContractStorageDir } from "../utils/paths.js";
 import { generateContractNumber } from "./numberingService.js";
 import { generateContractPdf } from "./pdfService.js";
 import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
+import { saveSignatureByToken } from "./fileService.js";
 
 const includeFiles = {
   files: true
@@ -22,7 +25,77 @@ const decimalToNumber = (value: { toString: () => string } | number | null | und
 
 const toContractData = (input: Record<string, unknown>) => {
   const parsed = draftContractSchema.parse(input);
+
+  const firstName = (parsed.customerFirstName ?? "").trim();
+  const lastName = (parsed.customerLastName ?? "").trim();
+  if (firstName || lastName) {
+    (parsed as Record<string, unknown>).customerName = [firstName, lastName].filter(Boolean).join(" ");
+  }
+
+  const street = (parsed.customerStreet ?? "").trim();
+  const zip = (parsed.customerZipCode ?? "").trim();
+  const city = (parsed.customerCity ?? "").trim();
+  if (street || zip || city) {
+    (parsed as Record<string, unknown>).customerAddress = [street, [zip, city].filter(Boolean).join(" ")]
+      .filter(Boolean)
+      .join(", ");
+  }
+
   return parsed;
+};
+
+type ContractWritableData = Omit<
+  Prisma.ContractUncheckedCreateInput,
+  "id" | "userId" | "contractNumber" | "status" | "createdAt" | "updatedAt"
+>;
+
+const toPrismaContractData = (parsed: ContractData): ContractWritableData => {
+  const fields: Record<string, unknown> = {
+    salutation: parsed.salutation,
+    customerFirstName: parsed.customerFirstName,
+    customerLastName: parsed.customerLastName,
+    customerName: parsed.customerName,
+    customerStreet: parsed.customerStreet,
+    customerZipCode: parsed.customerZipCode,
+    customerCity: parsed.customerCity,
+    customerAddress: parsed.customerAddress,
+    customerPhone: parsed.customerPhone,
+    customerEmail: parsed.customerEmail,
+    customerDateOfBirth: parsed.customerDateOfBirth,
+    idDocumentNumber: parsed.idDocumentNumber,
+    idType: parsed.idType,
+    deviceType: parsed.deviceType,
+    brand: parsed.brand,
+    model: parsed.model,
+    imei: parsed.imei,
+    serialNumber: parsed.serialNumber,
+    storage: parsed.storage,
+    color: parsed.color,
+    condition: parsed.condition,
+    accessories: parsed.accessories,
+    batteryHealth: parsed.batteryHealth,
+    osVersion: parsed.osVersion,
+    icloudStatus: parsed.icloudStatus,
+    mdmStatus: parsed.mdmStatus,
+    warranty: parsed.warranty,
+    purchaseReceiptAvailable: parsed.purchaseReceiptAvailable,
+    damageNotes: parsed.damageNotes,
+    internalNotes: parsed.internalNotes,
+    purchasePrice: parsed.purchasePrice,
+    paymentMethod: parsed.paymentMethod,
+    paymentStatus: parsed.paymentStatus,
+    notes: parsed.notes,
+    ownershipConfirmed: parsed.ownershipConfirmed,
+    notStolenConfirmed: parsed.notStolenConfirmed,
+    icloudRemoved: parsed.icloudRemoved,
+    googleLockRemoved: parsed.googleLockRemoved,
+    otherLockRemoved: parsed.otherLockRemoved,
+    factoryResetConfirmed: parsed.factoryResetConfirmed
+  };
+
+  return Object.fromEntries(
+    Object.entries(fields).filter(([, value]) => value !== undefined)
+  ) as ContractWritableData;
 };
 
 type ContractWithFiles = Awaited<ReturnType<typeof getContractOrThrow>>;
@@ -108,7 +181,18 @@ export const validateDeviceIdentifiers = async (userId: string, query: Record<st
   return { valid: true };
 };
 
-const toCompletionValidationInput = (contract: ContractWithFiles) => ({
+const toCompletionValidationInput = (contract: ContractWithFiles) => {
+  const legacyName = contract.customerName?.trim() || "";
+  const legacyAddress = contract.customerAddress?.trim() || "";
+
+  return {
+    salutation: contract.salutation ?? undefined,
+    customerFirstName: contract.customerFirstName ?? (legacyName || undefined),
+    customerLastName: contract.customerLastName ?? undefined,
+    customerStreet: contract.customerStreet ?? (legacyAddress || undefined),
+    customerZipCode: contract.customerZipCode ?? (legacyAddress ? "-" : undefined),
+    customerCity: contract.customerCity ?? (legacyAddress ? "-" : undefined),
+  idType: contract.idType ?? undefined,
   customerName: contract.customerName ?? undefined,
   customerAddress: contract.customerAddress ?? undefined,
   customerPhone: contract.customerPhone ?? undefined,
@@ -125,6 +209,13 @@ const toCompletionValidationInput = (contract: ContractWithFiles) => ({
   condition: contract.condition ?? undefined,
   accessories: contract.accessories ?? undefined,
   batteryHealth: contract.batteryHealth ?? undefined,
+  osVersion: contract.osVersion ?? undefined,
+  icloudStatus: contract.icloudStatus ?? "Unlocked",
+  mdmStatus: contract.mdmStatus ?? undefined,
+  warranty: contract.warranty ?? undefined,
+  purchaseReceiptAvailable: contract.purchaseReceiptAvailable ?? undefined,
+  paymentStatus: contract.paymentStatus ?? undefined,
+  notes: contract.notes ?? undefined,
   damageNotes: contract.damageNotes ?? undefined,
   internalNotes: contract.internalNotes ?? undefined,
   purchasePrice: contract.purchasePrice ? contract.purchasePrice.toString() : undefined,
@@ -135,7 +226,8 @@ const toCompletionValidationInput = (contract: ContractWithFiles) => ({
   googleLockRemoved: contract.googleLockRemoved,
   otherLockRemoved: contract.otherLockRemoved,
   factoryResetConfirmed: contract.factoryResetConfirmed
-});
+  };
+};
 
 export const getContractOrThrow = async (id: string, userId: string, isAdmin = false) => {
   const contract = await prisma.contract.findFirst({
@@ -162,7 +254,7 @@ export const createDraftContract = async (userId: string, input: Record<string, 
         data: {
           userId,
           contractNumber,
-          ...data
+          ...toPrismaContractData(data)
         },
         include: includeFiles
       });
@@ -170,6 +262,7 @@ export const createDraftContract = async (userId: string, input: Record<string, 
       await ensureDirectory(getContractStorageDir(userId, contract.contractNumber));
       return contract;
     } catch (error) {
+      console.error("[contractService] createDraftContract failed:", error);
       if (attempt === 2) throw error;
     }
   }
@@ -193,7 +286,7 @@ export const updateDraftContract = async (
 
   return prisma.contract.update({
     where: { id },
-    data,
+    data: toPrismaContractData(data),
     include: includeFiles
   });
 };
@@ -362,3 +455,60 @@ export const getRecentContracts = async (userId: string) =>
     }
   });
 
+export const generateSignatureToken = async (id: string, userId: string) => {
+  const contract = await getContractOrThrow(id, userId);
+
+  if (contract.status !== "Draft") {
+    throw new HttpError(409, "Only draft contracts can have signatures generated");
+  }
+
+  const token = crypto.randomBytes(24).toString("hex");
+
+  return prisma.contract.update({
+    where: { id },
+    data: {
+      signatureToken: token,
+      signatureStatus: "PENDING"
+    }
+  });
+};
+
+export const getSignatureStatus = async (id: string, userId: string) => {
+  const contract = await prisma.contract.findFirst({
+    where: { id, userId },
+    select: { signatureStatus: true, signatureToken: true }
+  });
+
+  if (!contract) {
+    throw new HttpError(404, "Contract not found");
+  }
+
+  return {
+    status: contract.signatureStatus ?? "NONE",
+    token: contract.signatureToken ?? null
+  };
+};
+
+export const getContractBySignatureToken = async (token: string) => {
+  const contract = await prisma.contract.findFirst({
+    where: { signatureToken: token, status: "Draft" }
+  });
+
+  if (!contract) {
+    throw new HttpError(404, "Contract not found or already completed");
+  }
+
+  return contract;
+};
+
+export const submitSignatureByToken = async (token: string, file: Express.Multer.File) => {
+  const contract = await prisma.contract.findFirst({
+    where: { signatureToken: token, status: "Draft" }
+  });
+
+  if (!contract) {
+    throw new HttpError(404, "Contract not found or already completed");
+  }
+
+  return saveSignatureByToken(contract.id, contract.userId, contract.contractNumber, file);
+};
