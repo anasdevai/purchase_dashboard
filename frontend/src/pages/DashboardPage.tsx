@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   Banknote,
   CircleDollarSign,
@@ -21,8 +22,11 @@ import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 export function DashboardPage() {
   const { user } = useAuth()
   const { t, formatMoney, interpolate } = useLanguage()
+  const location = useLocation()
   const [dashboard, setDashboard] = useState<DashboardSummary | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Store the initial location key so we can skip the location-effect on first render
+  const initialLocationKey = useRef(location.key)
 
   const loadDashboard = (alive = true) => {
     fetchDashboard()
@@ -35,6 +39,7 @@ export function DashboardPage() {
       })
   }
 
+  // Initial load and reload when user changes
   useEffect(() => {
     if (!user?.id) return
     let alive = true
@@ -46,6 +51,19 @@ export function DashboardPage() {
       alive = false
     }
   }, [user?.id])
+
+  // Refresh dashboard every time the user navigates back to /dashboard
+  // Skip the very first render (initial location key) since the effect above already fetches data
+  useEffect(() => {
+    if (!user?.id) return
+    if (location.key === initialLocationKey.current) return
+    let alive = true
+    loadDashboard(alive)
+
+    return () => {
+      alive = false
+    }
+  }, [location.key])
 
   return (
     <div className="space-y-6">

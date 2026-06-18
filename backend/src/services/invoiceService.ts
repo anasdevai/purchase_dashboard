@@ -23,9 +23,9 @@ const calculateItems = calculateInvoiceItems;
 
 const toData = (input: Record<string, unknown>) => invoiceSchema.parse(input);
 
-export const getInvoiceOrThrow = async (id: string, userId: string) => {
+export const getInvoiceOrThrow = async (id: string, userId: string, isAdmin = false) => {
   const invoice = await prisma.invoice.findFirst({
-    where: { id, userId },
+    where: isAdmin ? { id } : { id, userId },
     include: includeItems
   });
 
@@ -226,18 +226,19 @@ export const generatePdfForInvoice = async (
 export const streamInvoicePdf = async (
   id: string,
   userId: string,
-  language: InvoicePdfLanguage = "de"
+  language: InvoicePdfLanguage = "de",
+  isAdmin = false
 ) => {
-  const invoice = await getInvoiceOrThrow(id, userId);
-  const shopSettings = shopSettingsToPdf(await getShopSettingsForUser(userId));
+  const invoice = await getInvoiceOrThrow(id, userId, isAdmin);
+  const shopSettings = shopSettingsToPdf(await getShopSettingsForUser(invoice.userId));
   return renderInvoicePdfBuffer(invoice, shopSettings, language);
 };
 
-export const deleteInvoice = async (id: string, userId: string) => {
-  const invoice = await getInvoiceOrThrow(id, userId);
+export const deleteInvoice = async (id: string, userId: string, isAdmin = false) => {
+  const invoice = await getInvoiceOrThrow(id, userId, isAdmin);
 
   await prisma.invoice.delete({ where: { id } });
-  await fs.promises.rm(getInvoiceStorageDir(userId, invoice.invoiceNumber), {
+  await fs.promises.rm(getInvoiceStorageDir(invoice.userId, invoice.invoiceNumber), {
     recursive: true,
     force: true
   });

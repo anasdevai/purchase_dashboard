@@ -1,0 +1,73 @@
+import { z } from "zod";
+
+export const invoicePaymentMethods = ["Cash", "BankTransfer", "Card", "Other"] as const;
+export const invoicePaymentStatuses = ["Paid", "Open", "Cancelled"] as const;
+
+const optionalText = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z.string().trim().max(2000).optional()
+);
+
+const requiredText = (max = 1000) => z.string().trim().min(1).max(max);
+
+const optionalDate = z.preprocess(
+  (value) => (value === "" || value === undefined || value === null ? undefined : value),
+  z.coerce.date().optional()
+);
+
+const wholeNumberMessage = "Must be a whole number";
+
+const isWholeNumber = (value: number) => Number.isInteger(value);
+
+const quantitySchema = z.coerce
+  .number({ invalid_type_error: wholeNumberMessage })
+  .min(1, "Quantity must be at least 1")
+  .refine(isWholeNumber, { message: wholeNumberMessage });
+
+const wholeEuroSchema = z.coerce
+  .number({ invalid_type_error: wholeNumberMessage })
+  .min(0, "Amount must be zero or greater")
+  .refine(isWholeNumber, { message: wholeNumberMessage });
+
+const wholeVatSchema = z.coerce
+  .number({ invalid_type_error: wholeNumberMessage })
+  .min(0, "VAT must be zero or greater")
+  .max(100, "VAT cannot exceed 100")
+  .refine(isWholeNumber, { message: wholeNumberMessage });
+
+export const invoiceItemSchema = z.object({
+  description: requiredText(1000),
+  quantity: quantitySchema,
+  unitPrice: wholeEuroSchema,
+  vatPercent: wholeVatSchema
+});
+
+export const invoiceSchema = z.object({
+  repairOrderId: optionalText,
+  invoiceDate: optionalDate,
+  customerName: requiredText(150),
+  customerAddress: optionalText,
+  customerPhone: optionalText,
+  customerEmail: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.string().trim().email().max(150).optional()
+  ),
+  deviceSummary: optionalText,
+  repairSummary: optionalText,
+  paymentMethod: z.enum(invoicePaymentMethods).optional(),
+  paymentStatus: z.enum(invoicePaymentStatuses).optional(),
+  notes: optionalText,
+  items: z.array(invoiceItemSchema).min(1)
+});
+
+export const searchInvoicesSchema = z.object({
+  q: optionalText,
+  invoiceNumber: optionalText,
+  customerName: optionalText,
+  phone: optionalText,
+  date: optionalText
+});
+
+export const invoicePaymentStatusSchema = z.object({
+  paymentStatus: z.enum(invoicePaymentStatuses)
+});

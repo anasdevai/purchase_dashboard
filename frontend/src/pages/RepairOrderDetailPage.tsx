@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Download, Eye, FileText, Pencil, Save } from 'lucide-react'
+import { Download, Eye, FileText, Mail, Pencil, Save } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   downloadRepairOrderPdf,
   fetchRepairOrder,
   generateRepairOrderPdf,
   saveRepairOrder,
+  emailRepairOrderPdf,
 } from '../api/repairOrders'
 import { createInvoiceFromRepairOrder } from '../api/invoices'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
@@ -309,6 +310,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(Boolean(repairOrderId))
   const [saving, setSaving] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showActions, setShowActions] = useState(false)
   const isExistingOrder = Boolean(repairOrderId)
@@ -434,6 +436,29 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       logApiError('repair order pdf download', err)
       showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
     }
+  }
+
+  const handleSendEmail = () => {
+    if (!repairOrder || !repairOrder.customerEmail) return
+
+    confirm({
+      title: t.repairOrders.detail.sendEmailConfirmTitle,
+      message: interpolate(t.repairOrders.detail.sendEmailConfirmMessage, {
+        email: repairOrder.customerEmail,
+      }),
+      onConfirm: async () => {
+        setSendingEmail(true)
+        try {
+          await emailRepairOrderPdf(repairOrder.id)
+          showToast('success', t.repairOrders.detail.emailSentSuccess)
+        } catch (err) {
+          logApiError('repair order email send', err)
+          showToast('error', t.repairOrders.detail.emailSendFailed)
+        } finally {
+          setSendingEmail(false)
+        }
+      },
+    })
   }
 
   const linkedInvoice = repairOrder?.invoices?.[0] ?? null
@@ -583,6 +608,18 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
                 <Download className="h-4 w-4" />
                 {t.repairOrders.detail.downloadPdf}
               </button>
+              {repairOrder.customerEmail ? (
+                <button
+                  type="button"
+                  data-testid="repair-order-action-send-email"
+                  className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail || saving}
+                >
+                  <Mail className="h-4 w-4" />
+                  {t.repairOrders.detail.sendEmailBtn}
+                </button>
+              ) : null}
               {linkedInvoice ? (
                 <Link
                   to={`/invoices/${linkedInvoice.id}`}

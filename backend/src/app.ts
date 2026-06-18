@@ -7,6 +7,7 @@ import { dashboardRouter } from "./routes/dashboardRoutes.js";
 import { invoiceRouter } from "./routes/invoiceRoutes.js";
 import { repairOrderRouter } from "./routes/repairOrderRoutes.js";
 import { settingsRouter } from "./routes/settingsRoutes.js";
+import { adminRouter } from "./routes/adminRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 
 export const app = express();
@@ -34,6 +35,8 @@ app.use("/api/dashboard", dashboardRouter);
 app.use("/api/repair-orders", repairOrderRouter);
 app.use("/api/invoices", invoiceRouter);
 app.use("/api/settings", settingsRouter);
+app.use("/api/admin", adminRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
+

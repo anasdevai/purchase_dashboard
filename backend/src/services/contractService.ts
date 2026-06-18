@@ -1,5 +1,7 @@
 import fs from "node:fs";
+import crypto from "node:crypto";
 import { env } from "../config/env.js";
+import { saveSignatureByToken } from "./fileService.js";
 import { prisma } from "../config/prisma.js";
 import { completeContractSchema, draftContractSchema, searchContractsSchema } from "../validators/contractValidators.js";
 import { requiredCompletionFileTypes } from "../validators/fileValidators.js";
@@ -8,7 +10,7 @@ import { HttpError } from "../utils/httpError.js";
 import { ensureDirectory, getContractStorageDir } from "../utils/paths.js";
 import { generateContractNumber } from "./numberingService.js";
 import { generateContractPdf } from "./pdfService.js";
-import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
+import { getShopSettingsForUser, shopSettingsToPdf, getDefaultVatPercent } from "./settingsService.js";
 
 const includeFiles = {
   files: true
@@ -22,6 +24,21 @@ const decimalToNumber = (value: { toString: () => string } | number | null | und
 
 const toContractData = (input: Record<string, unknown>) => {
   const parsed = draftContractSchema.parse(input);
+
+  // Auto-derive composite fields for backward-compat search indexes
+  const firstName = (parsed.customerFirstName ?? "").trim();
+  const lastName = (parsed.customerLastName ?? "").trim();
+  if (firstName || lastName) {
+    (parsed as Record<string, unknown>).customerName = [firstName, lastName].filter(Boolean).join(" ");
+  }
+
+  const street = (parsed.customerStreet ?? "").trim();
+  const zip = (parsed.customerZipCode ?? "").trim();
+  const city = (parsed.customerCity ?? "").trim();
+  if (street || zip || city) {
+    (parsed as Record<string, unknown>).customerAddress = [street, [zip, city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  }
+
   return parsed;
 };
 
@@ -109,12 +126,19 @@ export const validateDeviceIdentifiers = async (userId: string, query: Record<st
 };
 
 const toCompletionValidationInput = (contract: ContractWithFiles) => ({
+  salutation: contract.salutation ?? undefined,
+  customerFirstName: contract.customerFirstName ?? undefined,
+  customerLastName: contract.customerLastName ?? undefined,
   customerName: contract.customerName ?? undefined,
   customerAddress: contract.customerAddress ?? undefined,
+  customerStreet: contract.customerStreet ?? undefined,
+  customerZipCode: contract.customerZipCode ?? undefined,
+  customerCity: contract.customerCity ?? undefined,
   customerPhone: contract.customerPhone ?? undefined,
   customerEmail: contract.customerEmail ?? undefined,
   customerDateOfBirth: contract.customerDateOfBirth ?? undefined,
   idDocumentNumber: contract.idDocumentNumber ?? undefined,
+  idType: contract.idType ?? undefined,
   deviceType: contract.deviceType ?? undefined,
   brand: contract.brand ?? undefined,
   model: contract.model ?? undefined,
@@ -125,10 +149,17 @@ const toCompletionValidationInput = (contract: ContractWithFiles) => ({
   condition: contract.condition ?? undefined,
   accessories: contract.accessories ?? undefined,
   batteryHealth: contract.batteryHealth ?? undefined,
+  osVersion: (contract as Record<string, unknown>).osVersion as string | undefined ?? undefined,
+  icloudStatus: (contract as Record<string, unknown>).icloudStatus as string | undefined ?? undefined,
+  mdmStatus: (contract as Record<string, unknown>).mdmStatus as string | undefined ?? undefined,
+  warranty: (contract as Record<string, unknown>).warranty as string | undefined ?? undefined,
+  purchaseReceiptAvailable: (contract as Record<string, unknown>).purchaseReceiptAvailable as boolean | undefined ?? undefined,
   damageNotes: contract.damageNotes ?? undefined,
   internalNotes: contract.internalNotes ?? undefined,
   purchasePrice: contract.purchasePrice ? contract.purchasePrice.toString() : undefined,
   paymentMethod: contract.paymentMethod ?? undefined,
+  paymentStatus: (contract as Record<string, unknown>).paymentStatus as string | undefined ?? undefined,
+  notes: (contract as Record<string, unknown>).notes as string | undefined ?? undefined,
   ownershipConfirmed: contract.ownershipConfirmed,
   notStolenConfirmed: contract.notStolenConfirmed,
   icloudRemoved: contract.icloudRemoved,
@@ -137,9 +168,9 @@ const toCompletionValidationInput = (contract: ContractWithFiles) => ({
   factoryResetConfirmed: contract.factoryResetConfirmed
 });
 
-export const getContractOrThrow = async (id: string, userId: string) => {
+export const getContractOrThrow = async (id: string, userId: string, isAdmin = false) => {
   const contract = await prisma.contract.findFirst({
-    where: { id, userId },
+    where: isAdmin ? { id } : { id, userId },
     include: includeFiles
   });
 
@@ -249,12 +280,27 @@ export const completeContract = async (
   );
   assertCompletionFiles(contract);
 
-  const pdfShopSettings = shopSettingsToPdf(await getShopSettingsForUser(userId));
+  const shopSettings = await getShopSettingsForUser(userId);
+  const pdfShopSettings = shopSettingsToPdf(shopSettings);
+
+  const employee = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true }
+  });
+  const employeeName = employee?.name ?? "";
+
+  const vatPercent = getDefaultVatPercent(shopSettings);
+  const grossPrice = Number(contract.purchasePrice ?? 0);
+  const netPrice = grossPrice / (1 + vatPercent / 100);
+  const vatAmount = grossPrice - netPrice;
 
   const pdfPath = await generateContractPdf(
     {
       ...contract,
-      status: "Completed"
+      status: "Completed",
+      employeeName,
+      netPrice,
+      vatAmount
     },
     pdfShopSettings
   );
@@ -266,8 +312,8 @@ export const completeContract = async (
   });
 };
 
-export const cancelContract = async (id: string, userId: string) => {
-  const contract = await getContractOrThrow(id, userId);
+export const cancelContract = async (id: string, userId: string, isAdmin = false) => {
+  const contract = await getContractOrThrow(id, userId, isAdmin);
 
   await prisma.contract.delete({
     where: { id }
@@ -361,4 +407,62 @@ export const getRecentContracts = async (userId: string) =>
       createdAt: true
     }
   });
+
+export const generateSignatureToken = async (id: string, userId: string) => {
+  const contract = await getContractOrThrow(id, userId);
+
+  if (contract.status !== "Draft") {
+    throw new HttpError(409, "Only draft contracts can have signatures generated");
+  }
+
+  const token = crypto.randomBytes(24).toString("hex");
+
+  return prisma.contract.update({
+    where: { id },
+    data: {
+      signatureToken: token,
+      signatureStatus: "PENDING"
+    }
+  });
+};
+
+export const getSignatureStatus = async (id: string, userId: string) => {
+  const contract = await prisma.contract.findFirst({
+    where: { id, userId },
+    select: { signatureStatus: true, signatureToken: true }
+  });
+
+  if (!contract) {
+    throw new HttpError(404, "Contract not found");
+  }
+
+  return {
+    status: contract.signatureStatus ?? "NONE",
+    token: contract.signatureToken ?? null
+  };
+};
+
+export const getContractBySignatureToken = async (token: string) => {
+  const contract = await prisma.contract.findFirst({
+    where: { signatureToken: token, status: "Draft" }
+  });
+
+  if (!contract) {
+    throw new HttpError(404, "Contract not found or already completed");
+  }
+
+  return contract;
+};
+
+export const submitSignatureByToken = async (token: string, file: Express.Multer.File) => {
+  const contract = await prisma.contract.findFirst({
+    where: { signatureToken: token, status: "Draft" }
+  });
+
+  if (!contract) {
+    throw new HttpError(404, "Contract not found or already completed");
+  }
+
+  return saveSignatureByToken(contract.id, contract.userId, contract.contractNumber, file);
+};
 

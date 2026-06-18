@@ -94,3 +94,9 @@ export async function downloadRepairOrderPdf(id: string, filename: string) {
   link.remove()
   URL.revokeObjectURL(url)
 }
+
+export async function emailRepairOrderPdf(id: string) {
+  return apiRequest<{ success: true }>(`/api/repair-orders/${id}/email`, {
+    method: 'POST',
+  })
+}

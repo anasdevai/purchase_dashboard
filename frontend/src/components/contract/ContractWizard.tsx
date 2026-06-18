@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useForm, type UseFormRegisterReturn } from 'react-hook-form'
 import SignatureCanvas from 'react-signature-canvas'
 import { useNavigate } from 'react-router-dom'
@@ -12,6 +12,8 @@ import {
   uploadContractFile,
   uploadSignature,
   validateDeviceIdentifiers,
+  generateSignatureQr,
+  fetchSignatureStatus,
   type ContractDraftPayload,
 } from '../../api/contracts'
 import { useAppConfirm } from '../common/ConfirmDialogProvider'
@@ -20,6 +22,7 @@ import {
   getFriendlyErrorMessage,
   isDraftAlreadyCompletedError,
   logApiError,
+  ApiError,
 } from '../../utils/apiErrors'
 import type { OptionLabels } from '../../i18n/types'
 import { useAuth } from '../../auth/AuthContext'
@@ -28,12 +31,17 @@ import type { ApiContract } from '../../types/contract'
 import { DOCUMENT_IMAGE_ACCEPT, isAcceptedDocumentImage } from '../../utils/imageUpload'
 
 type FormValues = {
-  customerName: string
+  salutation?: string
+  customerFirstName: string
+  customerLastName: string
   customerEmail?: string
   customerPhone: string
   customerDateOfBirth?: string
-  customerAddress: string
+  customerStreet: string
+  customerZipCode: string
+  customerCity: string
   idDocumentNumber?: string
+  idType?: string
   deviceType: string
   brand: string
   model: string
@@ -48,10 +56,17 @@ type FormValues = {
   internalNotes?: string
   purchasePrice: number
   paymentMethod: string
+  paymentStatus?: string
+  notes?: string
   ownershipConfirmed: boolean
   notStolenConfirmed: boolean
   icloudRemoved: boolean
   googleLockRemoved: boolean
+  osVersion?: string
+  icloudStatus?: string
+  mdmStatus?: string
+  warranty?: string
+  purchaseReceiptAvailable?: boolean
   otherLockRemoved: boolean
   factoryResetConfirmed: boolean
 }
@@ -92,21 +107,29 @@ const BRAND_PRESETS = [
   'Other',
 ] as const
 
-const CONDITIONS = ['Like new', 'Very good', 'Good', 'Used', 'Defective'] as const
-const PAYMENT_METHODS = ['Cash', 'Bank transfer', 'Card', 'Other'] as const
+const CONDITIONS = ['New', 'Like new', 'Very good', 'Good', 'Acceptable', 'Defective'] as const
+const PAYMENT_METHODS = ['Cash', 'Bank transfer', 'Card', 'Debit card', 'PayPal', 'Other'] as const
+const PAYMENT_STATUSES = ['Paid', 'Pending', 'Partial payment'] as const
 const ACCESSORY_OPTIONS = ['Ladegerät', 'Netzteil', 'Controller', 'Kabel', 'Tragetasche', 'Sonstiges'] as const
+const ICLOUD_STATUSES = ['Unlocked', 'Locked'] as const
+const MDM_STATUSES = ['Yes', 'No'] as const
+const WARRANTY_OPTIONS = ['AppleCare+', 'Manufacturer warranty', 'None'] as const
 
 const requiredFileFields: FileField[] = ['id_front', 'device_front', 'device_back']
 const maxDocumentUploadMb = 20
 
 const stepFields: Record<number, Array<keyof FormValues>> = {
   0: [
-    'customerName',
+    'customerFirstName',
+    'customerLastName',
     'customerEmail',
     'customerPhone',
     'customerDateOfBirth',
-    'customerAddress',
+    'customerStreet',
+    'customerZipCode',
+    'customerCity',
     'idDocumentNumber',
+    'idType',
   ],
   1: [
     'deviceType',
@@ -119,8 +142,15 @@ const stepFields: Record<number, Array<keyof FormValues>> = {
     'condition',
     'purchasePrice',
     'paymentMethod',
+    'paymentStatus',
+    'notes',
+    'icloudStatus',
     'accessories',
     'batteryHealth',
+    'osVersion',
+    'mdmStatus',
+    'warranty',
+    'purchaseReceiptAvailable',
   ],
   2: [
     'ownershipConfirmed',
@@ -188,6 +218,37 @@ export function ContractWizard(props: {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [signatureMethod, setSignatureMethod] = useState<'onsite' | 'qr'>('onsite')
+  const [qrToken, setQrToken] = useState<string | null>(props.initialContract?.signatureToken ?? null)
+  const [qrStatus, setQrStatus] = useState<string | null>(props.initialContract?.signatureStatus ?? null)
+  const [qrUrl, setQrUrl] = useState<string | null>(props.initialContract?.qrUrl ?? null)
+
+  useEffect(() => {
+    if (signatureMethod !== 'qr' || !draftId || qrStatus === 'SIGNED') return
+
+    let active = true
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetchSignatureStatus(draftId)
+        if (!active) return
+        
+        if (res.status === 'SIGNED') {
+          setQrStatus('SIGNED')
+          showToast('success', w.qrSignatureStatusSigned)
+          clearInterval(interval)
+        } else {
+          setQrStatus(res.status)
+        }
+      } catch (err) {
+        console.error('Error polling signature status:', err)
+      }
+    }, 2000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [signatureMethod, draftId, qrStatus, w.qrSignatureStatusSigned, showToast])
 
   const requiredText = useMemo(
     () => (message: string) => ({
@@ -257,9 +318,12 @@ export function ContractWizard(props: {
   } = useForm<FormValues>({
     shouldUnregister: false,
     defaultValues: {
-      customerName: '',
+      customerFirstName: '',
+      customerLastName: '',
       customerPhone: '',
-      customerAddress: '',
+      customerStreet: '',
+      customerZipCode: '',
+      customerCity: '',
       deviceType: 'iPhone',
       brand: 'Apple',
       condition: 'Good',
@@ -282,11 +346,6 @@ export function ContractWizard(props: {
     ? values.deviceType
     : 'Other'
   const brandPreset = (BRAND_PRESETS as readonly string[]).includes(values.brand ?? '') ? values.brand : 'Other'
-  const accessoryPreset = (ACCESSORY_OPTIONS as readonly string[]).includes(values.accessories ?? '')
-    ? values.accessories
-    : values.accessories
-      ? 'Sonstiges'
-      : ''
 
   const hasRequiredFile = (field: FileField) => Boolean(files[field]) || savedFileTypes.has(field)
   const getLiveSignatureDataUrl = (ref: SignatureCanvas | null) =>
@@ -294,7 +353,8 @@ export function ContractWizard(props: {
   const hasCustomerSignature =
     Boolean(props.initialContract?.signaturePath) ||
     Boolean(customerSignatureDataUrl) ||
-    Boolean(getLiveSignatureDataUrl(customerSigRef.current))
+    Boolean(getLiveSignatureDataUrl(customerSigRef.current)) ||
+    (signatureMethod === 'qr' && qrStatus === 'SIGNED')
   const hasShopkeeperSignature =
     Boolean(props.initialContract?.shopkeeperSignaturePath) ||
     Boolean(shopkeeperSignatureDataUrl) ||
@@ -365,7 +425,7 @@ export function ContractWizard(props: {
     await uploadOneSignature(
       contractId,
       customerDataUrl,
-      props.initialContract?.signaturePath,
+      props.initialContract?.signaturePath || (signatureMethod === 'qr' && qrStatus === 'SIGNED' ? 'qr-signed-placeholder' : null),
       'customer',
       required,
     )
@@ -376,6 +436,27 @@ export function ContractWizard(props: {
       'shopkeeper',
       required,
     )
+  }
+
+  const handleGenerateQr = async () => {
+    setError(null)
+    setMessage(null)
+    setIsSubmitting(true)
+    try {
+      const draft = await persistDraft(getValues())
+      await uploadSelectedFiles(draft.id)
+      
+      const res = await generateSignatureQr(draft.id)
+      setQrToken(res.token)
+      setQrStatus(res.status)
+      setQrUrl(res.qrUrl ?? null)
+      showToast('success', t.common.toasts.contractDraftSaved)
+    } catch (err) {
+      logApiError('generate QR signature token', err)
+      setError(getFriendlyErrorMessage(err, 'contractSave', t))
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const saveDraft = async () => {
@@ -424,7 +505,11 @@ export function ContractWizard(props: {
         })
       } catch (err) {
         logApiError('contract device identifier validation', err)
-        setError(w.imeiOrSerialExists)
+        if (err instanceof ApiError) {
+          setError(err.message)
+        } else {
+          setError(w.imeiOrSerialExists) // Fallback for safety
+        }
         return false
       }
     }
@@ -598,23 +683,22 @@ export function ContractWizard(props: {
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
               {w.customerInformation}
             </div>
-            <Field label={w.fullName} error={errors.customerName?.message || (errors.customerName && w.fullNameRequired)}>
-              <input className="input" data-testid="wizard-customer-name" placeholder={w.fullNamePlaceholder} {...register('customerName', requiredText(w.fullNameRequired))} />
+            {/* Salutation */}
+            <Field label={w.salutation}>
+              <select className="input" {...register('salutation')}>
+                <option value="">{w.salutationPlaceholder}</option>
+                <option value="Mr">{w.options.Mr}</option>
+                <option value="Ms">{w.options.Ms}</option>
+                <option value="Diverse">{w.options.Diverse}</option>
+              </select>
             </Field>
-            <Field label={w.email} error={errors.customerEmail?.message}>
-              <input
-                className="input"
-                type="email"
-                data-testid="wizard-customer-email"
-                placeholder={w.emailPlaceholder}
-                {...register('customerEmail', {
-                  ...requiredText(w.emailRequired),
-                  pattern: {
-                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: w.emailInvalid,
-                  },
-                })}
-              />
+            {/* placeholder so layout stays 2-col */}
+            <div />
+            <Field label={w.firstName} error={errors.customerFirstName?.message}>
+              <input className="input" data-testid="wizard-first-name" placeholder={w.firstNamePlaceholder} {...register('customerFirstName', requiredText(w.firstNameRequired))} />
+            </Field>
+            <Field label={w.lastName} error={errors.customerLastName?.message}>
+              <input className="input" data-testid="wizard-last-name" placeholder={w.lastNamePlaceholder} {...register('customerLastName', requiredText(w.lastNameRequired))} />
             </Field>
             <Field label={w.phone} error={errors.customerPhone?.message || (errors.customerPhone && w.phoneRequired)}>
               <input
@@ -627,14 +711,44 @@ export function ContractWizard(props: {
                 })}
               />
             </Field>
+            <Field label={w.email} error={errors.customerEmail?.message}>
+              <input
+                className="input"
+                type="email"
+                data-testid="wizard-customer-email"
+                placeholder={w.emailPlaceholder}
+                {...register('customerEmail', {
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: w.emailInvalid,
+                  },
+                })}
+              />
+            </Field>
             <Field label={w.dob} error={errors.customerDateOfBirth?.message}>
-              <input className="input" type="date" data-testid="wizard-customer-dob" {...register('customerDateOfBirth', requiredText(w.dobRequired))} />
+              <input className="input" type="date" data-testid="wizard-customer-dob" {...register('customerDateOfBirth')} />
             </Field>
-            <Field label={w.address} error={errors.customerAddress?.message || (errors.customerAddress && w.addressRequired)} wide>
-              <textarea className="input min-h-24 py-2" data-testid="wizard-customer-address" placeholder={w.addressPlaceholder} {...register('customerAddress', requiredText(w.addressRequired))} />
+            {/* Address split fields */}
+            <Field label={w.street} error={errors.customerStreet?.message} wide>
+              <input className="input" data-testid="wizard-street" placeholder={w.streetPlaceholder} {...register('customerStreet', requiredText(w.streetRequired))} />
             </Field>
-            <Field label={w.idDocument} error={errors.idDocumentNumber?.message} wide>
-              <input className="input" data-testid="wizard-id-document" placeholder={w.idDocumentPlaceholder} {...register('idDocumentNumber', requiredText(w.idDocumentRequired))} />
+            <Field label={w.zipCode} error={errors.customerZipCode?.message}>
+              <input className="input" data-testid="wizard-zip" placeholder={w.zipCodePlaceholder} {...register('customerZipCode', requiredText(w.zipCodeRequired))} />
+            </Field>
+            <Field label={w.city} error={errors.customerCity?.message}>
+              <input className="input" data-testid="wizard-city" placeholder={w.cityPlaceholder} {...register('customerCity', requiredText(w.cityRequired))} />
+            </Field>
+            {/* ID fields */}
+            <Field label={w.idType}>
+              <select className="input" data-testid="wizard-id-type" {...register('idType')}>
+                <option value="">{w.idTypePlaceholder}</option>
+                <option value="ID card">{w.options['ID card']}</option>
+                <option value="Passport">{w.options['Passport']}</option>
+                <option value="Driver's license">{w.options["Driver's license"]}</option>
+              </select>
+            </Field>
+            <Field label={w.idDocument} error={errors.idDocumentNumber?.message}>
+              <input className="input" data-testid="wizard-id-document" placeholder={w.idDocumentPlaceholder} {...register('idDocumentNumber')} />
             </Field>
           </section>
         ) : null}
@@ -749,49 +863,89 @@ export function ContractWizard(props: {
               optionLabels={w.options}
               register={register('paymentMethod', { required: w.paymentMethodRequired })}
             />
+            <Field label={w.paymentStatus} error={errors.paymentStatus?.message}>
+              <select className="input" data-testid="wizard-payment-status" {...register('paymentStatus')}>
+                <option value="">{w.paymentStatusPlaceholder}</option>
+                {PAYMENT_STATUSES.map(s => (
+                  <option key={s} value={s}>{w.options[s as keyof typeof w.options] ?? s}</option>
+                ))}
+              </select>
+            </Field>
             <Field label={w.storage} error={errors.storage?.message}>
               <input className="input" data-testid="wizard-storage" placeholder={w.storagePlaceholder} {...register('storage', requiredText(w.storageRequired))} />
             </Field>
             <Field label={w.color} error={errors.color?.message}>
               <input className="input" data-testid="wizard-color" placeholder={w.colorPlaceholder} {...register('color', requiredText(w.colorRequired))} />
             </Field>
-            <Field label={w.accessories} error={errors.accessories?.message}>
-              <input type="hidden" {...register('accessories', requiredText(w.accessoriesRequired))} />
-              <select
-                className="input"
-                data-testid="wizard-accessories"
-                value={accessoryPreset}
-                onChange={(event) => {
-                  const nextAccessory = event.target.value
-                  setValue('accessories', nextAccessory === 'Sonstiges' ? '' : nextAccessory, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }}
-              >
-                <option value="">{w.accessoriesSelectOption}</option>
+            {/* Multi-select Accessories */}
+            <Field label={w.accessories} wide>
+              <div className="grid grid-cols-2 gap-2">
                 {ACCESSORY_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
+                  <label key={option} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-primary"
+                      checked={(values.accessories ?? '').split(',').map(s => s.trim()).filter(Boolean).includes(option)}
+                      onChange={(e) => {
+                        const current = (values.accessories ?? '').split(',').map(s => s.trim()).filter(Boolean)
+                        const next = e.target.checked
+                          ? [...current, option]
+                          : current.filter(a => a !== option)
+                        setValue('accessories', next.join(', '), { shouldDirty: true, shouldValidate: true })
+                      }}
+                    />
                     {optionLabel(option, w.options)}
-                  </option>
+                  </label>
                 ))}
-              </select>
-              {accessoryPreset === 'Sonstiges' ? (
-                <input
-                  className="input mt-2"
-                  placeholder={w.accessoriesCustomPlaceholder}
-                  value={values.accessories ?? ''}
-                  onChange={(event) => {
-                    setValue('accessories', event.target.value, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }}
-                />
-              ) : null}
+              </div>
             </Field>
             <Field label={w.batteryHealth} error={errors.batteryHealth?.message}>
-              <input className="input" data-testid="wizard-battery" placeholder={w.batteryHealthPlaceholder} {...register('batteryHealth', requiredText(w.batteryHealthRequired))} />
+              <input className="input" data-testid="wizard-battery" placeholder={w.batteryHealthPlaceholder} {...register('batteryHealth')} />
+            </Field>
+            {/* iCloud Status (Unlocked / Locked) */}
+            <Field label={w.icloudStatus} error={errors.icloudStatus?.message}>
+              <select className="input" data-testid="wizard-icloud-status" {...register('icloudStatus', { required: w.icloudStatusRequired })}>
+                <option value="">{w.icloudStatusPlaceholder}</option>
+                {ICLOUD_STATUSES.map(s => (
+                  <option key={s} value={s}>{w.options[s as keyof typeof w.options] ?? s}</option>
+                ))}
+              </select>
+            </Field>
+            {/* MDM Status */}
+            <Field label={w.mdmStatus}>
+              <select className="input" data-testid="wizard-mdm-status" {...register('mdmStatus')}>
+                <option value="">{w.mdmStatusPlaceholder}</option>
+                {MDM_STATUSES.map(s => (
+                  <option key={s} value={s}>{w.options[s as keyof typeof w.options] ?? s}</option>
+                ))}
+              </select>
+            </Field>
+            {/* OS Version */}
+            <Field label={w.osVersion}>
+              <input className="input" data-testid="wizard-os-version" placeholder={w.osVersionPlaceholder} {...register('osVersion')} />
+            </Field>
+            {/* Warranty */}
+            <Field label={w.warranty}>
+              <select className="input" data-testid="wizard-warranty" {...register('warranty')}>
+                <option value="">{w.warrantyPlaceholder}</option>
+                {WARRANTY_OPTIONS.map(s => (
+                  <option key={s} value={s}>{w.options[s as keyof typeof w.options] ?? s}</option>
+                ))}
+              </select>
+            </Field>
+            {/* Purchase Receipt */}
+            <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                data-testid="wizard-purchase-receipt"
+                className="h-4 w-4 rounded border-slate-300 text-primary"
+                checked={Boolean(values.purchaseReceiptAvailable)}
+                onChange={(e) => setValue('purchaseReceiptAvailable', e.target.checked, { shouldDirty: true })}
+              />
+              {w.purchaseReceiptAvailable}
+            </label>
+            <Field label={w.notes} error={errors.notes?.message} wide>
+              <textarea className="input min-h-20 py-2" placeholder={w.notesPlaceholder} {...register('notes')} />
             </Field>
             <Field label={w.damageNotes} error={errors.damageNotes?.message} wide>
               <textarea className="input min-h-20 py-2" placeholder={w.damageNotesPlaceholder} {...register('damageNotes')} />
@@ -821,7 +975,7 @@ export function ContractWizard(props: {
                     })
                   }}
                 />
-                {label} *
+                {label}
               </label>
             ))}
           </section>
@@ -845,25 +999,115 @@ export function ContractWizard(props: {
 
         {step === 4 ? (
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <SignatureBox
-              testId="wizard-signature-customer"
-              title={w.customerSignatureTitle}
-              clearLabel={w.clear}
-              savedHint={w.savedSignatureReplace}
-              refSetter={(ref) => {
-                customerSigRef.current = ref
-              }}
-              onChange={() => {
-                const dataUrl = getLiveSignatureDataUrl(customerSigRef.current)
-                setCustomerSignatureDataUrl(dataUrl)
-                setError(null)
-              }}
-              onClear={() => {
-                customerSigRef.current?.clear()
-                setCustomerSignatureDataUrl(null)
-              }}
-              saved={Boolean(props.initialContract?.signaturePath)}
-            />
+            <div className="flex flex-col gap-4">
+              <div className="flex border-b border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setSignatureMethod('onsite')}
+                  className={clsx(
+                    'border-b-2 px-4 py-2 text-sm font-semibold focus:outline-none',
+                    signatureMethod === 'onsite'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  )}
+                >
+                  {w.signatureMethodOnsite}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSignatureMethod('qr')}
+                  className={clsx(
+                    'border-b-2 px-4 py-2 text-sm font-semibold focus:outline-none',
+                    signatureMethod === 'qr'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  )}
+                >
+                  {w.signatureMethodQr}
+                </button>
+              </div>
+
+              {signatureMethod === 'onsite' ? (
+                <SignatureBox
+                  testId="wizard-signature-customer"
+                  title={w.customerSignatureTitle}
+                  clearLabel={w.clear}
+                  savedHint={w.savedSignatureReplace}
+                  refSetter={(ref) => {
+                    customerSigRef.current = ref
+                  }}
+                  onChange={() => {
+                    const dataUrl = getLiveSignatureDataUrl(customerSigRef.current)
+                    setCustomerSignatureDataUrl(dataUrl)
+                    setError(null)
+                  }}
+                  onClear={() => {
+                    customerSigRef.current?.clear()
+                    setCustomerSignatureDataUrl(null)
+                  }}
+                  saved={Boolean(props.initialContract?.signaturePath)}
+                />
+              ) : (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col items-center text-center space-y-4">
+                  <div className="text-sm font-bold text-slate-800">{w.qrSignatureTitle}</div>
+                  <p className="text-xs text-slate-500 max-w-[280px]">
+                    {w.qrSignatureInstructions}
+                  </p>
+
+                  {qrToken ? (
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                            qrUrl || `${window.location.origin}/signature/${qrToken}`
+                          )}`}
+                          alt="QR Code"
+                          className="h-[180px] w-[180px]"
+                        />
+                      </div>
+                      <a 
+                        href={qrUrl || `${window.location.origin}/signature/${qrToken}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-xs text-primary font-semibold hover:underline text-center break-all max-w-[280px]"
+                      >
+                        {(() => {
+                          const url = qrUrl || `${window.location.origin}/signature/${qrToken}`;
+                          try {
+                            const parsed = new URL(url);
+                            return `${parsed.host}/signature/${qrToken?.slice(0, 8)}...`;
+                          } catch {
+                            return url;
+                          }
+                        })()}
+                      </a>
+
+                      <div className={clsx(
+                        'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold',
+                        qrStatus === 'SIGNED' 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-amber-100 text-amber-800 animate-pulse'
+                      )}>
+                        <span className={clsx(
+                          'h-2 w-2 rounded-full',
+                          qrStatus === 'SIGNED' ? 'bg-emerald-500' : 'bg-amber-500'
+                        )} />
+                        {qrStatus === 'SIGNED' ? w.qrSignatureStatusSigned : w.qrSignatureStatusWaiting}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={handleGenerateQr}
+                    className="btn btn-secondary h-9 text-xs"
+                  >
+                    {w.qrSignatureGenerateBtn}
+                  </button>
+                </div>
+              )}
+            </div>
             <SignatureBox
               testId="wizard-signature-shopkeeper"
               title={w.shopkeeperSignatureTitle}
@@ -894,10 +1138,10 @@ export function ContractWizard(props: {
                 title={w.review.customer}
                 dash={t.common.dash}
                 rows={[
-                  [w.review.name, values.customerName],
+                  [w.review.name, [values.customerFirstName, values.customerLastName].filter(Boolean).join(' ')],
                   [w.review.phone, values.customerPhone],
                   [w.review.email, values.customerEmail],
-                  [w.review.address, values.customerAddress],
+                  [w.review.address, [values.customerStreet, [values.customerZipCode, values.customerCity].filter(Boolean).join(' ')].filter(Boolean).join(', ')],
                 ]}
               />
               <ReviewCard
@@ -908,6 +1152,9 @@ export function ContractWizard(props: {
                   [w.review.imeiSerial, values.imei || values.serialNumber],
                   [w.review.condition, values.condition ? optionLabel(values.condition, w.options) : undefined],
                   [w.review.price, values.purchasePrice ? formatMoney(Number(values.purchasePrice)) : undefined],
+                  [w.paymentMethod.replace(' *', ''), values.paymentMethod ? optionLabel(values.paymentMethod, w.options) : undefined],
+                  [w.paymentStatus, values.paymentStatus ? optionLabel(values.paymentStatus, w.options) : undefined],
+                  [w.notes, values.notes],
                 ]}
               />
               <ReviewCard

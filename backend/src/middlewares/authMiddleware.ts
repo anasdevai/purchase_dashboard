@@ -18,11 +18,15 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
     const payload = verifyAuthToken(token);
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, name: true, email: true, createdAt: true }
+      select: { id: true, name: true, email: true, createdAt: true, role: true, isActive: true }
     });
 
     if (!user) {
       throw new HttpError(401, "User no longer exists");
+    }
+
+    if (!user.isActive) {
+      throw new HttpError(403, "Your account has been deactivated. Contact an administrator.");
     }
 
     req.user = user;

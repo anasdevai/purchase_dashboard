@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  admin
+  staff
+}
+
 enum ContractStatus {
   Draft
   Completed
@@ -51,6 +56,8 @@ model User {
   name         String
   email        String        @unique
   passwordHash String        @map("password_hash")
+  role         UserRole      @default(staff)
+  isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at")
   contracts    Contract[]
   repairOrders RepairOrder[]
@@ -93,12 +100,19 @@ model Contract {
   id                      String         @id @default(uuid())
   userId                  String         @map("user_id")
   contractNumber          String         @map("contract_number")
+  salutation              String?        @map("salutation")
+  customerFirstName       String?        @map("customer_first_name")
+  customerLastName        String?        @map("customer_last_name")
   customerName            String?        @map("customer_name")
   customerAddress         String?        @map("customer_address")
+  customerStreet          String?        @map("customer_street")
+  customerZipCode         String?        @map("customer_zip_code")
+  customerCity            String?        @map("customer_city")
   customerPhone           String?        @map("customer_phone")
   customerEmail           String?        @map("customer_email")
   customerDateOfBirth     DateTime?      @map("customer_date_of_birth") @db.Date
   idDocumentNumber        String?        @map("id_document_number")
+  idType                  String?        @map("id_type")
   deviceType              String?        @map("device_type")
   brand                   String?
   model                   String?
@@ -109,10 +123,19 @@ model Contract {
   condition               String?
   accessories             String?
   batteryHealth           String?        @map("battery_health")
+  osVersion               String?        @map("os_version")
+  icloudStatus            String?        @map("icloud_status")
+  mdmStatus               String?        @map("mdm_status")
+  warranty                String?
+  purchaseReceiptAvailable Boolean?      @default(false) @map("purchase_receipt_available")
   damageNotes             String?        @map("damage_notes")
   internalNotes           String?        @map("internal_notes")
   purchasePrice           Decimal?       @map("purchase_price") @db.Decimal(12, 2)
   paymentMethod           String?        @map("payment_method")
+  paymentStatus           String?        @map("payment_status")
+  notes                   String?        @map("notes")
+  signatureToken          String?        @map("signature_token")
+  signatureStatus         String?        @map("signature_status")
   ownershipConfirmed      Boolean        @default(false) @map("ownership_confirmed")
   notStolenConfirmed      Boolean        @default(false) @map("not_stolen_confirmed")
   icloudRemoved           Boolean        @default(false) @map("icloud_removed")
@@ -137,6 +160,7 @@ model Contract {
   @@index([serialNumber])
   @@index([model])
   @@index([createdAt])
+  @@index([signatureToken])
   @@map("contracts")
 }
 

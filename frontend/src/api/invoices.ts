@@ -79,3 +79,9 @@ export async function downloadInvoicePdf(id: string, filename: string, language:
   link.remove()
   URL.revokeObjectURL(url)
 }
+
+export async function emailInvoicePdf(id: string) {
+  return apiRequest<{ success: true }>(`/api/invoices/${id}/email`, {
+    method: 'POST',
+  })
+}

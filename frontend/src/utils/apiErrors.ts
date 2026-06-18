@@ -93,6 +93,10 @@ export function resolveApiErrorMessage(
     return { message: t.login.emailAlreadyRegistered, userFacing: true }
   }
 
+  if (status === 409) {
+    return { message: _rawMessage || t.common.friendlyErrors.generic, userFacing: true }
+  }
+
   return { message: t.common.friendlyErrors.generic, userFacing: false }
 }
 

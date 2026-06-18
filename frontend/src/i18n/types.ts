@@ -26,6 +26,34 @@ export type OptionLabels = {
   Kabel: string
   Tragetasche: string
   Sonstiges: string
+  // Salutation options
+  Mr: string
+  Ms: string
+  Diverse: string
+  // ID type options
+  'ID card': string
+  'Passport': string
+  "Driver's license": string
+  // iCloud status
+  Unlocked: string
+  Locked: string
+  // MDM status
+  Yes: string
+  No: string
+  // Warranty
+  'AppleCare+': string
+  'Manufacturer warranty': string
+  None: string
+  // Condition
+  New: string
+  Acceptable: string
+  // Payment methods
+  'Debit card': string
+  PayPal: string
+  // Payment status
+  Paid: string
+  Pending: string
+  'Partial payment': string
 }
 
 export type TranslationSchema = {
@@ -196,6 +224,14 @@ export type TranslationSchema = {
     photosAndDocuments: string
     photosRequiredHint: string
     checkAndSave: string
+    salutation: string
+    salutationPlaceholder: string
+    firstName: string
+    firstNamePlaceholder: string
+    firstNameRequired: string
+    lastName: string
+    lastNamePlaceholder: string
+    lastNameRequired: string
     fullName: string
     fullNamePlaceholder: string
     fullNameRequired: string
@@ -211,9 +247,20 @@ export type TranslationSchema = {
     dob: string
     dobOptional: string
     dobRequired: string
+    street: string
+    streetPlaceholder: string
+    streetRequired: string
+    zipCode: string
+    zipCodePlaceholder: string
+    zipCodeRequired: string
+    city: string
+    cityPlaceholder: string
+    cityRequired: string
     address: string
     addressPlaceholder: string
     addressRequired: string
+    idType: string
+    idTypePlaceholder: string
     idDocument: string
     idDocumentPlaceholder: string
     idDocumentRequired: string
@@ -236,6 +283,13 @@ export type TranslationSchema = {
     savedSignatureReplace: string
     clear: string
     saveSignature: string
+    signatureMethodOnsite: string
+    signatureMethodQr: string
+    qrSignatureTitle: string
+    qrSignatureInstructions: string
+    qrSignatureStatusWaiting: string
+    qrSignatureStatusSigned: string
+    qrSignatureGenerateBtn: string
     nextDeviceInfo: string
     back: string
     next: string
@@ -268,6 +322,10 @@ export type TranslationSchema = {
     priceMin: string
     paymentMethod: string
     paymentMethodRequired: string
+    paymentStatus: string
+    paymentStatusPlaceholder: string
+    notes: string
+    notesPlaceholder: string
     storage: string
     storagePlaceholder: string
     storageRequired: string
@@ -284,6 +342,16 @@ export type TranslationSchema = {
     batteryHealth: string
     batteryHealthPlaceholder: string
     batteryHealthRequired: string
+    icloudStatus: string
+    icloudStatusPlaceholder: string
+    icloudStatusRequired: string
+    mdmStatus: string
+    mdmStatusPlaceholder: string
+    osVersion: string
+    osVersionPlaceholder: string
+    warranty: string
+    warrantyPlaceholder: string
+    purchaseReceiptAvailable: string
     damageNotes: string
     damageNotesPlaceholder: string
     damageNotesRequired: string
@@ -336,6 +404,7 @@ export type TranslationSchema = {
       draftSaveFailed: string
       completeFailed: string
       documentTypeInvalid: string
+      confirmationsRequired: string
     }
     options: OptionLabels
   }
@@ -369,6 +438,11 @@ export type TranslationSchema = {
     openPdf: string
     pdfIframeTitle: string
     pdfPending: string
+    sendEmailBtn: string
+    sendEmailConfirmTitle: string
+    sendEmailConfirmMessage: string
+    emailSentSuccess: string
+    emailSendFailed: string
   }
   login: {
     appTitle: string
@@ -583,6 +657,11 @@ export type TranslationSchema = {
       overrideNetPlaceholder: string
       overrideVatPlaceholder: string
       overrideGrossPlaceholder: string
+      sendEmailConfirmTitle: string
+      sendEmailConfirmMessage: string
+      emailSentSuccess: string
+      emailSendFailed: string
+      sendEmailBtn: string
     }
   }
   repairOrders: {
@@ -689,6 +768,11 @@ export type TranslationSchema = {
       invoiceExistsTitle: string
       invoiceExistsMessage: string
       openExistingInvoice: string
+      sendEmailConfirmTitle: string
+      sendEmailConfirmMessage: string
+      emailSentSuccess: string
+      emailSendFailed: string
+      sendEmailBtn: string
     }
   }
   language: {

@@ -39,7 +39,7 @@ const run = async () => {
       status: "Completed",
       updatedAt: new Date("2026-06-10"),
       customerName: "Max Mustermann",
-      customerAddress: "Hauptstraße 1, 1010 Wien",
+      customerAddress: "Hauptstraße 1, 1010 Wien کراچی",
       customerPhone: "+43 660 1234567",
       customerEmail: "max@example.com",
       customerDateOfBirth: new Date("1990-05-15"),

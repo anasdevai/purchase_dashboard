@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Download, Printer, Trash2 } from 'lucide-react'
+import { Download, Mail, Printer, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { cancelContract, downloadPdf, fetchContract, fetchPdfBlob, mapContract } from '../api/contracts'
+import { cancelContract, downloadPdf, fetchContract, fetchPdfBlob, mapContract, emailContractPdf } from '../api/contracts'
 import { ContractWizard } from '../components/contract/ContractWizard'
 import { StatusBadge } from '../components/contract/StatusBadge'
 import { useAuth } from '../auth/AuthContext'
@@ -16,11 +16,12 @@ export function ContractDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { t, formatMoney, formatDate, interpolate } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { showToast, confirm } = useAppConfirm()
   const [apiContract, setApiContract] = useState<ApiContract | null>(null)
   const [pdfObjectUrl, setPdfObjectUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const { askDeleteContract } = useDeleteContractConfirm()
 
   useEffect(() => {
@@ -87,6 +88,29 @@ export function ContractDetailPage() {
       },
       () => navigate('/contracts'),
     )
+  }
+
+  const handleSendEmail = () => {
+    if (!apiContract || !apiContract.customerEmail) return
+
+    confirm({
+      title: t.contractDetail.sendEmailConfirmTitle,
+      message: interpolate(t.contractDetail.sendEmailConfirmMessage, {
+        email: apiContract.customerEmail,
+      }),
+      onConfirm: async () => {
+        setSendingEmail(true)
+        try {
+          await emailContractPdf(apiContract.id)
+          showToast('success', t.contractDetail.emailSentSuccess)
+        } catch (err) {
+          logApiError('contract email send', err)
+          showToast('error', t.contractDetail.emailSendFailed)
+        } finally {
+          setSendingEmail(false)
+        }
+      },
+    })
   }
 
   if (apiContract.status === 'Draft') {
@@ -180,6 +204,17 @@ export function ContractDetailPage() {
             >
               <Download className="h-4 w-4" />
               {t.contractDetail.downloadPdf}
+            </button>
+          ) : null}
+          {apiContract.status === 'Completed' && apiContract.customerEmail ? (
+            <button
+              type="button"
+              disabled={sendingEmail}
+              onClick={handleSendEmail}
+              className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Mail className="h-4 w-4" />
+              {t.contractDetail.sendEmailBtn}
             </button>
           ) : null}
         </div>

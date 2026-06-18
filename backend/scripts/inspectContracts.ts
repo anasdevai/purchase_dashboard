@@ -21,6 +21,8 @@ const inspectContracts = async () => {
         signaturePath: contract.signaturePath,
         shopkeeperSignaturePath: contract.shopkeeperSignaturePath,
         pdfPath: contract.pdfPath,
+        createdAt: contract.createdAt,
+        updatedAt: contract.updatedAt,
         files: contract.files.map((file) => ({
           fileType: file.fileType,
           filePath: file.filePath

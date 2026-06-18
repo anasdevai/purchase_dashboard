@@ -19,7 +19,7 @@ export const signup = async (input: { name: string; email: string; password: str
       email: input.email,
       passwordHash: await hashPassword(input.password)
     },
-    select: { id: true, name: true, email: true, createdAt: true }
+    select: { id: true, name: true, email: true, role: true, createdAt: true }
   });
 
   return {
@@ -37,14 +37,20 @@ export const login = async (input: { email: string; password: string }) => {
     });
   }
 
+  if (!user.isActive) {
+    throw new HttpError(403, "Your account has been deactivated. Contact an administrator.");
+  }
+
   return {
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
       createdAt: user.createdAt
     },
     token: signAuthToken({ userId: user.id })
   };
 };
+
 

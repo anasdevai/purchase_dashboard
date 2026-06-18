@@ -5,6 +5,7 @@ import {
   ExternalLink,
   FileText,
   Info,
+  Mail,
   Plus,
   Save,
   ShoppingCart,
@@ -12,7 +13,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { downloadInvoicePdf, fetchInvoice, generateInvoicePdf, saveInvoice } from '../api/invoices'
+import { downloadInvoicePdf, fetchInvoice, generateInvoicePdf, saveInvoice, emailInvoicePdf } from '../api/invoices'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
@@ -120,7 +121,7 @@ export function NewInvoicePage() {
 export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const { user } = useAuth()
   const { t, interpolate, language } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { confirm, showToast } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
   const invoiceId = props.mode === 'new' ? undefined : params.invoiceId
@@ -129,6 +130,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
   const [loading, setLoading] = useState(Boolean(invoiceId))
   const [saving, setSaving] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<{ customerName?: string }>({})
@@ -258,6 +260,29 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSendEmail = () => {
+    if (!invoice || !invoice.customerEmail) return
+
+    confirm({
+      title: t.invoices.detail.sendEmailConfirmTitle,
+      message: interpolate(t.invoices.detail.sendEmailConfirmMessage, {
+        email: invoice.customerEmail,
+      }),
+      onConfirm: async () => {
+        setSendingEmail(true)
+        try {
+          await emailInvoicePdf(invoice.id)
+          showToast('success', t.invoices.detail.emailSentSuccess)
+        } catch (err) {
+          logApiError('invoice email send', err)
+          showToast('error', t.invoices.detail.emailSendFailed)
+        } finally {
+          setSendingEmail(false)
+        }
+      },
+    })
   }
 
   const addLineItem = () => {
@@ -656,6 +681,18 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               >
                 <Download className="h-4 w-4" />
                 {t.invoices.detail.downloadPdf}
+              </button>
+            ) : null}
+            {invoice && invoice.customerEmail ? (
+              <button
+                type="button"
+                data-testid="invoice-send-email"
+                className="btn btn-secondary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleSendEmail}
+                disabled={saving || sendingEmail}
+              >
+                <Mail className="h-4 w-4" />
+                {t.invoices.detail.sendEmailBtn}
               </button>
             ) : null}
           </div>

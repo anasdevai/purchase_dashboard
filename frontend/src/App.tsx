@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import { AdminProtectedRoute } from './auth/AdminProtectedRoute'
 import { LanguageProvider } from './i18n/LanguageProvider'
 import { AppLayout } from './app/layout/AppLayout'
 import { ContractDetailPage } from './pages/ContractDetailPage'
@@ -14,6 +15,17 @@ import { NewRepairOrderPage, RepairOrderDetailPage } from './pages/RepairOrderDe
 import { RepairOrdersPage } from './pages/RepairOrdersPage'
 import { SearchContractsPage } from './pages/SearchContractsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { MobileSignaturePage } from './pages/MobileSignaturePage'
+
+// Admin imports
+import { AdminLayout } from './pages/admin/AdminLayout'
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
+import { AdminUsersPage } from './pages/admin/AdminUsersPage'
+import { AdminNewUserPage } from './pages/admin/AdminNewUserPage'
+import { AdminUserDetailPage } from './pages/admin/AdminUserDetailPage'
+import { AdminUserContractsPage } from './pages/admin/AdminUserContractsPage'
+import { AdminUserInvoicesPage } from './pages/admin/AdminUserInvoicesPage'
+import { AdminUserRepairOrdersPage } from './pages/admin/AdminUserRepairOrdersPage'
 
 export default function App() {
   return (
@@ -22,6 +34,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/signature/:token" element={<MobileSignaturePage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
@@ -38,6 +51,19 @@ export default function App() {
                 <Route path="/invoices" element={<InvoicesPage />} />
                 <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+              </Route>
+            </Route>
+
+            <Route element={<AdminProtectedRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboardPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
+                <Route path="users/new" element={<AdminNewUserPage />} />
+                <Route path="users/:userId" element={<AdminUserDetailPage />} />
+                <Route path="users/:userId/contracts" element={<AdminUserContractsPage />} />
+                <Route path="users/:userId/invoices" element={<AdminUserInvoicesPage />} />
+                <Route path="users/:userId/repair-orders" element={<AdminUserRepairOrdersPage />} />
               </Route>
             </Route>
 

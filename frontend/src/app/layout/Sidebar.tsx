@@ -6,6 +6,7 @@ import {
   PlusSquare,
   Search,
   Settings,
+  Shield,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -71,7 +72,7 @@ function SidebarNavLink(props: {
 
 function SidebarNav(props: { onNavigate?: () => void }) {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const { t } = useLanguage()
   const { onNavigate } = props
 
@@ -142,6 +143,21 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         },
       ],
     },
+    ...(user?.role === 'admin'
+      ? [
+          {
+            title: 'Admin Panel',
+            items: [
+              {
+                to: '/admin/dashboard',
+                label: 'Admin Dashboard',
+                icon: Shield,
+                testId: 'nav-admin-dashboard',
+              },
+            ],
+          },
+        ]
+      : []),
     {
       title: t.nav.sections.settings,
       items: [
