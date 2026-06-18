@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   FileText,
@@ -14,6 +15,7 @@ import clsx from 'clsx'
 import { useAuth } from '../../auth/AuthContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { useLayout } from './LayoutContext'
+import { fetchRepairOrders } from '../../api/repairOrders'
 
 const LOGO_SRC = '/assets/sclera-logo.png'
 
@@ -32,9 +34,10 @@ type NavSection = {
 
 function SidebarNavLink(props: {
   item: NavItem
+  badgeCount?: number
   onNavigate?: () => void
 }) {
-  const { item, onNavigate } = props
+  const { item, badgeCount, onNavigate } = props
   const Icon = item.icon
 
   return (
@@ -63,6 +66,11 @@ function SidebarNavLink(props: {
             ) : null}
             <Icon className="h-5 w-5 shrink-0" />
             <span className="truncate">{item.label}</span>
+            {badgeCount !== undefined && badgeCount > 0 ? (
+              <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-slate-900 animate-pulse">
+                {badgeCount}
+              </span>
+            ) : null}
           </>
         )}
       </NavLink>
@@ -75,6 +83,29 @@ function SidebarNav(props: { onNavigate?: () => void }) {
   const { logout, user } = useAuth()
   const { t } = useLanguage()
   const { onNavigate } = props
+
+  const [sparePartArrivedCount, setSparePartArrivedCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    let alive = true
+
+    const fetchCount = () => {
+      void fetchRepairOrders('', 'SparePartArrived')
+        .then((orders) => {
+          if (alive) setSparePartArrivedCount(orders.length)
+        })
+        .catch((err) => console.error('Failed to fetch SparePartArrived count', err))
+    }
+
+    fetchCount()
+    const interval = setInterval(fetchCount, 30000)
+
+    return () => {
+      alive = false
+      clearInterval(interval)
+    }
+  }, [user])
 
   const sections: NavSection[] = [
     {
@@ -196,7 +227,12 @@ function SidebarNav(props: { onNavigate?: () => void }) {
             </p>
             <ul className="space-y-0.5">
               {section.items.map((item) => (
-                <SidebarNavLink key={item.to} item={item} onNavigate={onNavigate} />
+                <SidebarNavLink
+                  key={item.to}
+                  item={item}
+                  badgeCount={item.to === '/repair-orders' ? sparePartArrivedCount : undefined}
+                  onNavigate={onNavigate}
+                />
               ))}
             </ul>
           </div>

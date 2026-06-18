@@ -7,18 +7,28 @@ import {
   generateRepairOrderPdf,
   saveRepairOrder,
   emailRepairOrderPdf,
+  updateRepairOrderStatus,
+  addRepairOrderComment,
+  fetchEmployees,
+  type Employee,
 } from '../api/repairOrders'
 import { createInvoiceFromRepairOrder } from '../api/invoices'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
-import type { RepairOrder, RepairOrderPayload } from '../types/repairOrder'
+import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
+import { RepairOrderHistory } from '../components/repairOrders/RepairOrderHistory'
+import { CustomerSearchInput } from '../components/repairOrders/CustomerSearchInput'
 
 const repairStatusValues = [
+  'New',
   'Received',
-  'InProgress',
+  'InDiagnosis',
   'WaitingForParts',
+  'SparePartArrived',
+  'InRepair',
+  'Finished',
   'ReadyForPickup',
   'Completed',
   'Cancelled',
@@ -96,9 +106,18 @@ const emptyForm: RepairOrderPayload = {
   passwordPin: '',
   accessoriesReceived: '',
   problemDescription: '',
+  issueCategory: undefined,
+  diagnosis: '',
+  requiredSpareParts: '',
+  sparePartStatus: undefined,
   visibleDamage: '',
   technicianNotes: '',
   status: 'Received',
+  discountPercent: undefined,
+  depositAmount: undefined,
+  paymentMethod: undefined,
+  assignedEmployeeId: undefined,
+  customerId: undefined,
 }
 
 function labelToAccessoryKey(
@@ -187,18 +206,29 @@ function fromRepairOrder(order: RepairOrder): RepairOrderPayload {
     passwordPin: order.passwordPin ?? '',
     accessoriesReceived: order.accessoriesReceived ?? '',
     problemDescription: order.problemDescription,
+    issueCategory: order.issueCategory ?? undefined,
+    diagnosis: order.diagnosis ?? '',
+    requiredSpareParts: order.requiredSpareParts ?? '',
+    sparePartStatus: order.sparePartStatus ?? undefined,
     visibleDamage: order.visibleDamage ?? '',
     technicianNotes: order.technicianNotes ?? '',
     estimatedPrice:
       order.estimatedPrice === null || order.estimatedPrice === undefined
         ? undefined
         : Number(order.estimatedPrice),
+    discountPercent:
+      order.discountPercent === null || order.discountPercent === undefined
+        ? undefined
+        : Number(order.discountPercent),
     depositAmount:
       order.depositAmount === null || order.depositAmount === undefined
         ? undefined
         : Number(order.depositAmount),
+    paymentMethod: order.paymentMethod ?? undefined,
     expectedCompletionDate: formatDateInputValue(order.expectedCompletionDate),
     status: order.status,
+    assignedEmployeeId: order.assignedEmployeeId ?? undefined,
+    customerId: order.customerId ?? undefined,
   }
 }
 
@@ -258,6 +288,12 @@ function validateForm(
   const estimated = parseOptionalMoney(form.estimatedPrice, v.priceInvalid)
   if (estimated.error) errors.estimatedPrice = estimated.error
 
+  const discount = parseOptionalMoney(form.discountPercent, v.discountInvalid)
+  if (discount.error) errors.discountPercent = discount.error
+  else if (discount.value !== undefined && (discount.value < 0 || discount.value > 100)) {
+    errors.discountPercent = v.discountInvalid
+  }
+
   const deposit = parseOptionalMoney(form.depositAmount, v.depositInvalid)
   if (deposit.error) errors.depositAmount = deposit.error
 
@@ -284,11 +320,19 @@ function validateForm(
       imeiOrSerial: form.imeiOrSerial?.trim() || undefined,
       passwordPin: form.passwordPin?.trim() || undefined,
       accessoriesReceived: serializeAccessories(selectedAccessories, accessoryOtherText) || undefined,
+      issueCategory: form.issueCategory || undefined,
+      diagnosis: form.diagnosis?.trim() || undefined,
+      requiredSpareParts: form.requiredSpareParts?.trim() || undefined,
+      sparePartStatus: form.sparePartStatus || undefined,
       visibleDamage: form.visibleDamage?.trim(),
       technicianNotes: form.technicianNotes?.trim() || undefined,
       estimatedPrice: estimated.value,
+      discountPercent: discount.value,
       depositAmount: deposit.value,
+      paymentMethod: form.paymentMethod || undefined,
       expectedCompletionDate,
+      assignedEmployeeId: form.assignedEmployeeId || undefined,
+      customerId: form.customerId || undefined,
     },
   }
 }
@@ -313,6 +357,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showActions, setShowActions] = useState(false)
+  const [employees, setEmployees] = useState<Employee[]>([])
   const isExistingOrder = Boolean(repairOrderId)
 
   const repairStatuses = useMemo(
@@ -374,6 +419,12 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     }
   }, [repairOrderId, t])
 
+  useEffect(() => {
+    fetchEmployees()
+      .then((data) => setEmployees(data))
+      .catch((err) => console.error('Failed to fetch employees:', err))
+  }, [])
+
   const setField = (name: keyof RepairOrderPayload, value: string) => {
     setForm((current) => ({ ...current, [name]: value }))
     setFieldErrors((current) => {
@@ -401,6 +452,30 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
         delete next.accessoriesOther
         return next
       })
+    }
+  }
+
+  const handleStatusChange = async (nextStatus: RepairOrderStatus) => {
+    if (!repairOrder) return
+    const commentInput = window.prompt(
+      t.repairOrders.detail.historyPromptCommentMessage.replace('{status}', t.repairOrders.statuses[nextStatus])
+    )
+    if (commentInput === null) {
+      return
+    }
+
+    setSaving(true)
+    try {
+      const updated = await updateRepairOrderStatus(repairOrder.id, nextStatus, commentInput.trim() || undefined)
+      setRepairOrder(updated)
+      setForm((current) => ({ ...current, status: updated.status }))
+      showToast('success', t.common.toasts.repairOrderSaved)
+      await handleGeneratePdf(updated)
+    } catch (err) {
+      logApiError('repair order status update', err)
+      showToast('error', getFriendlyErrorMessage(err, 'generic', t))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -648,6 +723,17 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
         </div>
       ) : null}
 
+      {showActions && repairOrder ? (
+        <RepairOrderHistory
+          history={repairOrder.history ?? []}
+          onAddComment={async (commentText) => {
+            await addRepairOrderComment(repairOrder.id, commentText)
+            const refreshed = await fetchRepairOrder(repairOrder.id)
+            setRepairOrder(refreshed)
+          }}
+        />
+      ) : null}
+
       {error ? (
         <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700 ring-1 ring-red-100">
           {error}
@@ -660,12 +746,39 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
             <div className="text-sm font-semibold text-slate-900">{t.repairOrders.detail.customerInfo}</div>
           </div>
           <div className="card-body grid gap-4 md:grid-cols-2">
-            <Field
-              testId="ro-customer-name"
+            <CustomerSearchInput
               label={t.repairOrders.detail.customerName}
               value={form.customerName}
               error={fieldErrors.customerName}
-              onChange={(value) => setField('customerName', value)}
+              onChange={(name, phone, email, address, customerId) => {
+                setForm((current) => {
+                  if (customerId) {
+                    return {
+                      ...current,
+                      customerName: name,
+                      customerPhone: phone,
+                      customerEmail: email,
+                      customerAddress: address,
+                      customerId,
+                    }
+                  } else {
+                    return {
+                      ...current,
+                      customerName: name,
+                      customerId: undefined,
+                    }
+                  }
+                })
+                setFieldErrors((current) => {
+                  const next = { ...current }
+                  delete next.customerName
+                  if (customerId) {
+                    delete next.customerPhone
+                    delete next.customerEmail
+                  }
+                  return next
+                })
+              }}
             />
             <Field
               testId="ro-customer-phone"
@@ -788,6 +901,44 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
               error={fieldErrors.problemDescription}
               onChange={(value) => setField('problemDescription', value)}
             />
+            <div>
+              <label className="label">{t.repairOrders.detail.issueCategory}</label>
+              <select
+                className="input"
+                value={form.issueCategory ?? ''}
+                onChange={(e) => setField('issueCategory', e.target.value)}
+              >
+                <option value="">{t.repairOrders.detail.selectIssueCategory}</option>
+                {(Object.keys(t.repairOrders.issueCategories) as Array<keyof typeof t.repairOrders.issueCategories>).map((key) => (
+                  <option key={key} value={key}>{t.repairOrders.issueCategories[key]}</option>
+                ))}
+              </select>
+            </div>
+            <TextArea
+              testId="ro-diagnosis"
+              label={t.repairOrders.detail.diagnosis}
+              value={form.diagnosis ?? ''}
+              onChange={(value) => setField('diagnosis', value)}
+            />
+            <Field
+              testId="ro-spare-parts"
+              label={t.repairOrders.detail.requiredSpareParts}
+              value={form.requiredSpareParts ?? ''}
+              onChange={(value) => setField('requiredSpareParts', value)}
+            />
+            <div>
+              <label className="label">{t.repairOrders.detail.sparePartStatus}</label>
+              <select
+                className="input"
+                value={form.sparePartStatus ?? ''}
+                onChange={(e) => setField('sparePartStatus', e.target.value)}
+              >
+                <option value="">{t.repairOrders.detail.selectSparePartStatus}</option>
+                {(Object.keys(t.repairOrders.sparePartStatuses) as Array<keyof typeof t.repairOrders.sparePartStatuses>).map((key) => (
+                  <option key={key} value={key}>{t.repairOrders.sparePartStatuses[key]}</option>
+                ))}
+              </select>
+            </div>
             <TextArea
               testId="ro-visible-damage"
               label={t.repairOrders.detail.visibleDamage}
@@ -812,6 +963,29 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
                 onChange={(value) => setField('estimatedPrice', value)}
               />
               <Field
+                testId="ro-discount-percent"
+                label={t.repairOrders.detail.discountPercent}
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={String(form.discountPercent ?? '')}
+                error={fieldErrors.discountPercent}
+                onChange={(value) => setField('discountPercent', value)}
+              />
+              <label>
+                <span className="label">{t.repairOrders.detail.totalPrice}</span>
+                <div className="input bg-slate-50 text-slate-700 font-semibold cursor-default select-none">
+                  {(() => {
+                    const price = Number(form.estimatedPrice ?? 0)
+                    const disc = Number(form.discountPercent ?? 0)
+                    if (!price) return '—'
+                    const total = price * (1 - disc / 100)
+                    return `€ ${total.toFixed(2)}`
+                  })()}
+                </div>
+              </label>
+              <Field
                 label={t.repairOrders.detail.depositAmount}
                 type="number"
                 min="0"
@@ -820,6 +994,33 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
                 error={fieldErrors.depositAmount}
                 onChange={(value) => setField('depositAmount', value)}
               />
+              <label>
+                <span className="label">{t.repairOrders.detail.remainingAmount}</span>
+                <div className="input bg-slate-50 text-slate-700 font-semibold cursor-default select-none">
+                  {(() => {
+                    const price = Number(form.estimatedPrice ?? 0)
+                    const disc = Number(form.discountPercent ?? 0)
+                    const dep = Number(form.depositAmount ?? 0)
+                    if (!price) return '—'
+                    const total = price * (1 - disc / 100)
+                    const remaining = total - dep
+                    return `€ ${remaining.toFixed(2)}`
+                  })()}
+                </div>
+              </label>
+              <label>
+                <span className="label">{t.repairOrders.detail.paymentMethod}</span>
+                <select
+                  className="input"
+                  value={form.paymentMethod ?? ''}
+                  onChange={(e) => setField('paymentMethod', e.target.value)}
+                >
+                  <option value="">{t.repairOrders.detail.selectPaymentMethod}</option>
+                  {(Object.keys(t.repairOrders.paymentMethods) as Array<keyof typeof t.repairOrders.paymentMethods>).map((key) => (
+                    <option key={key} value={key}>{t.repairOrders.paymentMethods[key]}</option>
+                  ))}
+                </select>
+              </label>
               <Field
                 label={t.repairOrders.detail.expectedCompletionDate}
                 type="date"
@@ -831,12 +1032,35 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
                 <span className="label">{t.repairOrders.detail.status}</span>
                 <select
                   className="input"
-                  value={form.status ?? 'Received'}
-                  onChange={(event) => setField('status', event.target.value)}
+                  value={form.status ?? 'New'}
+                  onChange={(event) => {
+                    const nextStatus = event.target.value as RepairOrderStatus
+                    if (isExistingOrder && repairOrder) {
+                      void handleStatusChange(nextStatus)
+                    } else {
+                      setField('status', nextStatus)
+                    }
+                  }}
                 >
                   {repairStatuses.map((status) => (
                     <option key={status.value} value={status.value}>
                       {status.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="label">{t.repairOrders.detail.assignedEmployee}</span>
+                <select
+                  className="input"
+                  data-testid="ro-assigned-employee"
+                  value={form.assignedEmployeeId ?? ''}
+                  onChange={(event) => setField('assignedEmployeeId', event.target.value)}
+                >
+                  <option value="">{t.repairOrders.detail.selectAssignedEmployee}</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name}
                     </option>
                   ))}
                 </select>
@@ -918,6 +1142,7 @@ function Field(props: {
   value: string
   type?: string
   min?: string
+  max?: string
   step?: string
   error?: string
   onChange: (value: string) => void
@@ -930,6 +1155,7 @@ function Field(props: {
         data-testid={props.testId}
         type={props.type ?? 'text'}
         min={props.min}
+        max={props.max}
         step={props.step ?? (props.type === 'number' ? '0.01' : undefined)}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}

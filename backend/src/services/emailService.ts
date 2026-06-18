@@ -153,3 +153,66 @@ export const sendInvoicePdfEmail = async (
 
   await transporter.sendMail(mailOptions);
 };
+
+export const sendRepairFinishedEmail = async (
+  toEmail: string,
+  repairOrderNumber: string,
+  customerName?: string | null
+) => {
+  const transporter = getTransporter();
+  const greeting = buildGermanGreeting(customerName);
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || env.SMTP_FROM,
+    to: toEmail,
+    subject: `Reparatur fertiggestellt - ${repairOrderNumber}`,
+    text: `${greeting},\n\ndie Reparatur an Ihrem Gerät für den Auftrag ${repairOrderNumber} wurde erfolgreich abgeschlossen und die Qualitätsprüfung durchgeführt.\n\nWir bereiten das Gerät nun zur Abholung vor.\n\nMit freundlichen Grüßen,\nIhr Service-Team`
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+export const sendReadyForPickupEmail = async (
+  toEmail: string,
+  repairOrderNumber: string,
+  customerName?: string | null,
+  shopAddress?: string | null,
+  openingHours?: string | null
+) => {
+  const transporter = getTransporter();
+  const greeting = buildGermanGreeting(customerName);
+
+  let addressInfo = "";
+  if (shopAddress) {
+    addressInfo = `\n\nAbholadresse:\n${shopAddress}`;
+  }
+  let hoursInfo = "";
+  if (openingHours) {
+    hoursInfo = `\nÖffnungszeiten:\n${openingHours}`;
+  }
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || env.SMTP_FROM,
+    to: toEmail,
+    subject: `Bereit zur Abholung - ${repairOrderNumber}`,
+    text: `${greeting},\n\nIhr Gerät für den Reparaturauftrag ${repairOrderNumber} ist fertiggestellt und steht zur Abholung bereit.${addressInfo}${hoursInfo}\n\nBitte bringen Sie diesen Beleg oder Ihren Ausweis zur Abholung mit.\n\nMit freundlichen Grüßen,\nIhr Service-Team`
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+export const sendSparePartArrivedNotification = async (
+  employeeEmail: string,
+  repairOrderNumber: string
+) => {
+  const transporter = getTransporter();
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || env.SMTP_FROM,
+    to: employeeEmail,
+    subject: `Ersatzteil eingetroffen - ${repairOrderNumber}`,
+    text: `Hallo,\n\ndas Ersatzteil für den Reparaturauftrag ${repairOrderNumber} ist eingetroffen.\n\nBitte bearbeiten Sie den Auftrag, sobald das Gerät zur Reparatur bereitsteht.\n\nMit freundlichen Grüßen,\nSystem-Benachrichtigung`
+  };
+
+  await transporter.sendMail(mailOptions);
+};

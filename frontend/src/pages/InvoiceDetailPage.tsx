@@ -552,9 +552,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                           <input
                             className="input h-10"
                             type="number"
-                            min={0}
                             step={1}
-                            inputMode="numeric"
                             data-testid={`invoice-line-${index}-unit-price`}
                             value={item.unitPrice}
                             onChange={(event) => setWholeField(index, 'unitPrice', event.target.value)}

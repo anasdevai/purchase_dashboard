@@ -82,7 +82,7 @@ export const getGlobalDashboard = async () => {
     prisma.repairOrder.count(),
     prisma.repairOrder.count({ where: todayFilter }),
     prisma.repairOrder.count({ where: { status: "Received" } }),
-    prisma.repairOrder.count({ where: { status: "InProgress" } }),
+    prisma.repairOrder.count({ where: { status: "InRepair" } }),
     prisma.repairOrder.count({ where: { status: "Completed" } }),
     prisma.repairOrder.count({ where: { status: "ReadyForPickup" } }),
 

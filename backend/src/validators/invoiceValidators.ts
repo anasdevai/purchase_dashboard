@@ -26,7 +26,6 @@ const quantitySchema = z.coerce
 
 const wholeEuroSchema = z.coerce
   .number({ invalid_type_error: wholeNumberMessage })
-  .min(0, "Amount must be zero or greater")
   .refine(isWholeNumber, { message: wholeNumberMessage });
 
 const wholeVatSchema = z.coerce

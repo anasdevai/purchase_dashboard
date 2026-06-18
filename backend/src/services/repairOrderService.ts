@@ -11,6 +11,8 @@ import {
   searchRepairOrdersSchema
 } from "../validators/repairOrderValidators.js";
 import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
+import * as emailService from "./emailService.js";
+import { findOrCreateCustomerForRepair } from "./customerService.js";
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
@@ -22,7 +24,12 @@ export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, 
     where: UUID_RE.test(idOrNumber)
       ? (isAdmin ? { id: idOrNumber } : { id: idOrNumber, userId })
       : (isAdmin ? { repairOrderNumber: idOrNumber } : { repairOrderNumber: idOrNumber, userId }),
-    include: { invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } } }
+    include: {
+      invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } },
+      history: { orderBy: { createdAt: "asc" } },
+      assignedEmployee: { select: { id: true, name: true, email: true } },
+      customer: true
+    }
   });
 
   if (!repairOrder) {
@@ -36,6 +43,14 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
 
+  const customer = await findOrCreateCustomerForRepair(
+    userId,
+    orderData.customerName,
+    orderData.customerPhone,
+    orderData.customerEmail,
+    orderData.customerAddress
+  );
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const repairOrderNumber = await generateRepairOrderNumber(userId);
 
@@ -44,7 +59,8 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
         data: {
           userId,
           ...orderData,
-          repairOrderNumber
+          repairOrderNumber,
+          customerId: customer.id
         }
       });
 
@@ -58,15 +74,79 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
   throw new HttpError(500, "Unable to generate repair order number");
 };
 
-export const updateRepairOrder = async (id: string, userId: string, input: Record<string, unknown>, isAdmin = false) => {
-  await getRepairOrderOrThrow(id, userId, isAdmin);
+async function triggerStatusChangeEmails(current: any, toStatus: string) {
+  try {
+    if (toStatus === "Finished" && current.customerEmail) {
+      await emailService.sendRepairFinishedEmail(
+        current.customerEmail,
+        current.repairOrderNumber,
+        current.customerName
+      );
+    } else if (toStatus === "ReadyForPickup" && current.customerEmail) {
+      const shopSettings = await getShopSettingsForUser(current.userId);
+      const shopAddress = shopSettings.shopAddress || null;
+      const openingHours = "Mo-Fr: 09:00 - 18:00, Sa: 09:00 - 13:00";
+      
+      await emailService.sendReadyForPickupEmail(
+        current.customerEmail,
+        current.repairOrderNumber,
+        current.customerName,
+        shopAddress,
+        openingHours
+      );
+    } else if (toStatus === "SparePartArrived") {
+      const user = await prisma.user.findUnique({
+        where: { id: current.userId },
+        select: { email: true }
+      });
+      if (user?.email) {
+        await emailService.sendSparePartArrivedNotification(
+          user.email,
+          current.repairOrderNumber
+        );
+      }
+    }
+  } catch (emailErr) {
+    console.error("Failed to send status update email:", emailErr);
+  }
+}
+
+export const updateRepairOrder = async (id: string, userId: string, input: Record<string, unknown>, employeeName: string, isAdmin = false) => {
+  const current = await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
 
+  const customer = await findOrCreateCustomerForRepair(
+    userId,
+    orderData.customerName,
+    orderData.customerPhone,
+    orderData.customerEmail,
+    orderData.customerAddress
+  );
+
   await prisma.repairOrder.update({
     where: { id },
-    data: orderData
+    data: {
+      ...orderData,
+      customerId: customer.id
+    }
   });
+
+  if (orderData.status && current.status !== orderData.status) {
+    await prisma.repairOrderHistory.create({
+      data: {
+        repairOrderId: id,
+        userId: current.userId,
+        employeeName,
+        fromStatus: current.status,
+        toStatus: orderData.status,
+        comment: "Status updated in repair order editor"
+      }
+    });
+
+    // Trigger auto-notifications
+    void triggerStatusChangeEmails(current, orderData.status);
+  }
 
   return getRepairOrderOrThrow(id, userId, isAdmin);
 };
@@ -75,9 +155,10 @@ export const updateRepairOrderStatus = async (
   id: string,
   userId: string,
   input: Record<string, unknown>,
+  employeeName: string,
   isAdmin = false
 ) => {
-  await getRepairOrderOrThrow(id, userId, isAdmin);
+  const current = await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = repairOrderStatusSchema.parse(input);
 
   await prisma.repairOrder.update({
@@ -85,7 +166,44 @@ export const updateRepairOrderStatus = async (
     data: { status: parsed.status }
   });
 
+  if (current.status !== parsed.status) {
+    await prisma.repairOrderHistory.create({
+      data: {
+        repairOrderId: id,
+        userId: current.userId,
+        employeeName,
+        fromStatus: current.status,
+        toStatus: parsed.status,
+        comment: parsed.comment || null
+      }
+    });
+
+    // Trigger auto-notifications
+    void triggerStatusChangeEmails(current, parsed.status);
+  }
+
   return getRepairOrderOrThrow(id, userId, isAdmin);
+};
+
+export const addHistoryComment = async (
+  id: string,
+  userId: string,
+  employeeName: string,
+  comment: string,
+  isAdmin = false
+) => {
+  const current = await getRepairOrderOrThrow(id, userId, isAdmin);
+
+  return prisma.repairOrderHistory.create({
+    data: {
+      repairOrderId: id,
+      userId: current.userId,
+      employeeName,
+      fromStatus: current.status,
+      toStatus: current.status,
+      comment
+    }
+  });
 };
 
 export const generatePdfForRepairOrder = async (id: string, userId: string, isAdmin = false) => {

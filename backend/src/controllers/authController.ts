@@ -16,3 +16,13 @@ export const me = async (req: Request, res: Response) => {
   res.json({ user: req.user });
 };
 
+import { prisma } from "../config/prisma.js";
+
+export const listEmployees = async (req: Request, res: Response) => {
+  const employees = await prisma.user.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, email: true, role: true }
+  });
+  res.json({ employees });
+};
+

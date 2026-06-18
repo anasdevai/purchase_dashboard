@@ -109,7 +109,7 @@ export function AdminUserRepairOrdersPage() {
                         className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
                           ro.status === 'Completed'
                             ? 'bg-emerald-500/10 text-emerald-400'
-                            : ro.status === 'InProgress'
+                            : ro.status === 'InRepair'
                             ? 'bg-sky-500/10 text-sky-400'
                             : ro.status === 'Cancelled'
                             ? 'bg-red-500/10 text-red-400'

@@ -690,6 +690,7 @@ export type TranslationSchema = {
       problemDescriptionRequired: string
       visibleDamageRequired: string
       priceInvalid: string
+      discountInvalid: string
       depositInvalid: string
       dateInvalid: string
       otherAccessoryRequired: string
@@ -705,12 +706,39 @@ export type TranslationSchema = {
       action: string
     }
     statuses: {
+      New: string
       Received: string
-      InProgress: string
+      InDiagnosis: string
       WaitingForParts: string
+      SparePartArrived: string
+      InRepair: string
+      Finished: string
       ReadyForPickup: string
       Completed: string
       Cancelled: string
+    }
+    issueCategories: {
+      Display: string
+      Battery: string
+      WaterDamage: string
+      Software: string
+      LogicBoard: string
+      Camera: string
+      ChargingPort: string
+      Keyboard: string
+      Other: string
+    }
+    sparePartStatuses: {
+      NotOrdered: string
+      Ordered: string
+      Arrived: string
+      Installed: string
+    }
+    paymentMethods: {
+      Cash: string
+      DebitCard: string
+      BankTransfer: string
+      PayPal: string
     }
     accessories: {
       charger: string
@@ -751,14 +779,27 @@ export type TranslationSchema = {
       selectAccessory: string
       accessoriesManual: string
       problemDescription: string
+      issueCategory: string
+      selectIssueCategory: string
+      diagnosis: string
+      requiredSpareParts: string
+      sparePartStatus: string
+      selectSparePartStatus: string
       visibleDamage: string
       technicianNotes: string
       estimatedPrice: string
+      discountPercent: string
+      totalPrice: string
+      remainingAmount: string
       depositAmount: string
+      paymentMethod: string
+      selectPaymentMethod: string
       expectedCompletionDate: string
       status: string
       repairOrderNumber: string
       savedSuccess: string
+      assignedEmployee: string
+      selectAssignedEmployee: string
       actionsTitle: string
       viewRepairOrder: string
       editRepairOrder: string
@@ -773,6 +814,18 @@ export type TranslationSchema = {
       emailSentSuccess: string
       emailSendFailed: string
       sendEmailBtn: string
+      historyTitle: string
+      historyCommentPlaceholder: string
+      historyAddCommentBtn: string
+      historyAddingComment: string
+      historyStatusChanged: string
+      historyStatusSet: string
+      historyNoActivity: string
+      historyCommentEmptyError: string
+      historyPromptCommentTitle: string
+      historyPromptCommentMessage: string
+      historyPromptCommentSubmit: string
+      historyCommentAdded: string
     }
   }
   language: {

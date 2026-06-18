@@ -79,7 +79,9 @@ export type RepairOrderForPdf = {
   visibleDamage: string | null;
   technicianNotes: string | null;
   estimatedPrice: MoneyLike;
+  discountPercent: MoneyLike;
   depositAmount: MoneyLike;
+  paymentMethod: string | null;
   expectedCompletionDate: Date | null;
   status: string;
 };

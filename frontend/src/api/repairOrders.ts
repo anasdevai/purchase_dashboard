@@ -51,12 +51,20 @@ export async function saveRepairOrder(payload: RepairOrderPayload, id?: string) 
   return response.repairOrder
 }
 
-export async function updateRepairOrderStatus(id: string, status: RepairOrderStatus) {
+export async function updateRepairOrderStatus(id: string, status: RepairOrderStatus, comment?: string) {
   const response = await apiRequest<RepairOrderResponse>(`/api/repair-orders/${id}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, comment }),
   })
   return response.repairOrder
+}
+
+export async function addRepairOrderComment(id: string, comment: string) {
+  const response = await apiRequest<{ historyEntry: any }>(`/api/repair-orders/${id}/comment`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  })
+  return response.historyEntry
 }
 
 export async function deleteRepairOrder(id: string) {
@@ -99,4 +107,16 @@ export async function emailRepairOrderPdf(id: string) {
   return apiRequest<{ success: true }>(`/api/repair-orders/${id}/email`, {
     method: 'POST',
   })
+}
+
+export type Employee = {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
+export async function fetchEmployees(): Promise<Employee[]> {
+  const response = await apiRequest<{ employees: Employee[] }>('/api/auth/employees')
+  return response.employees
 }

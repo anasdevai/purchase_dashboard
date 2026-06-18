@@ -142,6 +142,40 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
   const shopSettings = await getShopSettingsForUser(userId);
   const defaultVatPercent = Math.round(getDefaultVatPercent(shopSettings));
 
+  const items: any[] = [
+    {
+      description: repairOrder.problemDescription || "Repair service",
+      quantity: 1,
+      unitPrice: repairOrder.estimatedPrice
+        ? Math.round(Number(repairOrder.estimatedPrice.toString()))
+        : 0,
+      vatPercent: defaultVatPercent
+    }
+  ];
+
+  const estPrice = repairOrder.estimatedPrice ? Number(repairOrder.estimatedPrice.toString()) : 0;
+
+  if (repairOrder.discountPercent && Number(repairOrder.discountPercent) > 0) {
+    const discPercent = Number(repairOrder.discountPercent);
+    const discAmount = estPrice * (discPercent / 100);
+    items.push({
+      description: `Discount (${discPercent}%)`,
+      quantity: 1,
+      unitPrice: -Math.round(discAmount),
+      vatPercent: defaultVatPercent
+    });
+  }
+
+  if (repairOrder.depositAmount && Number(repairOrder.depositAmount) > 0) {
+    const depAmount = Number(repairOrder.depositAmount);
+    items.push({
+      description: "Deposit Paid",
+      quantity: 1,
+      unitPrice: -Math.round(depAmount),
+      vatPercent: defaultVatPercent
+    });
+  }
+
   return createInvoice(userId, {
     repairOrderId: repairOrder.id,
     customerName: repairOrder.customerName,
@@ -151,16 +185,7 @@ export const createInvoiceFromRepairOrder = async (userId: string, repairOrderId
     deviceSummary,
     repairSummary: repairOrder.problemDescription,
     paymentStatus: "Open",
-    items: [
-      {
-        description: repairOrder.problemDescription || "Repair service",
-        quantity: 1,
-        unitPrice: repairOrder.estimatedPrice
-          ? Math.round(Number(repairOrder.estimatedPrice.toString()))
-          : 0,
-        vatPercent: defaultVatPercent
-      }
-    ]
+    items
   });
 };
 

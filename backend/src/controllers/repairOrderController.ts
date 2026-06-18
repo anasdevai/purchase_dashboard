@@ -17,6 +17,7 @@ export const update = async (req: Request, res: Response) => {
     paramId(req),
     userId(req),
     req.body,
+    req.user!.name,
     req.user?.role === "admin"
   );
   res.json({ repairOrder });
@@ -27,9 +28,27 @@ export const updateStatus = async (req: Request, res: Response) => {
     paramId(req),
     userId(req),
     req.body,
+    req.user!.name,
     req.user?.role === "admin"
   );
   res.json({ repairOrder });
+};
+
+export const addComment = async (req: Request, res: Response) => {
+  const { comment } = req.body;
+  if (!comment || typeof comment !== "string" || comment.trim() === "") {
+    throw new HttpError(400, "Comment is required");
+  }
+
+  const historyEntry = await repairOrderService.addHistoryComment(
+    paramId(req),
+    userId(req),
+    req.user!.name,
+    comment.trim(),
+    req.user?.role === "admin"
+  );
+
+  res.status(201).json({ historyEntry });
 };
 
 export const get = async (req: Request, res: Response) => {

@@ -30,12 +30,23 @@ enum ContractFileType {
 }
 
 enum RepairOrderStatus {
+  New
   Received
-  InProgress
+  InDiagnosis
   WaitingForParts
+  SparePartArrived
+  InRepair
+  Finished
   ReadyForPickup
   Completed
   Cancelled
+}
+
+enum SparePartStatus {
+  NotOrdered
+  Ordered
+  Arrived
+  Installed
 }
 
 enum InvoicePaymentMethod {
@@ -59,10 +70,13 @@ model User {
   role         UserRole      @default(staff)
   isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at")
-  contracts    Contract[]
-  repairOrders RepairOrder[]
-  invoices     Invoice[]
-  shopSettings ShopSettings?
+  contracts       Contract[]
+  repairOrders    RepairOrder[]   @relation("UserRepairs")
+  invoices        Invoice[]
+  shopSettings    ShopSettings?
+  repairCompanies RepairCompany[]
+  customers       Customer[]
+  assignedRepairs RepairOrder[]   @relation("AssignedEmployeeRepairs")
 
   @@map("users")
 }
@@ -192,17 +206,31 @@ model RepairOrder {
   passwordPin            String?           @map("password_pin")
   accessoriesReceived    String?           @map("accessories_received")
   problemDescription     String            @map("problem_description")
+  issueCategory          String?           @map("issue_category")
+  diagnosis              String?           @map("diagnosis")
+  requiredSpareParts     String?           @map("required_spare_parts")
+  sparePartStatus        SparePartStatus?  @map("spare_part_status")
   visibleDamage          String?           @map("visible_damage")
   technicianNotes        String?           @map("technician_notes")
   estimatedPrice         Decimal?          @map("estimated_price") @db.Decimal(12, 2)
+  discountPercent        Decimal?          @map("discount_percent") @db.Decimal(5, 2)
   depositAmount          Decimal?          @map("deposit_amount") @db.Decimal(12, 2)
+  paymentMethod          String?           @map("payment_method")
   expectedCompletionDate DateTime?         @map("expected_completion_date") @db.Date
   status                 RepairOrderStatus @default(Received)
   pdfPath                String?           @map("pdf_path")
+  repairCompanyId        String?           @map("repair_company_id")
+  repairCompanyNotes     String?           @map("repair_company_notes")
+  assignedEmployeeId     String?           @map("assigned_employee_id")
+  customerId             String?           @map("customer_id")
   createdAt              DateTime          @default(now()) @map("created_at")
   updatedAt              DateTime          @updatedAt @map("updated_at")
-  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                   User              @relation("UserRepairs", fields: [userId], references: [id], onDelete: Cascade)
   invoices               Invoice[]
+  repairCompany          RepairCompany?    @relation(fields: [repairCompanyId], references: [id], onDelete: SetNull)
+  history                RepairOrderHistory[]
+  assignedEmployee       User?             @relation("AssignedEmployeeRepairs", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  customer               Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
 
   @@unique([userId, repairOrderNumber])
   @@index([userId])
@@ -213,6 +241,9 @@ model RepairOrder {
   @@index([imeiOrSerial])
   @@index([status])
   @@index([createdAt])
+  @@index([repairCompanyId])
+  @@index([assignedEmployeeId])
+  @@index([customerId])
   @@map("repair_orders")
 }
 
@@ -271,4 +302,55 @@ model InvoiceItem {
 
   @@index([invoiceId])
   @@map("invoice_items")
+}
+
+model RepairCompany {
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  name         String
+  contactInfo  String?       @map("contact_info")
+  notes        String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairOrders RepairOrder[]
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("repair_companies")
+}
+
+model RepairOrderHistory {
+  id            String             @id @default(uuid())
+  repairOrderId String             @map("repair_order_id")
+  userId        String             @map("user_id")
+  employeeName  String             @map("employee_name")
+  fromStatus    RepairOrderStatus? @map("from_status")
+  toStatus      RepairOrderStatus  @map("to_status")
+  comment       String?
+  createdAt     DateTime           @default(now()) @map("created_at")
+  repairOrder   RepairOrder        @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  @@index([repairOrderId])
+  @@index([createdAt])
+  @@map("repair_order_history")
+}
+
+model Customer {
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  name         String
+  phone        String
+  email        String?
+  address      String?
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairOrders RepairOrder[]
+
+  @@unique([userId, name, phone])
+  @@index([userId])
+  @@index([name])
+  @@index([phone])
+  @@map("customers")
 }
