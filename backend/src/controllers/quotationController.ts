@@ -111,6 +111,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   }
 
   await emailService.sendQuotationPdfEmail(
+    uid,
     quotation.customerEmail,
     quotation.quotationNumber,
     quotation.pdfPath,

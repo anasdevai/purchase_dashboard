@@ -13,6 +13,7 @@ import {
 import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
 import * as emailService from "./emailService.js";
 import { findOrCreateCustomerForRepair } from "./customerService.js";
+import { createPickupAppointmentFromOrder } from "./appointmentService.js";
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
@@ -78,21 +79,36 @@ async function triggerStatusChangeEmails(current: any, toStatus: string) {
   try {
     if (toStatus === "Finished" && current.customerEmail) {
       await emailService.sendRepairFinishedEmail(
+        current.userId,
         current.customerEmail,
         current.repairOrderNumber,
         current.customerName
       );
-    } else if (toStatus === "ReadyForPickup" && current.customerEmail) {
+    } else if (toStatus === "ReadyForPickup") {
       const shopSettings = await getShopSettingsForUser(current.userId);
       const shopAddress = shopSettings.shopAddress || null;
       const openingHours = "Mo-Fr: 09:00 - 18:00, Sa: 09:00 - 13:00";
       
-      await emailService.sendReadyForPickupEmail(
-        current.customerEmail,
-        current.repairOrderNumber,
-        current.customerName,
-        shopAddress,
-        openingHours
+      if (current.customerEmail) {
+        await emailService.sendReadyForPickupEmail(
+          current.userId,
+          current.customerEmail,
+          current.repairOrderNumber,
+          current.customerName,
+          shopAddress,
+          openingHours
+        );
+      }
+
+      // Automatically create a pickup appointment for tomorrow at 10 AM
+      const tomorrowAtTen = new Date();
+      tomorrowAtTen.setDate(tomorrowAtTen.getDate() + 1);
+      tomorrowAtTen.setHours(10, 0, 0, 0);
+      
+      await createPickupAppointmentFromOrder(
+        current.userId,
+        current.id,
+        tomorrowAtTen.toISOString()
       );
     } else if (toStatus === "SparePartArrived") {
       const user = await prisma.user.findUnique({
@@ -101,6 +117,7 @@ async function triggerStatusChangeEmails(current: any, toStatus: string) {
       });
       if (user?.email) {
         await emailService.sendSparePartArrivedNotification(
+          current.userId,
           user.email,
           current.repairOrderNumber
         );

@@ -122,6 +122,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   );
 
   await emailService.sendInvoicePdfEmail(
+    userId(req),
     updatedInvoice.customerEmail!,
     updatedInvoice.invoiceNumber,
     updatedInvoice.pdfPath,
@@ -156,6 +157,7 @@ export const sendReminder = async (req: Request, res: Response) => {
   }
 
   await emailService.sendPaymentReminderEmail(
+    userId(req),
     invoice.customerEmail,
     invoice.invoiceNumber,
     invoice.calculatedGrossTotal,

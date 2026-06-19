@@ -163,6 +163,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   }
 
   await emailService.sendContractPdfEmail(
+    userId(req),
     contract.customerEmail,
     contract.contractNumber,
     contract.pdfPath,

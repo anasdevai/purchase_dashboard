@@ -142,7 +142,7 @@ export const sendInvoicePdfEmail = async (
     from: process.env.SMTP_FROM || env.SMTP_FROM,
     to: toEmail,
     subject: `Rechnung - ${invoiceNumber}`,
-    text: `${greeting},\n\nanbei erhalten Sie Ihre Rechnung ${invoiceNumber} zu Ihrem Serviceauftrag.\n\nVielen Dank für Ihren Auftrag!\n\nMit freundlichen Grüßen,\nIhr Service-Team`,
+    text: `Guten Tag,\n\nvielen Dank für Ihren Auftrag.\nAnbei erhalten Sie die Rechnung zu den durchgeführten Leistungen. Wir bedanken uns für Ihr Vertrauen und freuen uns, dass wir Ihnen weiterhelfen durften.\n\nBei Fragen zur Rechnung oder zu unseren Leistungen stehen wir Ihnen jederzeit gerne zur Verfügung.\nWir würden uns sehr über eine Bewertung freuen.\n\nMit freundlichen Grüßen`,
     attachments: [
       {
         filename: `${invoiceNumber}.pdf`,

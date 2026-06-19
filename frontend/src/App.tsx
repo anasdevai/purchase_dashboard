@@ -17,7 +17,11 @@ import { NewQuotationPage, QuotationDetailPage } from './pages/QuotationDetailPa
 import { QuotationsPage } from './pages/QuotationsPage'
 import { SearchContractsPage } from './pages/SearchContractsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { EmailLogsPage } from './pages/EmailLogsPage'
+import { CustomersPage } from './pages/CustomersPage'
+import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { MobileSignaturePage } from './pages/MobileSignaturePage'
+import { CalendarPage } from './pages/CalendarPage'
 
 // Admin imports
 import { AdminLayout } from './pages/admin/AdminLayout'
@@ -56,6 +60,10 @@ export default function App() {
                 <Route path="/invoices" element={<InvoicesPage />} />
                 <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/email-logs" element={<EmailLogsPage />} />
+                <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
               </Route>
             </Route>
 

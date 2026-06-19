@@ -9,6 +9,9 @@ import {
   Settings,
   Shield,
   X,
+  Mail,
+  Users,
+  Calendar,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
@@ -113,6 +116,18 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       items: [
         { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
         {
+          to: '/customers',
+          label: t.pages.settings === 'Einstellungen' ? 'Kunden' : 'Customers',
+          icon: Users,
+          testId: 'nav-customers',
+        },
+        {
+          to: '/calendar',
+          label: t.pages.settings === 'Einstellungen' ? 'Kalender' : 'Calendar',
+          icon: Calendar,
+          testId: 'nav-calendar',
+        },
+        {
           to: '/contracts/search',
           label: t.nav.searchContracts,
           icon: Search,
@@ -215,6 +230,13 @@ function SidebarNav(props: { onNavigate?: () => void }) {
           label: t.nav.settings,
           icon: Settings,
           testId: 'nav-settings',
+          end: true,
+        },
+        {
+          to: '/email-logs',
+          label: t.pages.settings === 'Einstellungen' ? 'E-Mail-Protokolle' : 'Email Logs',
+          icon: Mail,
+          testId: 'nav-email-logs',
           end: true,
         },
       ],

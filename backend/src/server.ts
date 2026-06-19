@@ -2,6 +2,7 @@ import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { ensureDirectory, contractsRoot, invoicesRoot, repairOrdersRoot } from "./utils/paths.js";
+import { startReminderDaemon } from "./jobs/reminderDaemon.js";
 import os from "node:os";
 
 const getLanUrls = () =>
@@ -14,6 +15,9 @@ const start = async () => {
   await ensureDirectory(contractsRoot);
   await ensureDirectory(repairOrdersRoot);
   await ensureDirectory(invoicesRoot);
+
+  // Initialize background reminder daemon
+  startReminderDaemon();
 
   const server = app.listen(env.PORT, env.HOST, () => {
     console.log(`Backend API listening on ${env.HOST}:${env.PORT}`);

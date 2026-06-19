@@ -12,6 +12,7 @@ import { renderContractHtml } from "../pdf/templates/contractTemplate.js";
 import { renderInvoiceHtml } from "../pdf/templates/invoiceTemplate.js";
 import { renderRepairOrderHtml } from "../pdf/templates/repairOrderTemplate.js";
 import { renderQuotationHtml } from "../pdf/templates/quotationTemplate.js";
+import { renderCustomerListHtml } from "../pdf/templates/customerListTemplate.js";
 import type {
   ContractForPdf,
   InvoiceForPdf,
@@ -90,3 +91,28 @@ export const generateInvoicePdf = async (
 
   return toRelativeStoragePath(absolutePdfPath);
 };
+
+export type CustomerForPdfExport = {
+  customerNumber: string | null;
+  salutation: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  name: string;
+  company: string | null;
+  street: string | null;
+  zipCode: string | null;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  newsletter: boolean | null;
+  createdAt: Date;
+};
+
+export const generateCustomersPdf = async (
+  customers: CustomerForPdfExport[],
+  shopSettings?: PdfShopSettings
+): Promise<Buffer> => {
+  const html = renderCustomerListHtml(customers, shopSettings);
+  return renderHtmlToPdfBuffer(html);
+};
+

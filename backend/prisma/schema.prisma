@@ -85,6 +85,11 @@ model User {
   quotations      Quotation[]     @relation("UserQuotations")
   assignedQuotations Quotation[]   @relation("EmployeeQuotations")
   assignedInvoices   Invoice[]     @relation("EmployeeInvoices")
+  smtpSettings       SmtpSettings?
+  imapSettings       ImapSettings?
+  emailTemplates     EmailTemplate[]
+  emailLogs          EmailLog[]
+  appointments       Appointment[]
 
   @@map("users")
 }
@@ -171,6 +176,8 @@ model Contract {
   createdAt               DateTime       @default(now()) @map("created_at")
   updatedAt               DateTime       @updatedAt @map("updated_at")
   user                    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId              String?        @map("customer_id")
+  customer                Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   files                   ContractFile[]
 
   @@unique([userId, contractNumber])
@@ -241,6 +248,7 @@ model RepairOrder {
   customer               Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
   quotationId            String?           @map("quotation_id")
   quotation              Quotation?        @relation("QuotationRepairOrders", fields: [quotationId], references: [id], onDelete: SetNull)
+  appointments           Appointment[]
 
   @@unique([userId, repairOrderNumber])
   @@index([userId])
@@ -289,6 +297,8 @@ model Invoice {
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId           String?               @map("customer_id")
+  customer             Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
   repairOrder          RepairOrder?          @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
   items                InvoiceItem[]
 
@@ -354,19 +364,35 @@ model RepairOrderHistory {
 }
 
 model Customer {
-  id           String        @id @default(uuid())
-  userId       String        @map("user_id")
-  name         String
-  phone        String
-  email        String?
-  address      String?
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  repairOrders RepairOrder[]
-  quotations   Quotation[]
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  customerNumber String?         @map("customer_number")
+  salutation     String?
+  firstName      String?         @map("first_name")
+  lastName       String?         @map("last_name")
+  company        String?
+  vatId          String?         @map("vat_id")
+  street         String?
+  zipCode        String?         @map("zip_code")
+  city           String?
+  dateOfBirth    DateTime?       @map("date_of_birth") @db.Date
+  newsletter     Boolean         @default(false)
+  notes          String?         @db.Text
+  name           String
+  phone          String
+  email          String?
+  address        String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairOrders   RepairOrder[]
+  quotations     Quotation[]
+  contracts      Contract[]
+  invoices       Invoice[]
+  appointments   Appointment[]
 
   @@unique([userId, name, phone])
+  @@unique([userId, customerNumber])
   @@index([userId])
   @@index([name])
   @@index([phone])
@@ -436,4 +462,107 @@ model QuotationItem {
 
   @@index([quotationId])
   @@map("quotation_items")
+}
+
+model SmtpSettings {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  host       String
+  port       Int
+  encryption String   @default("none")
+  username   String
+  password   String   @map("encrypted_password")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("smtp_settings")
+}
+
+model ImapSettings {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  host       String
+  port       Int
+  encryption String   @default("none")
+  username   String
+  password   String   @map("encrypted_password")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("imap_settings")
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  subject   String
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  to        String
+  subject   String
+  body      String   @db.Text
+  status    String
+  error     String?  @db.Text
+  sentAt    DateTime @default(now()) @map("sent_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sentAt])
+  @@map("email_logs")
+}
+
+enum AppointmentStatus {
+  Booked
+  Confirmed
+  Arrived
+  Cancelled
+  Voided
+}
+
+enum AppointmentSource {
+  Manual
+  Order
+  Website
+}
+
+model Appointment {
+  id            String            @id @default(uuid())
+  userId        String            @map("user_id")
+  title         String
+  customerId    String?           @map("customer_id")
+  deviceBrand   String?           @map("device_brand")
+  deviceModel   String?           @map("device_model")
+  deviceImei    String?           @map("device_imei")
+  repairOrderId String?           @map("repair_order_id")
+  startTime     DateTime          @map("start_time")
+  endTime       DateTime          @map("end_time")
+  duration      Int
+  note          String?           @db.Text
+  status        AppointmentStatus @default(Booked)
+  source        AppointmentSource @default(Manual)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer      Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  repairOrder   RepairOrder?      @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([repairOrderId])
+  @@index([startTime])
+  @@map("appointments")
 }

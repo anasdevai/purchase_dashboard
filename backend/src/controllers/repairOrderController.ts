@@ -127,6 +127,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   }
 
   await emailService.sendRepairOrderPdfEmail(
+    userId(req),
     repairOrder.customerEmail,
     repairOrder.repairOrderNumber,
     repairOrder.pdfPath,
