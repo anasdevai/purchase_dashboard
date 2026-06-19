@@ -32,6 +32,7 @@ import { AdminUserDetailPage } from './pages/admin/AdminUserDetailPage'
 import { AdminUserContractsPage } from './pages/admin/AdminUserContractsPage'
 import { AdminUserInvoicesPage } from './pages/admin/AdminUserInvoicesPage'
 import { AdminUserRepairOrdersPage } from './pages/admin/AdminUserRepairOrdersPage'
+import { MasterDataPage } from './pages/admin/MasterDataPage'
 
 export default function App() {
   return (
@@ -77,6 +78,7 @@ export default function App() {
                 <Route path="users/:userId/contracts" element={<AdminUserContractsPage />} />
                 <Route path="users/:userId/invoices" element={<AdminUserInvoicesPage />} />
                 <Route path="users/:userId/repair-orders" element={<AdminUserRepairOrdersPage />} />
+                <Route path="master-data" element={<MasterDataPage />} />
               </Route>
             </Route>
 

@@ -12,6 +12,7 @@ import { customerRouter } from "./routes/customerRoutes.js";
 import { quotationRouter } from "./routes/quotationRoutes.js";
 import { emailSettingsRouter, emailLogsRouter } from "./routes/emailSettingsRoutes.js";
 import appointmentRouter from "./routes/appointmentRoutes.js";
+import { masterDataRouter } from "./routes/masterDataRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 
 export const app = express();
@@ -45,6 +46,7 @@ app.use("/api/admin", adminRouter);
 app.use("/api/customers", customerRouter);
 app.use("/api/quotations", quotationRouter);
 app.use("/api/appointments", appointmentRouter);
+app.use("/api/master-data", masterDataRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

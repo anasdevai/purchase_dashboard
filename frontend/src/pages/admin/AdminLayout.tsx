@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Shield,
   LogOut,
+  Settings,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../auth/AuthContext'
@@ -14,6 +15,7 @@ const adminNavItems = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/users', label: 'Manage Users', icon: Users, end: true },
   { to: '/admin/users/new', label: 'Add User', icon: UserPlus, end: true },
+  { to: '/admin/master-data', label: 'Master Data', icon: Settings, end: false },
 ]
 
 export function AdminLayout() {

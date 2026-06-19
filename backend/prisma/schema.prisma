@@ -570,3 +570,100 @@ model Appointment {
   @@index([startTime])
   @@map("appointments")
 }
+
+enum RepairCategory {
+  Display
+  Battery
+  WaterDamage
+  Software
+  LogicBoard
+  Camera
+  ChargingPort
+  Keyboard
+  Other
+}
+
+enum DifficultyLevel {
+  Easy
+  Medium
+  Difficult
+  Expert
+}
+
+model Brand {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  logoUrl     String?      @map("logo_url")
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  deviceTypes DeviceType[]
+  models      Model[]
+
+  @@map("brands")
+}
+
+model DeviceType {
+  id        String   @id @default(uuid())
+  name      String
+  brandId   String   @map("brand_id")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  models    Model[]
+
+  @@unique([brandId, name])
+  @@map("device_types")
+}
+
+model Model {
+  id             String      @id @default(uuid())
+  name           String
+  deviceTypeId   String      @map("device_type_id")
+  brandId        String      @map("brand_id")
+  generation     String?
+  storageOptions String[]    @map("storage_options")
+  colorOptions   String[]    @map("color_options")
+  releaseYear    Int?        @map("release_year")
+  isActive       Boolean     @default(true) @map("is_active")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  deviceType     DeviceType  @relation(fields: [deviceTypeId], references: [id], onDelete: Cascade)
+  brand          Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  priceLists     PriceList[]
+
+  @@map("models")
+}
+
+model RepairType {
+  id            String          @id @default(uuid())
+  name          String
+  category      RepairCategory
+  standardPrice Decimal?        @map("standard_price") @db.Decimal(12, 2)
+  duration      Int?
+  difficulty    DifficultyLevel?
+  isActive      Boolean         @default(true) @map("is_active")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  priceLists    PriceList[]
+
+  @@map("repair_types")
+}
+
+model PriceList {
+  id           String     @id @default(uuid())
+  modelId      String     @map("model_id")
+  repairTypeId String     @map("repair_type_id")
+  price        Decimal    @db.Decimal(12, 2)
+  duration     Int?
+  isActive     Boolean    @default(true) @map("is_active")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  model        Model      @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  repairType   RepairType @relation(fields: [repairTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([modelId, repairTypeId])
+  @@map("price_lists")
+}
+
