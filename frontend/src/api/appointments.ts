@@ -60,6 +60,21 @@ export async function sendAppointmentReminder(id: string): Promise<{ success: bo
   });
 }
 
+export async function fetchGoogleAuthUrl(): Promise<string> {
+  const response = await apiRequest<{ url: string }>("/api/appointments/google/auth");
+  return response.url;
+}
+
+export async function fetchGoogleCalendarStatus(): Promise<{ connected: boolean }> {
+  return apiRequest<{ connected: boolean }>("/api/appointments/google/status");
+}
+
+export async function disconnectGoogleCalendar(): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>("/api/appointments/google/disconnect", {
+    method: "POST",
+  });
+}
+
 export async function exportAppointments(format: "csv" | "ical"): Promise<Blob> {
   const token = getToken();
   const baseUrl = getApiBaseUrl();

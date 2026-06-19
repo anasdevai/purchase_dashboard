@@ -90,6 +90,9 @@ model User {
   emailTemplates     EmailTemplate[]
   emailLogs          EmailLog[]
   appointments       Appointment[]
+  googleAccessToken  String?       @map("google_access_token")
+  googleRefreshToken String?       @map("google_refresh_token")
+  googleTokenExpiry  DateTime?     @map("google_token_expiry")
 
   @@map("users")
 }
@@ -553,8 +556,9 @@ model Appointment {
   note          String?           @db.Text
   status        AppointmentStatus @default(Booked)
   source        AppointmentSource @default(Manual)
-  createdAt     DateTime          @default(now()) @map("created_at")
-  updatedAt     DateTime          @updatedAt @map("updated_at")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  googleCalendarEventId String?           @map("google_calendar_event_id")
 
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   customer      Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)

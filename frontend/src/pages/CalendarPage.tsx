@@ -13,7 +13,15 @@ import {
   Clock,
   Settings,
 } from "lucide-react";
-import { fetchAppointments, moveAppointment, exportAppointments, deleteAppointment } from "../api/appointments";
+import {
+  fetchAppointments,
+  moveAppointment,
+  exportAppointments,
+  deleteAppointment,
+  fetchGoogleAuthUrl,
+  fetchGoogleCalendarStatus,
+  disconnectGoogleCalendar,
+} from "../api/appointments";
 import type { Appointment, AppointmentStatus, AppointmentSource } from "../types/appointment";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppConfirm } from "../components/common/ConfirmDialogProvider";
@@ -31,6 +39,7 @@ export function CalendarPage() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [googleConnected, setGoogleConnected] = useState<boolean>(false);
   
   // Modals and form state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,8 +66,57 @@ export function CalendarPage() {
     }
   };
 
+  const checkGoogleStatus = async () => {
+    try {
+      const res = await fetchGoogleCalendarStatus();
+      setGoogleConnected(res.connected);
+    } catch (err) {
+      console.error("Failed to fetch Google Calendar status:", err);
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    try {
+      const url = await fetchGoogleAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      logApiError("fetch google auth url", err);
+      showToast("error", isDe ? "Google OAuth URL konnte nicht geladen werden." : "Failed to load Google OAuth URL.");
+    }
+  };
+
+  const handleDisconnectGoogle = () => {
+    confirm({
+      title: isDe ? "Google Kalender trennen?" : "Disconnect Google Calendar?",
+      message: isDe
+        ? "Möchten Sie die Verbindung zu Ihrem Google Kalender wirklich trennen? Termine werden dann nicht mehr synchronisiert."
+        : "Are you sure you want to disconnect your Google Calendar? Appointments will no longer be synchronized.",
+      confirmLabel: isDe ? "Trennen" : "Disconnect",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          await disconnectGoogleCalendar();
+          setGoogleConnected(false);
+          showToast("success", isDe ? "Google Kalender getrennt." : "Google Calendar disconnected.");
+        } catch (err) {
+          logApiError("disconnect google", err);
+          showToast("error", isDe ? "Trennen fehlgeschlagen." : "Failed to disconnect Google Calendar.");
+        }
+      },
+    });
+  };
+
   useEffect(() => {
     loadAppointments();
+    checkGoogleStatus();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google_connected") === "true") {
+      showToast("success", isDe ? "Google Kalender erfolgreich verknüpft!" : "Google Calendar successfully connected!");
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
   }, []);
 
   const handlePrevDate = () => {
@@ -647,6 +705,32 @@ export function CalendarPage() {
             <Plus className="h-4 w-4" />
             {isDe ? "Termin anlegen" : "New Appointment"}
           </button>
+          {googleConnected ? (
+            <button
+              type="button"
+              onClick={handleDisconnectGoogle}
+              className="btn bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-slate-700 h-11 px-4 text-sm font-semibold flex items-center gap-2"
+              title={isDe ? "Google Kalender trennen" : "Disconnect Google Calendar"}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>{isDe ? "Google Calendar verbunden" : "Google Calendar Connected"}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectGoogle}
+              className="btn btn-outline border-slate-200 hover:bg-slate-50 text-slate-700 h-11 px-4 text-sm font-semibold flex items-center gap-2"
+              title={isDe ? "Google Kalender verbinden" : "Connect Google Calendar"}
+            >
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+              <span>{isDe ? "Google Kalender verknüpfen" : "Connect Google Calendar"}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => handleExport("csv")}

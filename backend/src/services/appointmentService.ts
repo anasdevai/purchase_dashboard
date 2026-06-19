@@ -9,6 +9,11 @@ import {
   sendAppointmentConfirmationEmail,
   sendAppointmentReminderEmail
 } from "./emailService.js";
+import {
+  createGoogleEvent,
+  updateGoogleEvent,
+  deleteGoogleEvent
+} from "./googleCalendarService.js";
 
 // Helper to format dates to iCal format (YYYYMMDDTHHMMSSZ)
 const formatDateToICal = (date: Date): string => {
@@ -91,6 +96,19 @@ export const createAppointment = async (
   const end = new Date(parsed.endTime);
   const duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60)); // duration in minutes
 
+  // Sync with Google Calendar if integrated
+  let googleCalendarEventId: string | null = null;
+  try {
+    googleCalendarEventId = await createGoogleEvent(userId, {
+      title: parsed.title,
+      startTime: start,
+      endTime: end,
+      note: parsed.note
+    });
+  } catch (err) {
+    console.error("Failed to sync new appointment to Google Calendar:", err);
+  }
+
   const appointment = await prisma.appointment.create({
     data: {
       userId,
@@ -105,7 +123,8 @@ export const createAppointment = async (
       duration,
       note: parsed.note || null,
       status: parsed.status,
-      source: parsed.source
+      source: parsed.source,
+      googleCalendarEventId
     },
     include: {
       customer: true,
@@ -144,6 +163,27 @@ export const updateAppointment = async (
   const endTime = parsed.endTime ? new Date(parsed.endTime) : existing.endTime;
   const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
 
+  let googleCalendarEventId = existing.googleCalendarEventId;
+  try {
+    if (googleCalendarEventId) {
+      await updateGoogleEvent(userId, googleCalendarEventId, {
+        title: parsed.title !== undefined ? parsed.title : existing.title,
+        startTime,
+        endTime,
+        note: parsed.note !== undefined ? parsed.note : existing.note
+      });
+    } else {
+      googleCalendarEventId = await createGoogleEvent(userId, {
+        title: parsed.title !== undefined ? parsed.title : existing.title,
+        startTime,
+        endTime,
+        note: parsed.note !== undefined ? parsed.note : existing.note
+      });
+    }
+  } catch (err) {
+    console.error("Failed to sync updated appointment to Google Calendar:", err);
+  }
+
   return prisma.appointment.update({
     where: { id: existing.id },
     data: {
@@ -158,7 +198,8 @@ export const updateAppointment = async (
       duration,
       note: parsed.note !== undefined ? parsed.note : existing.note,
       status: parsed.status !== undefined ? parsed.status : existing.status,
-      source: parsed.source !== undefined ? parsed.source : existing.source
+      source: parsed.source !== undefined ? parsed.source : existing.source,
+      googleCalendarEventId
     },
     include: {
       customer: true,
@@ -179,6 +220,19 @@ export const moveAppointment = async (
   const endTime = new Date(parsed.endTime);
   const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
 
+  if (existing.googleCalendarEventId) {
+    try {
+      await updateGoogleEvent(userId, existing.googleCalendarEventId, {
+        title: existing.title,
+        startTime,
+        endTime,
+        note: existing.note
+      });
+    } catch (err) {
+      console.error("Failed to sync moved appointment to Google Calendar:", err);
+    }
+  }
+
   return prisma.appointment.update({
     where: { id: existing.id },
     data: {
@@ -195,6 +249,15 @@ export const moveAppointment = async (
 
 export const deleteAppointment = async (userId: string, id: string) => {
   const appointment = await getAppointmentOrThrow(id, userId);
+
+  if (appointment.googleCalendarEventId) {
+    try {
+      await deleteGoogleEvent(userId, appointment.googleCalendarEventId);
+    } catch (err) {
+      console.error("Failed to delete event from Google Calendar:", err);
+    }
+  }
+
   await prisma.appointment.delete({
     where: { id: appointment.id }
   });
@@ -341,6 +404,19 @@ export const createPickupAppointmentFromOrder = async (
     return existing;
   }
 
+  // Sync with Google Calendar if integrated
+  let googleCalendarEventId: string | null = null;
+  try {
+    googleCalendarEventId = await createGoogleEvent(userId, {
+      title,
+      startTime: start,
+      endTime: end,
+      note: "Automatisch generierter Abholtermin."
+    });
+  } catch (err) {
+    console.error("Failed to sync pickup appointment to Google Calendar:", err);
+  }
+
   const appointment = await prisma.appointment.create({
     data: {
       userId,
@@ -355,7 +431,8 @@ export const createPickupAppointmentFromOrder = async (
       duration,
       note: "Automatisch generierter Abholtermin.",
       status: "Booked",
-      source: "Order"
+      source: "Order",
+      googleCalendarEventId
     },
     include: {
       customer: true,

@@ -138,9 +138,7 @@ const sendMailAndLog = async (
       console.error("Failed to write email log to database:", logErr);
     }
   }
-};
-
-export const sendContractPdfEmail = async (
+};export const sendContractPdfEmail = async (
   userId: string,
   toEmail: string,
   contractNumber: string,
@@ -164,8 +162,8 @@ export const sendContractPdfEmail = async (
   const mailOptions = {
     from,
     to: toEmail,
-    subject: `Kaufvertrag - ${contractNumber}`,
-    text: `${greeting},\n\nanbei erhalten Sie eine PDF-Kopie Ihres Kaufvertrags ${contractNumber}.\n\nVielen Dank für Ihr Vertrauen und die angenehme Zusammenarbeit!\n\nMit freundlichen Grüßen,\nIhr Shop-Team`,
+    subject: `Ihr Kaufvertrag - ${contractNumber}`,
+    text: `${greeting},\n\nvielen Dank für die angenehme Zusammenarbeit.\n\nAnbei erhalten Sie Ihren Kaufvertrag mit der Vertragsnummer ${contractNumber} als PDF-Dokument für Ihre Unterlagen.\n\nSollten Sie Fragen zu den Vertragsbedingungen oder zur Auszahlung haben, stehen wir Ihnen jederzeit gerne zur Verfügung.\n\nWir bedanken uns herzlich für Ihr Vertrauen.\n\nMit freundlichen Grüßen,\nIhr Sclera-Team`,
     attachments: [
       {
         filename: `${contractNumber}.pdf`,
@@ -196,7 +194,8 @@ export const sendRepairOrderPdfEmail = async (
   const { transporter, from } = await getTransporterForUser(userId);
 
   const repairOrder = await prisma.repairOrder.findFirst({
-    where: { userId, repairOrderNumber }
+    where: { userId, repairOrderNumber },
+    include: { customer: true }
   });
 
   const { firstName, lastName } = getFirstAndLastName(customerName || repairOrder?.customerName);
@@ -218,8 +217,14 @@ export const sendRepairOrderPdfEmail = async (
     where: { userId, name: "OrderConfirmation" }
   });
 
+  const greeting = buildGermanGreeting(
+    customerName || repairOrder?.customerName,
+    repairOrder?.customer?.salutation,
+    repairOrder?.customer?.lastName
+  );
+
   let subject = `Reparaturauftrag - ${repairOrderNumber}`;
-  let text = `${buildGermanGreeting(customerName || repairOrder?.customerName)},\n\nanbei senden wir Ihnen die Bestätigung und Details zu Ihrem Reparaturauftrag ${repairOrderNumber} als PDF-Anhang.\n\nWir informieren Sie umgehend, sobald Ihr Gerät fertiggestellt und zur Abholung bereit ist.\n\nMit freundlichen Grüßen,\nIhr Service-Team`;
+  let text = `${greeting},\n\nanbei senden wir Ihnen die Bestätigung und Details zu Ihrem Reparaturauftrag ${repairOrderNumber} als PDF-Anhang.\n\nWir informieren Sie umgehend, sobald Ihr Gerät fertiggestellt und zur Abholung bereit ist.\n\nMit freundlichen Grüßen,\nIhr Service-Team`;
 
   if (template) {
     const compiled = compileTemplate(template.subject, template.body, placeholders);
@@ -262,7 +267,8 @@ export const sendInvoicePdfEmail = async (
   const { transporter, from } = await getTransporterForUser(userId);
 
   const invoice = await prisma.invoice.findFirst({
-    where: { userId, invoiceNumber }
+    where: { userId, invoiceNumber },
+    include: { customer: true }
   });
 
   const { firstName, lastName } = getFirstAndLastName(customerName || invoice?.customerName);
@@ -285,8 +291,14 @@ export const sendInvoicePdfEmail = async (
     where: { userId, name: "Invoice" }
   });
 
-  let subject = `Rechnung - ${invoiceNumber}`;
-  let text = `Guten Tag,\n\nvielen Dank für Ihren Auftrag.\nAnbei erhalten Sie die Rechnung zu den durchgeführten Leistungen. Wir bedanken uns für Ihr Vertrauen und freuen uns, dass wir Ihnen weiterhelfen durften.\n\nBei Fragen zur Rechnung oder zu unseren Leistungen stehen wir Ihnen jederzeit gerne zur Verfügung.\nWir würden uns sehr über eine Bewertung freuen.\n\nMit freundlichen Grüßen`;
+  const greeting = buildGermanGreeting(
+    customerName || invoice?.customerName,
+    invoice?.customer?.salutation,
+    invoice?.customer?.lastName
+  );
+
+  let subject = `Ihre Rechnung - ${invoiceNumber}`;
+  let text = `${greeting},\n\nvielen Dank für Ihren Auftrag.\n\nAnbei erhalten Sie die Rechnung ${invoiceNumber} zu den durchgeführten Leistungen als PDF-Dokument.\n\nWir bedanken uns für das entgegengebrachte Vertrauen und stehen Ihnen bei Rückfragen zur Rechnung oder zu unseren Serviceleistungen jederzeit gerne zur Verfügung.\n\nÜber eine positive Bewertung unseres Services würden wir uns sehr freuen.\n\nMit freundlichen Grüßen,\nIhr Sclera-Team`;
 
   if (template) {
     const compiled = compileTemplate(template.subject, template.body, placeholders);
@@ -329,7 +341,8 @@ export const sendQuotationPdfEmail = async (
   const { transporter, from } = await getTransporterForUser(userId);
 
   const quotation = await prisma.quotation.findFirst({
-    where: { userId, quotationNumber }
+    where: { userId, quotationNumber },
+    include: { customer: true }
   });
 
   const { firstName, lastName } = getFirstAndLastName(customerName || quotation?.customerName);
@@ -360,8 +373,14 @@ export const sendQuotationPdfEmail = async (
     where: { userId, name: "Quotation" }
   });
 
-  let subject = `Angebot - ${quotationNumber}`;
-  let text = `Guten Tag,\n\nvielen Dank für Ihre Anfrage.\nAnbei erhalten Sie Ihr persönliches Angebot. Bitte prüfen Sie die enthaltenen Leistungen und Preise. Sollten Sie Fragen haben oder Änderungen wünschen, stehen wir Ihnen gerne zur Verfügung.\n\nNach Ihrer Freigabe können wir die Arbeiten umgehend einplanen und durchführen.\n\nVielen Dank für Ihr Vertrauen.\n\nMit freundlichen Grüßen`;
+  const greeting = buildGermanGreeting(
+    customerName || quotation?.customerName,
+    quotation?.customer?.salutation,
+    quotation?.customer?.lastName
+  );
+
+  let subject = `Ihr persönliches Angebot - ${quotationNumber}`;
+  let text = `${greeting},\n\nvielen Dank für Ihre Anfrage und das damit verbundene Interesse an unseren Serviceleistungen.\n\nAnbei senden wir Ihnen Ihr persönliches Angebot mit der Angebotsnummer ${quotationNumber} als PDF-Dokument. Bitte prüfen Sie die aufgeführten Leistungen und Preise.\n\nSollten Sie Änderungswünsche haben oder weitere Auskünfte benötigen, stehen wir Ihnen gerne beratend zur Seite. Nach Ihrer Freigabe können wir die Durchführung der Arbeiten umgehend für Sie einplanen.\n\nWir freuen uns auf eine erfolgreiche Zusammenarbeit.\n\nMit freundlichen Grüßen,\nIhr Sclera-Team`;
 
   if (template) {
     const compiled = compileTemplate(template.subject, template.body, placeholders);

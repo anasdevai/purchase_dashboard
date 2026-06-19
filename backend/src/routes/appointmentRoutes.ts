@@ -4,8 +4,13 @@ import { requireAuth } from "../middlewares/authMiddleware.js";
 
 const router = Router();
 
+router.get("/google/callback", appointmentController.googleCallback);
+
 router.use(requireAuth);
 
+router.get("/google/auth", appointmentController.getGoogleAuthUrl);
+router.get("/google/status", appointmentController.getGoogleStatus);
+router.post("/google/disconnect", appointmentController.disconnectGoogle);
 router.get("/", appointmentController.list);
 router.post("/", appointmentController.create);
 router.get("/export", appointmentController.exportData);
