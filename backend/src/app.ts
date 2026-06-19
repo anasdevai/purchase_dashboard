@@ -9,6 +9,7 @@ import { repairOrderRouter } from "./routes/repairOrderRoutes.js";
 import { settingsRouter } from "./routes/settingsRoutes.js";
 import { adminRouter } from "./routes/adminRoutes.js";
 import { customerRouter } from "./routes/customerRoutes.js";
+import { quotationRouter } from "./routes/quotationRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 
 export const app = express();
@@ -38,6 +39,7 @@ app.use("/api/invoices", invoiceRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/customers", customerRouter);
+app.use("/api/quotations", quotationRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -154,6 +154,40 @@ export const sendInvoicePdfEmail = async (
   await transporter.sendMail(mailOptions);
 };
 
+export const sendQuotationPdfEmail = async (
+  toEmail: string,
+  quotationNumber: string,
+  pdfPath: string | null | undefined,
+  customerName?: string | null
+) => {
+  if (!pdfPath) {
+    throw new HttpError(400, "PDF path does not exist for this quotation");
+  }
+
+  const absolutePath = toAbsolutePath(pdfPath);
+  if (!fs.existsSync(absolutePath)) {
+    throw new HttpError(404, "PDF file not found on disk");
+  }
+
+  const transporter = getTransporter();
+  const greeting = buildGermanGreeting(customerName);
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || env.SMTP_FROM,
+    to: toEmail,
+    subject: `Angebot - ${quotationNumber}`,
+    text: `${greeting},\n\nanbei erhalten Sie das gewünschte Angebot ${quotationNumber} als PDF-Anhang.\n\nDas Angebot ist 14 Tage gültig. Bei Fragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen,\nIhr Shop-Team`,
+    attachments: [
+      {
+        filename: `${quotationNumber}.pdf`,
+        path: absolutePath
+      }
+    ]
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
 export const sendRepairFinishedEmail = async (
   toEmail: string,
   repairOrderNumber: string,
@@ -215,4 +249,22 @@ export const sendSparePartArrivedNotification = async (
   };
 
   await transporter.sendMail(mailOptions);
+};
+
+export const sendPaymentReminderEmail = async (
+  toEmail: string,
+  invoiceNumber: string,
+  grossTotal: any,
+  customerName?: string | null
+) => {
+  const transporter = getTransporter();
+  const greeting = buildGermanGreeting(customerName);
+  const amount = Number(grossTotal).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || env.SMTP_FROM,
+    to: toEmail,
+    subject: `Zahlungserinnerung – Rechnung ${invoiceNumber}`,
+    text: `${greeting},\n\nwir möchten Sie freundlich an die offene Zahlung der Rechnung ${invoiceNumber} über ${amount} erinnern.\n\nBitte überweisen Sie den Betrag so bald wie möglich.\n\nMit freundlichen Grüßen,\nIhr Shop-Team`,
+  });
 };

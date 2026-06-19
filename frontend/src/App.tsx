@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage'
 import { NewContractPage } from './pages/NewContractPage'
 import { NewRepairOrderPage, RepairOrderDetailPage } from './pages/RepairOrderDetailPage'
 import { RepairOrdersPage } from './pages/RepairOrdersPage'
+import { NewQuotationPage, QuotationDetailPage } from './pages/QuotationDetailPage'
+import { QuotationsPage } from './pages/QuotationsPage'
 import { SearchContractsPage } from './pages/SearchContractsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MobileSignaturePage } from './pages/MobileSignaturePage'
@@ -47,6 +49,9 @@ export default function App() {
                 <Route path="/repair-orders/new" element={<NewRepairOrderPage />} />
                 <Route path="/repair-orders" element={<RepairOrdersPage />} />
                 <Route path="/repair-orders/:repairOrderId" element={<RepairOrderDetailPage />} />
+                <Route path="/quotations/new" element={<NewQuotationPage />} />
+                <Route path="/quotations" element={<QuotationsPage />} />
+                <Route path="/quotations/:quotationId" element={<QuotationDetailPage />} />
                 <Route path="/invoices/new" element={<NewInvoicePage />} />
                 <Route path="/invoices" element={<InvoicesPage />} />
                 <Route path="/invoices/:invoiceId" element={<InvoiceDetailPage />} />

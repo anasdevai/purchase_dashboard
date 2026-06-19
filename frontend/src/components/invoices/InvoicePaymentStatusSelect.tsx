@@ -6,7 +6,15 @@ import { useLanguage } from '../../i18n/LanguageProvider'
 import type { InvoicePaymentStatus } from '../../types/invoice'
 import { invoicePaymentStatusColors } from './invoicePaymentStatusStyles'
 
-const STATUSES: InvoicePaymentStatus[] = ['Paid', 'Open', 'Cancelled']
+const STATUSES: InvoicePaymentStatus[] = [
+  'Draft',
+  'Open',
+  'Sent',
+  'Paid',
+  'PartiallyPaid',
+  'Overdue',
+  'Cancelled'
+]
 
 type InvoicePaymentStatusSelectProps = {
   value: InvoicePaymentStatus | '' | null | undefined

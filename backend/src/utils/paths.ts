@@ -6,6 +6,7 @@ export const storageRoot = path.join(projectRoot, "storage");
 export const contractsRoot = path.join(storageRoot, "contracts");
 export const repairOrdersRoot = path.join(storageRoot, "repair-orders");
 export const invoicesRoot = path.join(storageRoot, "invoices");
+export const quotationsRoot = path.join(storageRoot, "quotations");
 
 export const ensureDirectory = async (dirPath: string) => {
   await fs.promises.mkdir(dirPath, { recursive: true });
@@ -19,6 +20,9 @@ export const getRepairOrderStorageDir = (userId: string, repairOrderNumber: stri
 
 export const getInvoiceStorageDir = (userId: string, invoiceNumber: string) =>
   path.join(invoicesRoot, userId, invoiceNumber);
+
+export const getQuotationStorageDir = (userId: string, quotationNumber: string) =>
+  path.join(quotationsRoot, userId, quotationNumber);
 
 export const toRelativeStoragePath = (absolutePath: string) =>
   path.relative(projectRoot, absolutePath).replace(/\\/g, "/");

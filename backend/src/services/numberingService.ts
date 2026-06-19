@@ -60,6 +60,31 @@ export const generateRepairOrderNumber = async (userId: string) => {
   });
 };
 
+export const generateQuotationNumber = async (userId: string) => {
+  const year = new Date().getFullYear();
+  const prefix = `QT-${year}-`;
+
+  return nextNumber(prefix, async () => {
+    const latest = await prisma.quotation.findFirst({
+      where: {
+        userId,
+        quotationNumber: {
+          startsWith: prefix
+        }
+      },
+      orderBy: {
+        quotationNumber: "desc"
+      },
+      select: {
+        quotationNumber: true
+      }
+    });
+
+    return latest?.quotationNumber ?? null;
+  });
+};
+
+
 const INVOICE_NUMBER_PREFIX = "INV-";
 
 const parseInvoiceSequence = (invoiceNumber: string) => {

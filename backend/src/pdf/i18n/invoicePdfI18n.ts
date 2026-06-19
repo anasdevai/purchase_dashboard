@@ -32,6 +32,10 @@ export type InvoicePdfLabels = {
   taxNumber: string;
   phone: string;
   signatureRole: string;
+  serviceDate: string;
+  dueDate: string;
+  paymentDate: string;
+  paymentReference: string;
 };
 
 const labels: Record<InvoicePdfLanguage, InvoicePdfLabels> = {
@@ -66,7 +70,11 @@ const labels: Record<InvoicePdfLanguage, InvoicePdfLabels> = {
     companyRegistration: "Firmenbuchnummer",
     taxNumber: "Steuernummer",
     phone: "Tel.",
-    signatureRole: "Geschäftsführung"
+    signatureRole: "Geschäftsführung",
+    serviceDate: "Leistungsdatum",
+    dueDate: "Fälligkeitsdatum",
+    paymentDate: "Zahlungsdatum",
+    paymentReference: "Verwendungszweck"
   },
   en: {
     documentTitle: "INVOICE",
@@ -99,7 +107,11 @@ const labels: Record<InvoicePdfLanguage, InvoicePdfLabels> = {
     companyRegistration: "Company registration no.",
     taxNumber: "Tax number",
     phone: "Tel.",
-    signatureRole: "Management"
+    signatureRole: "Management",
+    serviceDate: "Service Date",
+    dueDate: "Due Date",
+    paymentDate: "Payment Date",
+    paymentReference: "Payment Reference"
   }
 };
 

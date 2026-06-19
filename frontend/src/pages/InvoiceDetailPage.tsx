@@ -13,7 +13,17 @@ import {
   Trash2,
 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { downloadInvoicePdf, fetchInvoice, generateInvoicePdf, saveInvoice, emailInvoicePdf } from '../api/invoices'
+import {
+  downloadInvoicePdf,
+  fetchInvoice,
+  generateInvoicePdf,
+  saveInvoice,
+  emailInvoicePdf,
+  copyInvoice,
+  cancelInvoice,
+  sendInvoiceReminder,
+} from '../api/invoices'
+import { fetchEmployees, type Employee } from '../api/repairOrders'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
@@ -50,8 +60,13 @@ type InvoiceForm = Omit<InvoicePayload, 'items'> & {
 const today = () => new Date().toISOString().slice(0, 10)
 
 function createEmptyForm(shopSettings: ShopSettings): InvoiceForm {
+  const d = new Date()
+  d.setDate(d.getDate() + 14)
+  const defaultDue = d.toISOString().slice(0, 10)
   return {
     invoiceDate: today(),
+    serviceDate: today(),
+    dueDate: defaultDue,
     customerName: '',
     customerAddress: '',
     customerPhone: '',
@@ -59,6 +74,11 @@ function createEmptyForm(shopSettings: ShopSettings): InvoiceForm {
     deviceSummary: '',
     repairSummary: '',
     paymentStatus: 'Open',
+    paymentMethod: undefined,
+    paymentDate: '',
+    paymentReference: '',
+    cancellationReason: '',
+    employeeId: '',
     notes: '',
     items: [makeEmptyInvoiceItem(shopSettings)],
   }
@@ -78,6 +98,8 @@ function fromInvoice(invoice: Invoice): InvoiceForm {
     repairOrderId: invoice.repairOrderId ?? undefined,
     invoiceNumber: invoice.invoiceNumber,
     invoiceDate: invoice.invoiceDate.slice(0, 10),
+    serviceDate: invoice.serviceDate ? invoice.serviceDate.slice(0, 10) : today(),
+    dueDate: invoice.dueDate ? invoice.dueDate.slice(0, 10) : undefined,
     customerName: invoice.customerName,
     customerAddress: invoice.customerAddress ?? '',
     customerPhone: invoice.customerPhone ?? '',
@@ -86,6 +108,10 @@ function fromInvoice(invoice: Invoice): InvoiceForm {
     repairSummary: invoice.repairSummary ?? '',
     paymentMethod: invoice.paymentMethod ?? undefined,
     paymentStatus: invoice.paymentStatus ?? undefined,
+    paymentDate: invoice.paymentDate ? invoice.paymentDate.slice(0, 10) : '',
+    paymentReference: invoice.paymentReference ?? '',
+    cancellationReason: invoice.cancellationReason ?? '',
+    employeeId: invoice.employeeId ?? '',
     notes: invoice.notes ?? '',
     items: invoice.items.map((item: InvoiceItem) => ({
       description: item.description,
@@ -105,6 +131,10 @@ function cleanForm(form: InvoiceForm): InvoicePayload {
 
   return {
     ...rest,
+    paymentDate: form.paymentDate || null,
+    paymentReference: form.paymentReference || null,
+    cancellationReason: form.cancellationReason || null,
+    employeeId: form.employeeId || null,
     items: items.map((item) => ({
       description: item.description,
       quantity: Math.max(1, parseWholeNumber(item.quantity, 1)),
@@ -139,12 +169,81 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
 
   const paymentMethods = useMemo(
     () =>
-      (['Cash', 'BankTransfer', 'Card', 'Other'] as const).map((value) => ({
+      (['Cash', 'BankTransfer', 'Card', 'PayPal', 'Other'] as const).map((value) => ({
         value,
         label: t.invoices.paymentMethods[value],
       })),
     [t],
   )
+
+  const [employees, setEmployees] = useState<Employee[]>([])
+
+  useEffect(() => {
+    fetchEmployees()
+      .then((data) => setEmployees(data))
+      .catch((err) => console.error('Failed to fetch employees:', err))
+  }, [])
+
+  const handleCancelInvoice = async () => {
+    if (!invoice) return
+    const reason = window.prompt(language === 'de' ? 'Bitte geben Sie einen Stornierungsgrund ein:' : 'Please enter a cancellation reason:')
+    if (reason === null) return
+
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await cancelInvoice(invoice.id, reason || undefined)
+      setInvoice(updated)
+      setForm(fromInvoice(updated))
+      showToast('success', language === 'de' ? 'Rechnung erfolgreich storniert.' : 'Invoice successfully cancelled.')
+    } catch (err) {
+      logApiError('invoice cancel', err)
+      showToast('error', getFriendlyErrorMessage(err, 'generic', t))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCopyInvoice = async () => {
+    if (!invoice) return
+    setSaving(true)
+    setError(null)
+    try {
+      const copied = await copyInvoice(invoice.id)
+      showToast('success', language === 'de' ? 'Kopie der Rechnung erfolgreich erstellt.' : 'Copy of invoice successfully created.')
+      navigate(`/invoices/${copied.id}`)
+    } catch (err) {
+      logApiError('invoice copy', err)
+      showToast('error', getFriendlyErrorMessage(err, 'generic', t))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSendReminder = () => {
+    if (!invoice) return
+    confirm({
+      title: language === 'de' ? 'Zahlungserinnerung senden' : 'Send Payment Reminder',
+      message: language === 'de' 
+        ? 'Möchten Sie eine Zahlungserinnerung für diese Rechnung an den Kunden senden?' 
+        : 'Do you want to send a payment reminder for this invoice to the customer?',
+      onConfirm: async () => {
+        setSaving(true)
+        try {
+          await sendInvoiceReminder(invoice.id)
+          showToast('success', language === 'de' ? 'Zahlungserinnerung gesendet.' : 'Payment reminder sent.')
+          const updated = await fetchInvoice(invoice.id)
+          setInvoice(updated)
+          setForm(fromInvoice(updated))
+        } catch (err) {
+          logApiError('invoice reminder send', err)
+          showToast('error', language === 'de' ? 'Senden der Zahlungserinnerung fehlgeschlagen.' : 'Failed to send payment reminder.')
+        } finally {
+          setSaving(false)
+        }
+      }
+    })
+  }
 
   useEffect(() => {
     if (!user?.id) return
@@ -338,6 +437,38 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          {invoice ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-secondary h-11 px-5"
+                onClick={handleCopyInvoice}
+                disabled={saving}
+              >
+                {language === 'de' ? 'Kopieren' : 'Copy'}
+              </button>
+              {invoice.paymentStatus !== 'Cancelled' ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary h-11 px-5 text-red-600 hover:bg-red-50"
+                  onClick={handleCancelInvoice}
+                  disabled={saving}
+                >
+                  {language === 'de' ? 'Stornieren' : 'Cancel'}
+                </button>
+              ) : null}
+              {['Sent', 'Open', 'Overdue'].includes(form.paymentStatus || '') ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary h-11 px-5"
+                  onClick={handleSendReminder}
+                  disabled={saving}
+                >
+                  {language === 'de' ? 'Mahnung senden' : 'Send Reminder'}
+                </button>
+              ) : null}
+            </>
+          ) : null}
           <Link to="/invoices" className="btn btn-secondary h-11 px-5">
             {t.invoices.detail.cancel}
           </Link>
@@ -443,7 +574,21 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 onChange={(value) => setField('invoiceDate', value)}
               />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+              <Field
+                label={t.invoices.detail.serviceDate}
+                type="date"
+                value={form.serviceDate ?? today()}
+                onChange={(value) => setField('serviceDate', value)}
+              />
+              <Field
+                label={t.invoices.detail.dueDate}
+                type="date"
+                value={form.dueDate ?? ''}
+                onChange={(value) => setField('dueDate', value)}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
               <label>
                 <span className="label">{t.invoices.detail.paymentMethod}</span>
                 <select
@@ -471,6 +616,46 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 />
               </label>
             </div>
+            <label className="block mt-4">
+              <span className="label">{t.invoices.detail.employee}</span>
+              <select
+                className="input h-11"
+                value={form.employeeId ?? ''}
+                onChange={(event) => setField('employeeId', event.target.value)}
+              >
+                <option value="">{t.invoices.detail.selectEmployee}</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {['Paid', 'PartiallyPaid'].includes(form.paymentStatus || '') ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+                <Field
+                  label={t.invoices.detail.paymentDate}
+                  type="date"
+                  value={form.paymentDate ?? ''}
+                  onChange={(value) => setField('paymentDate', value)}
+                />
+                <Field
+                  label={t.invoices.detail.paymentReference}
+                  value={form.paymentReference ?? ''}
+                  onChange={(value) => setField('paymentReference', value)}
+                />
+              </div>
+            ) : null}
+            {form.paymentStatus === 'Cancelled' && form.cancellationReason ? (
+              <div className="mt-4">
+                <Field
+                  label={t.invoices.detail.cancellationReason}
+                  value={form.cancellationReason ?? ''}
+                  readOnly
+                  onChange={() => undefined}
+                />
+              </div>
+            ) : null}
             <Field
               label={t.invoices.detail.deviceSummary}
               value={form.deviceSummary ?? ''}

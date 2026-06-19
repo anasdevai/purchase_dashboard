@@ -433,20 +433,28 @@ export const renderInvoiceHtml = (
     .filter(Boolean)
     .join("");
 
-  const invoiceInfoRows = `
-    <div class="inv-info__row">
+  const invoiceInfoRows = [
+    `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.invoiceTo)}</span>
       <span class="inv-info__value">${invoiceToValue}</span>
-    </div>
-    <div class="inv-info__row">
+    </div>`,
+    `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.invoiceShort)}</span>
       <span class="inv-info__value">${escapeHtml(invoice.invoiceNumber)}</span>
-    </div>
-    <div class="inv-info__row">
+    </div>`,
+    `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.date)}</span>
       <span class="inv-info__value">${formatDateEuropean(invoice.invoiceDate)}</span>
-    </div>
-  `;
+    </div>`,
+    invoice.serviceDate ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.serviceDate)}</span>
+      <span class="inv-info__value">${formatDateEuropean(invoice.serviceDate)}</span>
+    </div>` : "",
+    invoice.dueDate ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.dueDate)}</span>
+      <span class="inv-info__value">${formatDateEuropean(invoice.dueDate)}</span>
+    </div>` : ""
+  ].filter(Boolean).join("");
 
   const itemRows = invoice.items
     .map(
@@ -489,6 +497,8 @@ export const renderInvoiceHtml = (
   addPaymentRow(t.iban, shopSettings?.iban);
   addPaymentRow(t.bic, shopSettings?.bicSwift);
   addPaymentRow(t.bank, shopSettings?.bankName);
+  addPaymentRow(t.paymentDate, invoice.paymentDate ? formatDateEuropean(invoice.paymentDate) : null);
+  addPaymentRow(t.paymentReference, invoice.paymentReference);
 
   const paymentBlock =
     paymentRows.length > 0

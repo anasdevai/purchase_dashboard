@@ -53,12 +53,17 @@ enum InvoicePaymentMethod {
   Cash
   BankTransfer
   Card
+  PayPal
   Other
 }
 
 enum InvoicePaymentStatus {
-  Paid
+  Draft
   Open
+  Sent
+  Paid
+  PartiallyPaid
+  Overdue
   Cancelled
 }
 
@@ -77,6 +82,9 @@ model User {
   repairCompanies RepairCompany[]
   customers       Customer[]
   assignedRepairs RepairOrder[]   @relation("AssignedEmployeeRepairs")
+  quotations      Quotation[]     @relation("UserQuotations")
+  assignedQuotations Quotation[]   @relation("EmployeeQuotations")
+  assignedInvoices   Invoice[]     @relation("EmployeeInvoices")
 
   @@map("users")
 }
@@ -231,6 +239,8 @@ model RepairOrder {
   history                RepairOrderHistory[]
   assignedEmployee       User?             @relation("AssignedEmployeeRepairs", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
   customer               Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  quotationId            String?           @map("quotation_id")
+  quotation              Quotation?        @relation("QuotationRepairOrders", fields: [quotationId], references: [id], onDelete: SetNull)
 
   @@unique([userId, repairOrderNumber])
   @@index([userId])
@@ -269,6 +279,13 @@ model Invoice {
   grossTotalOverride   Decimal?              @map("gross_total_override") @db.Decimal(12, 2)
   notes                String?
   pdfPath              String?               @map("pdf_path")
+  serviceDate          DateTime?             @map("service_date") @db.Date
+  dueDate              DateTime?             @map("due_date") @db.Date
+  paymentDate          DateTime?             @map("payment_date") @db.Date
+  paymentReference     String?               @map("payment_reference")
+  cancellationReason   String?               @map("cancellation_reason")
+  employeeId           String?               @map("employee_id")
+  employee             User?                 @relation("EmployeeInvoices", fields: [employeeId], references: [id], onDelete: SetNull)
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -347,10 +364,76 @@ model Customer {
   updatedAt    DateTime      @updatedAt @map("updated_at")
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   repairOrders RepairOrder[]
+  quotations   Quotation[]
 
   @@unique([userId, name, phone])
   @@index([userId])
   @@index([name])
   @@index([phone])
   @@map("customers")
+}
+
+enum QuotationStatus {
+  Draft
+  Sent
+  Accepted
+  Rejected
+  Expired
+}
+
+model Quotation {
+  id              String          @id @default(uuid())
+  userId          String          @map("user_id")
+  quotationNumber String          @map("quotation_number")
+  validUntilDate  DateTime        @map("valid_until_date") @db.Date
+  status          QuotationStatus @default(Draft)
+  
+  employeeId      String?         @map("employee_id")
+  
+  customerId      String?         @map("customer_id")
+  customerName    String          @map("customer_name")
+  customerPhone   String          @map("customer_phone")
+  customerEmail   String?         @map("customer_email")
+  customerAddress String?         @map("customer_address")
+  
+  deviceType      String          @map("device_type")
+  brand           String?
+  model           String
+  imeiOrSerial    String?         @map("imei_or_serial")
+  
+  pdfPath         String?         @map("pdf_path")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  user            User            @relation("UserQuotations", fields: [userId], references: [id], onDelete: Cascade)
+  employee        User?           @relation("EmployeeQuotations", fields: [employeeId], references: [id], onDelete: SetNull)
+  customer        Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items           QuotationItem[]
+  repairOrders    RepairOrder[]   @relation("QuotationRepairOrders")
+
+  @@unique([userId, quotationNumber])
+  @@index([userId])
+  @@index([quotationNumber])
+  @@index([customerName])
+  @@index([customerPhone])
+  @@index([model])
+  @@index([createdAt])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String    @map("quotation_id")
+  repairType  String    @map("repair_type")
+  description String
+  unitPrice   Decimal   @map("unit_price") @db.Decimal(12, 2)
+  quantity    Decimal   @default(1) @db.Decimal(12, 2)
+  discount    Decimal?  @db.Decimal(5, 2)
+  lineTotal   Decimal   @map("line_total") @db.Decimal(12, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
+  @@map("quotation_items")
 }

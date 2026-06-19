@@ -205,7 +205,8 @@ export const shopSettingsToPdf = (settings: ReturnType<typeof toResponse>): PdfS
   street: settings.street,
   zipCode: settings.zipCode,
   city: settings.city,
-  country: settings.country
+  country: settings.country,
+  defaultVatRate: settings.defaultVatRate
 });
 
 export const getShopSettingsForUser = async (userId: string) => {

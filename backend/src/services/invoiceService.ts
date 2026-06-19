@@ -16,7 +16,8 @@ import { calculateInvoiceItems } from "../utils/invoiceCalculations.js";
 
 const includeItems = {
   items: { orderBy: { sortOrder: "asc" as const } },
-  repairOrder: { select: { id: true, repairOrderNumber: true } }
+  repairOrder: { select: { id: true, repairOrderNumber: true } },
+  employee: { select: { id: true, name: true } }
 };
 
 const calculateItems = calculateInvoiceItems;
@@ -91,6 +92,12 @@ export const createInvoice = async (userId: string, input: Record<string, unknow
           vatAmountOverride: null,
           grossTotalOverride: null,
           notes: parsed.notes,
+          serviceDate: parsed.serviceDate ?? new Date(),
+          dueDate: parsed.dueDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          paymentDate: parsed.paymentDate,
+          paymentReference: parsed.paymentReference,
+          cancellationReason: parsed.cancellationReason,
+          employeeId: parsed.employeeId,
           items: { create: totals.preparedItems }
         },
         include: includeItems
@@ -218,6 +225,12 @@ export const updateInvoice = async (id: string, userId: string, input: Record<st
         vatAmountOverride: null,
         grossTotalOverride: null,
         notes: parsed.notes,
+        serviceDate: parsed.serviceDate ?? new Date(),
+        dueDate: parsed.dueDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        paymentDate: parsed.paymentDate,
+        paymentReference: parsed.paymentReference,
+        cancellationReason: parsed.cancellationReason,
+        employeeId: parsed.employeeId,
         pdfPath: null,
         items: { create: totals.preparedItems }
       }
@@ -235,11 +248,24 @@ export const updateInvoicePaymentStatus = async (
   await getInvoiceOrThrow(id, userId);
   const parsed = invoicePaymentStatusSchema.parse(input);
 
-  return prisma.invoice.update({
+  const updatedInvoice = await prisma.invoice.update({
     where: { id },
-    data: { paymentStatus: parsed.paymentStatus },
+    data: {
+      paymentStatus: parsed.paymentStatus,
+      cancellationReason: parsed.cancellationReason ?? null,
+      paymentDate: parsed.paymentDate ?? null,
+      paymentReference: parsed.paymentReference ?? null,
+      pdfPath: null
+    },
     include: includeItems
   });
+
+  try {
+    return await attachInvoicePdf(id, userId);
+  } catch (error) {
+    console.error("[invoice] Failed to regenerate PDF on status update:", error);
+    return updatedInvoice;
+  }
 };
 
 export const generatePdfForInvoice = async (
@@ -304,4 +330,53 @@ export const searchInvoices = async (userId: string, query: Record<string, unkno
     take: 100,
     include: includeItems
   });
+};
+
+export const copyInvoice = async (id: string, userId: string) => {
+  const source = await getInvoiceOrThrow(id, userId);
+
+  const items = source.items.map((item) => ({
+    description: item.description,
+    quantity: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+    vatPercent: Number(item.vatPercent)
+  }));
+
+  return createInvoice(userId, {
+    repairOrderId: source.repairOrderId || undefined,
+    customerName: source.customerName,
+    customerAddress: source.customerAddress || undefined,
+    customerPhone: source.customerPhone || undefined,
+    customerEmail: source.customerEmail || undefined,
+    deviceSummary: source.deviceSummary || undefined,
+    repairSummary: source.repairSummary || undefined,
+    paymentMethod: source.paymentMethod || undefined,
+    paymentStatus: "Draft",
+    notes: source.notes || undefined,
+    serviceDate: source.serviceDate ?? new Date(),
+    dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    employeeId: source.employeeId || undefined,
+    items
+  });
+};
+
+export const cancelInvoice = async (id: string, userId: string, reason?: string) => {
+  await getInvoiceOrThrow(id, userId);
+
+  const updatedInvoice = await prisma.invoice.update({
+    where: { id },
+    data: {
+      paymentStatus: "Cancelled",
+      cancellationReason: reason ?? null,
+      pdfPath: null
+    },
+    include: includeItems
+  });
+
+  try {
+    return await attachInvoicePdf(id, userId);
+  } catch (error) {
+    console.error("[invoice] Failed to regenerate PDF on cancellation:", error);
+    return updatedInvoice;
+  }
 };

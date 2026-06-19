@@ -128,5 +128,45 @@ export const sendEmail = async (req: Request, res: Response) => {
     updatedInvoice.customerName
   );
 
+  if (["Draft", "Open"].includes(updatedInvoice.paymentStatus || "")) {
+    await invoiceService.updateInvoicePaymentStatus(paramId(req), userId(req), {
+      paymentStatus: "Sent"
+    });
+  }
+
+  res.json({ success: true });
+};
+
+export const copy = async (req: Request, res: Response) => {
+  const invoice = await invoiceService.copyInvoice(paramId(req), userId(req));
+  res.status(201).json({ invoice });
+};
+
+export const cancel = async (req: Request, res: Response) => {
+  const reason = req.body.cancellationReason;
+  const invoice = await invoiceService.cancelInvoice(paramId(req), userId(req), reason);
+  res.json({ invoice });
+};
+
+export const sendReminder = async (req: Request, res: Response) => {
+  const invoice = await invoiceService.getInvoiceOrThrow(paramId(req), userId(req));
+
+  if (!invoice.customerEmail) {
+    throw new HttpError(400, "Invoice does not have a customer email address configured");
+  }
+
+  await emailService.sendPaymentReminderEmail(
+    invoice.customerEmail,
+    invoice.invoiceNumber,
+    invoice.calculatedGrossTotal,
+    invoice.customerName
+  );
+
+  if (["Open", "Sent"].includes(invoice.paymentStatus || "")) {
+    await invoiceService.updateInvoicePaymentStatus(paramId(req), userId(req), {
+      paymentStatus: "Overdue"
+    });
+  }
+
   res.json({ success: true });
 };

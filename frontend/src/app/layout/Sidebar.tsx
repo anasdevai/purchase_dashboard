@@ -157,6 +157,24 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       ],
     },
     {
+      title: t.nav.sections.quotations,
+      items: [
+        {
+          to: '/quotations/new',
+          label: t.nav.newQuotation,
+          icon: PlusSquare,
+          testId: 'nav-new-quotation',
+        },
+        {
+          to: '/quotations',
+          label: t.nav.quotations,
+          icon: FileText,
+          testId: 'nav-quotations',
+          end: true,
+        },
+      ],
+    },
+    {
       title: t.nav.sections.invoices,
       items: [
         {
