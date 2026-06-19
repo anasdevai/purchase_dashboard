@@ -9,6 +9,14 @@ import { getAuthErrorMessage, logApiError } from '../utils/apiErrors'
 
 const SCLERA_LOGO = '/assets/sclera-logo.png'
 
+/** Header wordmark on blue background — sized independently from the footer logo. */
+const loginHeaderLogoClassName =
+  'login-header-logo block h-full w-auto max-w-none origin-center object-contain invert scale-[2.15] sm:scale-[2.3]'
+
+/** Footer wordmark — fixed small size; never shares header scale/height rules. */
+const loginFooterLogoClassName =
+  'login-footer-logo h-24 w-auto max-w-[30rem] shrink-0 object-contain sm:h-28 sm:max-w-[34rem]'
+
 const loginInputClassName =
   'input h-12 border-slate-200 text-sm text-[#111111] placeholder:text-slate-400 focus:border-[#111111] focus:ring-[#111111]/15'
 
@@ -67,17 +75,19 @@ export function LoginPage() {
 
       <div className="flex flex-1 items-center justify-center px-4 pb-10">
         <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200/60">
-        <div className="bg-primary px-8 pb-3 pt-2 text-center text-white">
-            <img
-              src={SCLERA_LOGO}
-              alt="Sclera"
-              className="mx-auto h-28 w-auto max-w-[380px] object-contain invert sm:h-32"
-              data-testid="login-logo"
-            />
-            <h1 className="mt-3 text-lg font-bold leading-snug tracking-tight">
+          <div className="bg-primary px-5 pb-4 pt-3 text-center text-white sm:px-6">
+            <div className="login-header-logo-wrap mx-auto flex h-[4.5rem] max-w-full items-center justify-center overflow-hidden sm:h-20">
+              <img
+                src={SCLERA_LOGO}
+                alt="Sclera"
+                className={loginHeaderLogoClassName}
+                data-testid="login-logo"
+              />
+            </div>
+            <h1 className="mt-2.5 text-lg font-bold leading-snug tracking-tight sm:mt-3 sm:text-xl">
               {t.login.appTitle}
             </h1>
-            <p className="mt-2 text-sm font-normal text-white/90">
+            <p className="mt-1.5 text-sm font-normal text-white/90 sm:mt-2">
               {mode === 'signup' ? t.login.signupSubtitle : t.login.subtitle}
             </p>
           </div>
@@ -191,7 +201,8 @@ export function LoginPage() {
                 <img
                   src={SCLERA_LOGO}
                   alt="Sclera"
-                  className="h-[102px] w-auto max-w-[10rem] object-contain"
+                  className={loginFooterLogoClassName}
+                  data-testid="login-footer-logo"
                 />
               </div>
             </div>
