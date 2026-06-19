@@ -72,9 +72,16 @@ export function RepairOrdersPage() {
   }
 
   const handleStatusChange = async (repairOrder: RepairOrder, nextStatus: RepairOrderStatus) => {
+    const commentInput = window.prompt(
+      t.repairOrders.detail.historyPromptCommentMessage.replace('{status}', t.repairOrders.statuses[nextStatus])
+    )
+    if (commentInput === null) {
+      return
+    }
+
     setUpdatingStatusId(repairOrder.id)
     try {
-      const updated = await updateRepairOrderStatus(repairOrder.id, nextStatus)
+      const updated = await updateRepairOrderStatus(repairOrder.id, nextStatus, commentInput.trim() || undefined)
       const shouldStayVisible =
         filter === 'active'
           ? nextStatus !== 'Completed' && nextStatus !== 'Cancelled'
@@ -168,6 +175,7 @@ export function RepairOrdersPage() {
                   <th className="py-2 pr-4">{t.repairOrders.table.phone}</th>
                   <th className="py-2 pr-4">{t.repairOrders.table.device}</th>
                   <th className="py-2 pr-4">{t.repairOrders.table.estimate}</th>
+                  <th className="py-2 pr-4">{t.repairOrders.detail.remainingAmount}</th>
                   <th className="py-2 pr-4">{t.repairOrders.table.date}</th>
                   <th className="py-2 pr-4">{t.repairOrders.table.status}</th>
                   <th className="py-2 pr-4">{t.repairOrders.table.repairCompany}</th>
@@ -187,6 +195,16 @@ export function RepairOrdersPage() {
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4">
                       {formatMoney(Number(order.estimatedPrice ?? 0))}
+                    </td>
+                    <td className="whitespace-nowrap py-3 pr-4 font-semibold text-slate-900">
+                      {(() => {
+                        const price = Number(order.estimatedPrice ?? 0)
+                        const discount = Number(order.discountPercent ?? 0)
+                        const deposit = Number(order.depositAmount ?? 0)
+                        const total = price * (1 - discount / 100)
+                        const remaining = total - deposit
+                        return formatMoney(remaining)
+                      })()}
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4">{formatDate(order.createdAt.slice(0, 10))}</td>
                     <td className="whitespace-nowrap py-3 pr-4">

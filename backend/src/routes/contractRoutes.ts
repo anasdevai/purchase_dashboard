@@ -27,9 +27,9 @@ contractRouter.post("/:id/files", upload.single("file"), asyncHandler(contractCo
 contractRouter.post("/:id/signature", upload.single("signature"), asyncHandler(contractController.uploadSignature));
 contractRouter.post("/:id/signature-qr", asyncHandler(contractController.generateSignatureQr));
 contractRouter.get("/:id/signature-status", asyncHandler(contractController.getSignatureStatus));
-contractRouter.post("/:id/email", asyncHandler(contractController.sendEmail));
 contractRouter.post("/:id/complete", asyncHandler(contractController.complete));
 contractRouter.post("/:id/cancel", asyncHandler(contractController.cancel));
 contractRouter.delete("/:id", asyncHandler(contractController.cancel));
 contractRouter.get("/:id/pdf", asyncHandler(contractController.openPdf));
 contractRouter.get("/:id/pdf/download", asyncHandler(contractController.downloadPdf));
+contractRouter.post("/:id/email", asyncHandler(contractController.sendEmail));

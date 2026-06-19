@@ -26,6 +26,34 @@ export type OptionLabels = {
   Kabel: string
   Tragetasche: string
   Sonstiges: string
+  // Salutation options
+  Mr: string
+  Ms: string
+  Diverse: string
+  // ID type options
+  'ID card': string
+  'Passport': string
+  "Driver's license": string
+  // iCloud status
+  Unlocked: string
+  Locked: string
+  // MDM status
+  Yes: string
+  No: string
+  // Warranty
+  'AppleCare+': string
+  'Manufacturer warranty': string
+  None: string
+  // Condition
+  New: string
+  Acceptable: string
+  // Payment methods
+  'Debit card': string
+  PayPal: string
+  // Payment status
+  Paid: string
+  Pending: string
+  'Partial payment': string
 }
 
 export type TranslationSchema = {
@@ -88,6 +116,7 @@ export type TranslationSchema = {
       overview: string
       contract: string
       repairOrders: string
+      quotations: string
       invoices: string
       settings: string
     }
@@ -97,6 +126,8 @@ export type TranslationSchema = {
     searchContracts: string
     newRepairOrder: string
     repairOrders: string
+    newQuotation: string
+    quotations: string
     newInvoice: string
     invoices: string
     settings: string
@@ -197,43 +228,13 @@ export type TranslationSchema = {
     photosRequiredHint: string
     checkAndSave: string
     salutation: string
+    salutationPlaceholder: string
     firstName: string
     firstNamePlaceholder: string
     firstNameRequired: string
     lastName: string
     lastNamePlaceholder: string
     lastNameRequired: string
-    street: string
-    streetPlaceholder: string
-    streetRequired: string
-    zipCode: string
-    zipCodePlaceholder: string
-    zipCodeRequired: string
-    city: string
-    cityPlaceholder: string
-    cityRequired: string
-    idType: string
-    osVersion: string
-    osVersionPlaceholder: string
-    icloudStatus: string
-    icloudStatusRequired: string
-    mdmStatus: string
-    warranty: string
-    purchaseReceiptAvailable: string
-    paymentStatus: string
-    notes: string
-    notesPlaceholder: string
-    signatureMethodOnsite: string
-    signatureMethodQr: string
-    qrSignatureTitle: string
-    qrSignatureInstructions: string
-    qrSignatureStatusWaiting: string
-    qrSignatureStatusSigned: string
-    qrSignatureGenerateBtn: string
-    customerSignatureLink: string
-    openSignaturePage: string
-    copySignatureLink: string
-    signatureLinkCopied: string
     fullName: string
     fullNamePlaceholder: string
     fullNameRequired: string
@@ -249,9 +250,20 @@ export type TranslationSchema = {
     dob: string
     dobOptional: string
     dobRequired: string
+    street: string
+    streetPlaceholder: string
+    streetRequired: string
+    zipCode: string
+    zipCodePlaceholder: string
+    zipCodeRequired: string
+    city: string
+    cityPlaceholder: string
+    cityRequired: string
     address: string
     addressPlaceholder: string
     addressRequired: string
+    idType: string
+    idTypePlaceholder: string
     idDocument: string
     idDocumentPlaceholder: string
     idDocumentRequired: string
@@ -274,6 +286,17 @@ export type TranslationSchema = {
     savedSignatureReplace: string
     clear: string
     saveSignature: string
+    signatureMethodOnsite: string
+    signatureMethodQr: string
+    qrSignatureTitle: string
+    qrSignatureInstructions: string
+    qrSignatureStatusWaiting: string
+    qrSignatureStatusSigned: string
+    qrSignatureGenerateBtn: string
+    customerSignatureLink: string
+    openSignaturePage: string
+    copySignatureLink: string
+    signatureLinkCopied: string
     nextDeviceInfo: string
     back: string
     next: string
@@ -306,6 +329,10 @@ export type TranslationSchema = {
     priceMin: string
     paymentMethod: string
     paymentMethodRequired: string
+    paymentStatus: string
+    paymentStatusPlaceholder: string
+    notes: string
+    notesPlaceholder: string
     storage: string
     storagePlaceholder: string
     storageRequired: string
@@ -322,6 +349,16 @@ export type TranslationSchema = {
     batteryHealth: string
     batteryHealthPlaceholder: string
     batteryHealthRequired: string
+    icloudStatus: string
+    icloudStatusPlaceholder: string
+    icloudStatusRequired: string
+    mdmStatus: string
+    mdmStatusPlaceholder: string
+    osVersion: string
+    osVersionPlaceholder: string
+    warranty: string
+    warrantyPlaceholder: string
+    purchaseReceiptAvailable: string
     damageNotes: string
     damageNotesPlaceholder: string
     damageNotesRequired: string
@@ -375,6 +412,7 @@ export type TranslationSchema = {
       draftSaveFailed: string
       completeFailed: string
       documentTypeInvalid: string
+      confirmationsRequired: string
     }
     options: OptionLabels
   }
@@ -586,11 +624,16 @@ export type TranslationSchema = {
       Cash: string
       BankTransfer: string
       Card: string
+      PayPal: string
       Other: string
     }
     paymentStatuses: {
-      Paid: string
+      Draft: string
       Open: string
+      Sent: string
+      Paid: string
+      PartiallyPaid: string
+      Overdue: string
       Cancelled: string
     }
     detail: {
@@ -617,6 +660,13 @@ export type TranslationSchema = {
       invoiceNumber: string
       invoiceNumberAutoGenerated: string
       invoiceDate: string
+      serviceDate: string
+      dueDate: string
+      paymentDate: string
+      paymentReference: string
+      cancellationReason: string
+      employee: string
+      selectEmployee: string
       paymentMethod: string
       paymentStatus: string
       deviceSummary: string
@@ -695,6 +745,7 @@ export type TranslationSchema = {
       problemDescriptionRequired: string
       visibleDamageRequired: string
       priceInvalid: string
+      discountInvalid: string
       depositInvalid: string
       dateInvalid: string
       otherAccessoryRequired: string
@@ -717,6 +768,29 @@ export type TranslationSchema = {
       AppointmentScheduled: string
       Completed: string
       Cancelled: string
+    }
+    issueCategories: {
+      Display: string
+      Battery: string
+      WaterDamage: string
+      Software: string
+      LogicBoard: string
+      Camera: string
+      ChargingPort: string
+      Keyboard: string
+      Other: string
+    }
+    sparePartStatuses: {
+      NotOrdered: string
+      Ordered: string
+      Arrived: string
+      Installed: string
+    }
+    paymentMethods: {
+      Cash: string
+      DebitCard: string
+      BankTransfer: string
+      PayPal: string
     }
     accessories: {
       charger: string
@@ -757,10 +831,21 @@ export type TranslationSchema = {
       selectAccessory: string
       accessoriesManual: string
       problemDescription: string
+      issueCategory: string
+      selectIssueCategory: string
+      diagnosis: string
+      requiredSpareParts: string
+      sparePartStatus: string
+      selectSparePartStatus: string
       visibleDamage: string
       technicianNotes: string
       estimatedPrice: string
+      discountPercent: string
+      totalPrice: string
+      remainingAmount: string
       depositAmount: string
+      paymentMethod: string
+      selectPaymentMethod: string
       expectedCompletionDate: string
       status: string
       externalRepairCompany: string
@@ -773,6 +858,8 @@ export type TranslationSchema = {
       noRepairCompanies: string
       repairOrderNumber: string
       savedSuccess: string
+      assignedEmployee: string
+      selectAssignedEmployee: string
       actionsTitle: string
       viewRepairOrder: string
       editRepairOrder: string
@@ -787,6 +874,18 @@ export type TranslationSchema = {
       sendEmailConfirmMessage: string
       emailSentSuccess: string
       emailSendFailed: string
+      historyTitle: string
+      historyCommentPlaceholder: string
+      historyAddCommentBtn: string
+      historyAddingComment: string
+      historyStatusChanged: string
+      historyStatusSet: string
+      historyNoActivity: string
+      historyCommentEmptyError: string
+      historyPromptCommentTitle: string
+      historyPromptCommentMessage: string
+      historyPromptCommentSubmit: string
+      historyCommentAdded: string
       ocrSectionTitle: string
       ocrSectionHint: string
       ocrScanButton: string
@@ -795,6 +894,99 @@ export type TranslationSchema = {
       ocrConfidence: string
       ocrUnclearFields: string
       ocrAppliedHint: string
+    }
+  }
+  quotations: {
+    title: string
+    newQuotation: string
+    searchPlaceholder: string
+    allStatuses: string
+    noResults: string
+    confirmDelete: string
+    errors: {
+      loadFailed: string
+      statusFailed: string
+      loadDetailFailed: string
+      saveFailed: string
+      pdfFailed: string
+      deleteFailed: string
+      emailFailed: string
+      convertFailed: string
+      copyFailed: string
+    }
+    table: {
+      quotationNumber: string
+      customer: string
+      phone: string
+      device: string
+      total: string
+      date: string
+      validUntil: string
+      status: string
+      action: string
+    }
+    statuses: {
+      Draft: string
+      Sent: string
+      Accepted: string
+      Rejected: string
+      Expired: string
+    }
+    detail: {
+      loading: string
+      titleNew: string
+      titleExisting: string
+      description: string
+      backToList: string
+      saveQuotation: string
+      saving: string
+      customerInfo: string
+      deviceInfo: string
+      quotationItems: string
+      customerName: string
+      customerPhone: string
+      customerEmail: string
+      customerAddress: string
+      deviceType: string
+      brand: string
+      model: string
+      imeiOrSerial: string
+      notes: string
+      notesPlaceholder: string
+      validUntilDate: string
+      status: string
+      quotationNumber: string
+      actionsTitle: string
+      downloadPdf: string
+      sendEmailBtn: string
+      sendEmailConfirmTitle: string
+      sendEmailConfirmMessage: string
+      emailSentSuccess: string
+      emailSendFailed: string
+      copyBtn: string
+      copySuccess: string
+      copyFailed: string
+      convertBtn: string
+      convertConfirmTitle: string
+      convertConfirmMessage: string
+      convertSuccess: string
+      convertFailed: string
+      acceptBtn: string
+      rejectBtn: string
+      statusChangedSuccess: string
+      addItem: string
+      repairType: string
+      descriptionCol: string
+      unitPrice: string
+      quantity: string
+      discount: string
+      total: string
+      netAmount: string
+      vatAmount: string
+      grossTotal: string
+      pricesIncludeVatNote: string
+      employee: string
+      selectEmployee: string
     }
   }
   language: {

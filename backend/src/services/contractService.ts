@@ -2,6 +2,7 @@ import fs from "node:fs";
 import crypto from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { env } from "../config/env.js";
+import { saveSignatureByToken } from "./fileService.js";
 import { prisma } from "../config/prisma.js";
 import { completeContractSchema, draftContractSchema, searchContractsSchema } from "../validators/contractValidators.js";
 import { requiredCompletionFileTypes } from "../validators/fileValidators.js";
@@ -10,8 +11,7 @@ import { HttpError } from "../utils/httpError.js";
 import { ensureDirectory, getContractStorageDir } from "../utils/paths.js";
 import { generateContractNumber } from "./numberingService.js";
 import { generateContractPdf } from "./pdfService.js";
-import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
-import { saveSignatureByToken } from "./fileService.js";
+import { getShopSettingsForUser, shopSettingsToPdf, getDefaultVatPercent } from "./settingsService.js";
 
 const includeFiles = {
   files: true
@@ -192,40 +192,40 @@ const toCompletionValidationInput = (contract: ContractWithFiles) => {
     customerStreet: contract.customerStreet ?? (legacyAddress || undefined),
     customerZipCode: contract.customerZipCode ?? (legacyAddress ? "-" : undefined),
     customerCity: contract.customerCity ?? (legacyAddress ? "-" : undefined),
-  idType: contract.idType ?? undefined,
-  customerName: contract.customerName ?? undefined,
-  customerAddress: contract.customerAddress ?? undefined,
-  customerPhone: contract.customerPhone ?? undefined,
-  customerEmail: contract.customerEmail ?? undefined,
-  customerDateOfBirth: contract.customerDateOfBirth ?? undefined,
-  idDocumentNumber: contract.idDocumentNumber ?? undefined,
-  deviceType: contract.deviceType ?? undefined,
-  brand: contract.brand ?? undefined,
-  model: contract.model ?? undefined,
-  imei: contract.imei ?? undefined,
-  serialNumber: contract.serialNumber ?? undefined,
-  storage: contract.storage ?? undefined,
-  color: contract.color ?? undefined,
-  condition: contract.condition ?? undefined,
-  accessories: contract.accessories ?? undefined,
-  batteryHealth: contract.batteryHealth ?? undefined,
-  osVersion: contract.osVersion ?? undefined,
-  icloudStatus: contract.icloudStatus ?? "Unlocked",
-  mdmStatus: contract.mdmStatus ?? undefined,
-  warranty: contract.warranty ?? undefined,
-  purchaseReceiptAvailable: contract.purchaseReceiptAvailable ?? undefined,
-  paymentStatus: contract.paymentStatus ?? undefined,
-  notes: contract.notes ?? undefined,
-  damageNotes: contract.damageNotes ?? undefined,
-  internalNotes: contract.internalNotes ?? undefined,
-  purchasePrice: contract.purchasePrice ? contract.purchasePrice.toString() : undefined,
-  paymentMethod: contract.paymentMethod ?? undefined,
-  ownershipConfirmed: contract.ownershipConfirmed,
-  notStolenConfirmed: contract.notStolenConfirmed,
-  icloudRemoved: contract.icloudRemoved,
-  googleLockRemoved: contract.googleLockRemoved,
-  otherLockRemoved: contract.otherLockRemoved,
-  factoryResetConfirmed: contract.factoryResetConfirmed
+    customerName: contract.customerName ?? undefined,
+    customerAddress: contract.customerAddress ?? undefined,
+    customerPhone: contract.customerPhone ?? undefined,
+    customerEmail: contract.customerEmail ?? undefined,
+    customerDateOfBirth: contract.customerDateOfBirth ?? undefined,
+    idDocumentNumber: contract.idDocumentNumber ?? undefined,
+    idType: contract.idType ?? undefined,
+    deviceType: contract.deviceType ?? undefined,
+    brand: contract.brand ?? undefined,
+    model: contract.model ?? undefined,
+    imei: contract.imei ?? undefined,
+    serialNumber: contract.serialNumber ?? undefined,
+    storage: contract.storage ?? undefined,
+    color: contract.color ?? undefined,
+    condition: contract.condition ?? undefined,
+    accessories: contract.accessories ?? undefined,
+    batteryHealth: contract.batteryHealth ?? undefined,
+    osVersion: contract.osVersion ?? undefined,
+    icloudStatus: contract.icloudStatus ?? "Unlocked",
+    mdmStatus: contract.mdmStatus ?? undefined,
+    warranty: contract.warranty ?? undefined,
+    purchaseReceiptAvailable: contract.purchaseReceiptAvailable ?? undefined,
+    damageNotes: contract.damageNotes ?? undefined,
+    internalNotes: contract.internalNotes ?? undefined,
+    purchasePrice: contract.purchasePrice ? contract.purchasePrice.toString() : undefined,
+    paymentMethod: contract.paymentMethod ?? undefined,
+    paymentStatus: contract.paymentStatus ?? undefined,
+    notes: contract.notes ?? undefined,
+    ownershipConfirmed: contract.ownershipConfirmed,
+    notStolenConfirmed: contract.notStolenConfirmed,
+    icloudRemoved: contract.icloudRemoved,
+    googleLockRemoved: contract.googleLockRemoved,
+    otherLockRemoved: contract.otherLockRemoved,
+    factoryResetConfirmed: contract.factoryResetConfirmed
   };
 };
 
@@ -342,12 +342,27 @@ export const completeContract = async (
   );
   assertCompletionFiles(contract);
 
-  const pdfShopSettings = shopSettingsToPdf(await getShopSettingsForUser(userId));
+  const shopSettings = await getShopSettingsForUser(userId);
+  const pdfShopSettings = shopSettingsToPdf(shopSettings);
+
+  const employee = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true }
+  });
+  const employeeName = employee?.name ?? "";
+
+  const vatPercent = getDefaultVatPercent(shopSettings);
+  const grossPrice = Number(contract.purchasePrice ?? 0);
+  const netPrice = grossPrice / (1 + vatPercent / 100);
+  const vatAmount = grossPrice - netPrice;
 
   const pdfPath = await generateContractPdf(
     {
       ...contract,
-      status: "Completed"
+      status: "Completed",
+      employeeName,
+      netPrice,
+      vatAmount
     },
     pdfShopSettings
   );
@@ -512,3 +527,4 @@ export const submitSignatureByToken = async (token: string, file: Express.Multer
 
   return saveSignatureByToken(contract.id, contract.userId, contract.contractNumber, file);
 };
+

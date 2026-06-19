@@ -455,52 +455,56 @@ export const renderInvoiceHtml = (
     .filter(Boolean)
     .join("");
 
-  const invoiceInfoRows = `
-    <div class="inv-info__row">
+  const invoiceInfoRows = [
+    `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.invoiceTo)}</span>
       <span class="inv-info__value">${invoiceToValue}</span>
-    </div>
-    ${
-      hasText(invoice.customerPhone)
-        ? `<div class="inv-info__row">
+    </div>`,
+    hasText(invoice.customerPhone)
+      ? `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.phoneLabel)}</span>
       <span class="inv-info__value">${escapeHtml(String(invoice.customerPhone).trim())}</span>
     </div>`
-        : ""
-    }
-    ${
-      hasText(invoice.customerEmail)
-        ? `<div class="inv-info__row">
+      : "",
+    hasText(invoice.customerEmail)
+      ? `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.emailLabel)}</span>
       <span class="inv-info__value">${escapeHtml(String(invoice.customerEmail).trim())}</span>
     </div>`
-        : ""
-    }
-    <div class="inv-info__row">
-      <span class="inv-info__label">${escapeHtml(t.invoiceNumber)}</span>
+      : "",
+    `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.invoiceNumber ?? t.invoiceShort)}</span>
       <span class="inv-info__value">${escapeHtml(invoice.invoiceNumber)}</span>
-    </div>
-    <div class="inv-info__row">
+    </div>`,
+    `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.date)}</span>
       <span class="inv-info__value">${formatDateEuropean(invoice.invoiceDate)}</span>
-    </div>
-    ${
-      hasText(invoice.paymentStatus)
-        ? `<div class="inv-info__row">
+    </div>`,
+    invoice.serviceDate
+      ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.serviceDate)}</span>
+      <span class="inv-info__value">${formatDateEuropean(invoice.serviceDate)}</span>
+    </div>`
+      : "",
+    invoice.dueDate
+      ? `<div class="inv-info__row">
+      <span class="inv-info__label">${escapeHtml(t.dueDate)}</span>
+      <span class="inv-info__value">${formatDateEuropean(invoice.dueDate)}</span>
+    </div>`
+      : "",
+    hasText(invoice.paymentStatus)
+      ? `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.paymentStatus)}</span>
       <span class="inv-info__value">${escapeHtml(translateInvoicePaymentStatus(invoice.paymentStatus, language))}</span>
     </div>`
-        : ""
-    }
-    ${
-      hasText(invoice.paymentMethod)
-        ? `<div class="inv-info__row">
+      : "",
+    hasText(invoice.paymentMethod)
+      ? `<div class="inv-info__row">
       <span class="inv-info__label">${escapeHtml(t.paymentMethod)}</span>
       <span class="inv-info__value">${escapeHtml(translateInvoicePaymentMethod(invoice.paymentMethod, language))}</span>
     </div>`
-        : ""
-    }
-  `;
+      : ""
+  ].filter(Boolean).join("");
 
   const itemRows = items
     .map(
@@ -544,6 +548,8 @@ export const renderInvoiceHtml = (
   addPaymentRow(t.iban, shopSettings?.iban);
   addPaymentRow(t.bic, shopSettings?.bicSwift);
   addPaymentRow(t.bank, shopSettings?.bankName);
+  addPaymentRow(t.paymentDate, invoice.paymentDate ? formatDateEuropean(invoice.paymentDate) : null);
+  addPaymentRow(t.paymentReference, invoice.paymentReference);
 
   const paymentBlock =
     paymentRows.length > 0

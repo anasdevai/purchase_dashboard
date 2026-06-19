@@ -14,6 +14,7 @@ export function InvoicesPage() {
   const { showToast } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [date, setDate] = useState('')
+  const [statusFilter, setStatusFilter] = useState<InvoicePaymentStatus | ''>('')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -68,6 +69,11 @@ export function InvoicesPage() {
     }
   }
 
+  const filteredInvoices = invoices.filter((invoice) => {
+    if (!statusFilter) return true
+    return invoice.paymentStatus === statusFilter
+  })
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -99,8 +105,16 @@ export function InvoicesPage() {
               />
             </div>
             <input data-testid="invoices-date-filter" className="input w-full sm:w-48" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
+            <InvoicePaymentStatusSelect
+              className="w-full sm:w-48"
+              size="sm"
+              allowEmpty
+              emptyLabel={language === 'de' ? '-- Alle Status --' : '-- All Statuses --'}
+              value={statusFilter}
+              onChange={(value) => setStatusFilter(value || '')}
+            />
             <div className="text-xs font-semibold text-slate-500">
-              {interpolate(t.table.resultCount, { count: invoices.length })}
+              {interpolate(t.table.resultCount, { count: filteredInvoices.length })}
             </div>
           </div>
 
@@ -112,18 +126,22 @@ export function InvoicesPage() {
                   <th className="py-2 pr-4">{t.invoices.table.customer}</th>
                   <th className="py-2 pr-4">{t.invoices.table.phone}</th>
                   <th className="py-2 pr-4">{t.invoices.table.date}</th>
+                  <th className="py-2 pr-4">{language === 'de' ? 'Fällig am' : 'Due date'}</th>
                   <th className="py-2 pr-4">{t.invoices.table.payment}</th>
                   <th className="py-2 pr-4">{t.invoices.table.grossTotal}</th>
                   <th className="py-2 pr-4 text-right">{t.invoices.table.action}</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
-                {invoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <tr key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="border-t border-slate-200">
                     <td className="whitespace-nowrap py-3 pr-4 font-medium text-slate-900">{invoice.invoiceNumber}</td>
                     <td className="py-3 pr-4">{invoice.customerName}</td>
                     <td className="whitespace-nowrap py-3 pr-4">{invoice.customerPhone || t.common.dash}</td>
                     <td className="whitespace-nowrap py-3 pr-4">{formatDate(invoice.invoiceDate.slice(0, 10))}</td>
+                    <td className="whitespace-nowrap py-3 pr-4">
+                      {invoice.dueDate ? formatDate(invoice.dueDate.slice(0, 10)) : t.common.dash}
+                    </td>
                     <td className="whitespace-nowrap py-3 pr-4">
                       <InvoicePaymentStatusSelect
                         testId={`invoice-payment-status-${invoice.id}`}
@@ -176,9 +194,9 @@ export function InvoicesPage() {
                     </td>
                   </tr>
                 ))}
-                {invoices.length === 0 ? (
+                {filteredInvoices.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
+                    <td colSpan={8} className="py-8 text-center text-sm text-slate-500">
                       {t.invoices.noResults}
                     </td>
                   </tr>

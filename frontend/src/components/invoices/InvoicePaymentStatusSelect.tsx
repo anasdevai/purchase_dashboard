@@ -8,7 +8,15 @@ import type { InvoicePaymentStatus } from '../../types/invoice'
 import { floatingMenuListClass } from '../common/floatingMenuStyles'
 import { invoicePaymentStatusColors } from './invoicePaymentStatusStyles'
 
-const STATUSES: InvoicePaymentStatus[] = ['Paid', 'Open', 'Cancelled']
+const STATUSES: InvoicePaymentStatus[] = [
+  'Draft',
+  'Open',
+  'Sent',
+  'Paid',
+  'PartiallyPaid',
+  'Overdue',
+  'Cancelled'
+]
 
 type InvoicePaymentStatusSelectProps = {
   value: InvoicePaymentStatus | '' | null | undefined
@@ -38,7 +46,7 @@ export function InvoicePaymentStatusSelect(props: InvoicePaymentStatusSelectProp
   const menuStyle = useFloatingMenu(open, buttonRef, menuRef)
 
   const selectedStatus =
-    typeof props.value === 'string' && props.value !== ''
+    props.value !== '' && props.value !== null && props.value !== undefined
       ? (props.value as InvoicePaymentStatus)
       : null
 

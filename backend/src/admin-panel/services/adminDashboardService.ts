@@ -45,6 +45,14 @@ export const getGlobalDashboard = async () => {
     workPendingRepairOrders,
     sentToRepairCompanyOrders,
     appointmentScheduledOrders,
+    newRepairOrders,
+    receivedRepairOrders,
+    inDiagnosisRepairOrders,
+    waitingForPartsRepairOrders,
+    sparePartArrivedRepairOrders,
+    inRepairRepairOrders,
+    finishedRepairOrders,
+    readyForPickupRepairOrders,
     completedRepairOrders,
     cancelledRepairOrders,
 
@@ -87,6 +95,14 @@ export const getGlobalDashboard = async () => {
     prisma.repairOrder.count({ where: { status: "WorkPending" } }),
     prisma.repairOrder.count({ where: { status: "SentToRepairCompany" } }),
     prisma.repairOrder.count({ where: { status: "AppointmentScheduled" } }),
+    prisma.repairOrder.count({ where: { status: "New" } }),
+    prisma.repairOrder.count({ where: { status: "Received" } }),
+    prisma.repairOrder.count({ where: { status: "InDiagnosis" } }),
+    prisma.repairOrder.count({ where: { status: "WaitingForParts" } }),
+    prisma.repairOrder.count({ where: { status: "SparePartArrived" } }),
+    prisma.repairOrder.count({ where: { status: "InRepair" } }),
+    prisma.repairOrder.count({ where: { status: "Finished" } }),
+    prisma.repairOrder.count({ where: { status: "ReadyForPickup" } }),
     prisma.repairOrder.count({ where: { status: "Completed" } }),
     prisma.repairOrder.count({ where: { status: "Cancelled" } }),
 
@@ -174,10 +190,23 @@ export const getGlobalDashboard = async () => {
       workPending: workPendingRepairOrders,
       sentToRepairCompany: sentToRepairCompanyOrders,
       appointmentScheduled: appointmentScheduledOrders,
+      new: newRepairOrders,
+      received: receivedRepairOrders,
+      inDiagnosis: inDiagnosisRepairOrders,
+      waitingForParts: waitingForPartsRepairOrders,
+      sparePartArrived: sparePartArrivedRepairOrders,
+      inRepair: inRepairRepairOrders,
+      finished: finishedRepairOrders,
+      readyForPickup: readyForPickupRepairOrders,
       completed: completedRepairOrders,
       cancelled: cancelledRepairOrders,
       inProgress:
-        workPendingRepairOrders + sentToRepairCompanyOrders + appointmentScheduledOrders,
+        workPendingRepairOrders +
+        sentToRepairCompanyOrders +
+        appointmentScheduledOrders +
+        inDiagnosisRepairOrders +
+        waitingForPartsRepairOrders +
+        inRepairRepairOrders,
     },
     recentUsers,
   };

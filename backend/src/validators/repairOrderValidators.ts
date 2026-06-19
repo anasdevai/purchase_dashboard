@@ -5,6 +5,14 @@ export const repairOrderStatuses = [
   "WorkPending",
   "SentToRepairCompany",
   "AppointmentScheduled",
+  "New",
+  "Received",
+  "InDiagnosis",
+  "WaitingForParts",
+  "SparePartArrived",
+  "InRepair",
+  "Finished",
+  "ReadyForPickup",
   "Completed",
   "Cancelled"
 ] as const;
@@ -12,6 +20,32 @@ export const repairOrderStatuses = [
 export const repairOrderListFilters = [
   "active",
   ...repairOrderStatuses
+] as const;
+
+export const issueCategoryValues = [
+  "Display",
+  "Battery",
+  "WaterDamage",
+  "Software",
+  "LogicBoard",
+  "Camera",
+  "ChargingPort",
+  "Keyboard",
+  "Other"
+] as const;
+
+export const sparePartStatuses = [
+  "NotOrdered",
+  "Ordered",
+  "Arrived",
+  "Installed"
+] as const;
+
+export const repairPaymentMethods = [
+  "Cash",
+  "DebitCard",
+  "BankTransfer",
+  "PayPal"
 ] as const;
 
 const optionalText = z.preprocess(
@@ -51,17 +85,31 @@ export const repairOrderSchema = z.object({
   passwordPin: optionalText,
   accessoriesReceived: optionalText,
   problemDescription: requiredText(2000),
+  issueCategory: z.enum(issueCategoryValues).optional(),
+  diagnosis: z.preprocess(
+    (value) => (value === "" || value === null ? undefined : value),
+    z.string().trim().max(3000).optional()
+  ),
+  requiredSpareParts: optionalText,
+  sparePartStatus: z.enum(sparePartStatuses).optional(),
   visibleDamage: requiredText(2000),
   technicianNotes: optionalText,
   estimatedPrice: optionalMoney,
+  discountPercent: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce.number().min(0).max(100).optional()
+  ),
   depositAmount: optionalMoney,
+  paymentMethod: z.enum(repairPaymentMethods).optional(),
   expectedCompletionDate: optionalDate,
   status: z.enum(repairOrderStatuses).optional(),
   repairCompanyId: z.preprocess(
     (value) => (value === "" || value === null || value === undefined ? undefined : value),
     z.string().uuid().optional()
   ),
-  repairCompanyNotes: optionalText
+  repairCompanyNotes: optionalText,
+  assignedEmployeeId: z.string().uuid().optional().nullable(),
+  customerId: z.string().uuid().optional().nullable()
 });
 
 export const searchRepairOrdersSchema = z.object({
@@ -76,5 +124,6 @@ export const searchRepairOrdersSchema = z.object({
 });
 
 export const repairOrderStatusSchema = z.object({
-  status: z.enum(repairOrderStatuses)
+  status: z.enum(repairOrderStatuses),
+  comment: z.string().trim().max(500).optional()
 });

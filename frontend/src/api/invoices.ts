@@ -54,10 +54,25 @@ export async function createInvoiceFromRepairOrder(repairOrderId: string, langua
   return response.invoice
 }
 
-export async function updateInvoicePaymentStatus(id: string, paymentStatus: InvoicePaymentStatus) {
+export async function updateInvoicePaymentStatus(
+  id: string,
+  paymentStatusOrPayload:
+    | InvoicePaymentStatus
+    | {
+        paymentStatus: InvoicePaymentStatus
+        cancellationReason?: string
+        paymentDate?: string
+        paymentReference?: string
+      }
+) {
+  const body =
+    typeof paymentStatusOrPayload === 'string'
+      ? { paymentStatus: paymentStatusOrPayload }
+      : paymentStatusOrPayload
+
   const response = await apiRequest<InvoiceResponse>(`/api/invoices/${id}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ paymentStatus }),
+    body: JSON.stringify(body),
   })
   return response.invoice
 }
@@ -115,4 +130,25 @@ export async function openInvoicePdf(id: string, language?: Language) {
 
 export async function emailInvoicePdf(id: string) {
   return apiRequest<{ success: true }>(`/api/invoices/${id}/email`, { method: 'POST' })
+}
+
+export async function copyInvoice(id: string) {
+  const response = await apiRequest<InvoiceResponse>(`/api/invoices/${id}/copy`, {
+    method: 'POST',
+  })
+  return response.invoice
+}
+
+export async function cancelInvoice(id: string, cancellationReason?: string) {
+  const response = await apiRequest<InvoiceResponse>(`/api/invoices/${id}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ cancellationReason }),
+  })
+  return response.invoice
+}
+
+export async function sendInvoiceReminder(id: string) {
+  return apiRequest<{ success: true }>(`/api/invoices/${id}/reminder`, {
+    method: 'POST',
+  })
 }

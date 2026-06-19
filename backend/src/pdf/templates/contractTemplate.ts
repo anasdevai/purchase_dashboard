@@ -45,6 +45,9 @@ const renderPhotoGrid = (files: ContractForPdf["files"]) => {
 export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfShopSettings) => {
   const shopOwner = shopSettings?.ownerName?.trim() || "";
   const shopkeeperLabel = shopOwner ? `Shopkeeper / Buyer (${shopOwner})` : "Shopkeeper / Buyer Signature";
+  const employeeLabel = contract.employeeName
+    ? `Shop Representative (${contract.employeeName})`
+    : shopkeeperLabel;
   const contractDate = formatDateShort(contract.updatedAt);
   const dob = contract.customerDateOfBirth
     ? contract.customerDateOfBirth.toISOString().slice(0, 10)
@@ -61,6 +64,7 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
   const addressLine1 = contract.customerStreet?.trim() || null;
   const addressLine2 = [contract.customerZipCode, contract.customerCity].filter(Boolean).join(" ") || null;
   const legacyAddress = contract.customerAddress ?? null;
+  const displayIdType = contract.idType;
 
   const customerSignature = filePathToDataUrl(contract.signaturePath);
   const shopkeeperSignature = filePathToDataUrl(contract.shopkeeperSignaturePath);
@@ -78,6 +82,10 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
     })}
 
     <h1 class="doc-title doc-title--center">DEVICE PURCHASE CONTRACT</h1>
+    ${contract.employeeName
+      ? `<div style="text-align: center; font-size: 10px; color: #475569; margin-top: -10px; margin-bottom: 20px;">Processed by: ${escapeHtml(contract.employeeName)}</div>`
+      : ""
+    }
 
     <section class="section avoid-break">
       <h2 class="section-title">Customer / Seller Information</h2>
@@ -94,11 +102,7 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
           : legacyAddress
             ? [{ label: "Address:", value: legacyAddress, half: false }]
             : []),
-        {
-          label: "ID Type:",
-          value: contract.idType ?? (contract.idDocumentNumber ? "Document" : null),
-          half: true
-        },
+        { label: "ID Type:", value: displayIdType ?? (contract.idDocumentNumber ? "Document" : null), half: true },
         { label: "ID Number:", value: contract.idDocumentNumber, half: true }
       ])}
     </section>
@@ -132,7 +136,15 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
     <section class="panel panel--highlight avoid-break">
       <div class="panel__title">Purchase Details</div>
       <div class="panel__row">
-        <span>Purchase Price</span>
+        <span>Net Price</span>
+        <span>${formatMoneyDecimal(contract.netPrice)}</span>
+      </div>
+      <div class="panel__row">
+        <span>VAT Amount</span>
+        <span>${formatMoneyDecimal(contract.vatAmount)}</span>
+      </div>
+      <div class="panel__row">
+        <span>Purchase Price (Gross)</span>
         <span class="panel__amount">${formatMoneyDecimal(contract.purchasePrice)}</span>
       </div>
       <div class="panel__row">
@@ -181,6 +193,15 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
     </section>
 
     <section class="panel avoid-break">
+      <div class="panel__title">Terms & Conditions</div>
+      <ol style="font-size: 10px; line-height: 1.5; color: #475569; padding-left: 15px; margin: 10px 0;">
+        <li>Seller confirms ownership and legal right to sell the device.</li>
+        <li>The device is purchased in the condition described above. The shop reserves the right to verify the device's authenticity and performance.</li>
+        <li>The seller must provide a valid government-issued photo identification document.</li>
+      </ol>
+    </section>
+
+    <section class="panel avoid-break">
       <div class="panel__title">Signatures</div>
       <div class="signature-grid">
         <div>
@@ -191,7 +212,7 @@ export const renderContractHtml = (contract: ContractForPdf, shopSettings?: PdfS
           <div class="signature-meta"><span>Date: ${contractDate}</span></div>
         </div>
         <div>
-          <div class="section-subtitle">${escapeHtml(shopkeeperLabel)}</div>
+          <div class="section-subtitle">${escapeHtml(employeeLabel)}</div>
           <div class="signature-box">
             ${shopkeeperSignature ? `<img src="${shopkeeperSignature}" alt="Shopkeeper signature" />` : ""}
           </div>

@@ -79,10 +79,14 @@ const resolveChromiumExecutablePath = async (): Promise<string | null> => {
   }
 
   if (process.platform === "win32") {
-    return findFirstExisting([
+    const candidates = [
       "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
       "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"
-    ]);
+    ];
+    if (process.env.LOCALAPPDATA) {
+      candidates.push(`${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`);
+    }
+    return findFirstExisting(candidates);
   }
 
   if (process.platform === "linux") {

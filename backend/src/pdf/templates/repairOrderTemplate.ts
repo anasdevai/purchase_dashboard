@@ -123,14 +123,52 @@ export const renderRepairOrderHtml = (
       }
 
       <section class="panel panel--highlight avoid-break">
-        <div class="panel__title">Estimate</div>
+        <div class="panel__title">Financial Summary</div>
         <div class="panel__row">
-          <span>Estimated Price</span>
-          <span class="panel__amount">${formatMoneyDecimal(repairOrder.estimatedPrice)}</span>
+          <span>Repair Price (gross)</span>
+          <span>${formatMoneyDecimal(repairOrder.estimatedPrice)}</span>
         </div>
+        ${
+          repairOrder.discountPercent && Number(repairOrder.discountPercent) > 0
+            ? `
         <div class="panel__row">
-          <span>Deposit / Advance</span>
+          <span>Discount (${Number(repairOrder.discountPercent)}%)</span>
+          <span>-${formatMoneyDecimal(
+            Number(repairOrder.estimatedPrice ?? 0) * (Number(repairOrder.discountPercent) / 100)
+          )}</span>
+        </div>
+        <div class="panel__row" style="font-weight: 600;">
+          <span>Total Price</span>
+          <span>${formatMoneyDecimal(
+            Number(repairOrder.estimatedPrice ?? 0) * (1 - Number(repairOrder.discountPercent) / 100)
+          )}</span>
+        </div>
+            `
+            : ""
+        }
+        <div class="panel__row">
+          <span>Deposit / Advance Paid</span>
           <span>${formatMoneyDecimal(repairOrder.depositAmount)}</span>
+        </div>
+        ${
+          repairOrder.paymentMethod
+            ? `
+        <div class="panel__row">
+          <span>Payment Method</span>
+          <span>${escapeHtml(repairOrder.paymentMethod)}</span>
+        </div>
+            `
+            : ""
+        }
+        <div class="panel__row" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #dbe3ef;">
+          <strong style="font-size: 10pt;">Remaining Balance</strong>
+          <strong class="panel__amount" style="font-size: 12pt; display: inline-block;">
+            ${formatMoneyDecimal(
+              Number(repairOrder.estimatedPrice ?? 0) *
+                (1 - Number(repairOrder.discountPercent ?? 0) / 100) -
+                Number(repairOrder.depositAmount ?? 0)
+            )}
+          </strong>
         </div>
       </section>
 

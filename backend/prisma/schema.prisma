@@ -34,20 +34,40 @@ enum RepairOrderStatus {
   WorkPending
   SentToRepairCompany
   AppointmentScheduled
+  New
+  Received
+  InDiagnosis
+  WaitingForParts
+  SparePartArrived
+  InRepair
+  Finished
+  ReadyForPickup
   Completed
   Cancelled
+}
+
+enum SparePartStatus {
+  NotOrdered
+  Ordered
+  Arrived
+  Installed
 }
 
 enum InvoicePaymentMethod {
   Cash
   BankTransfer
   Card
+  PayPal
   Other
 }
 
 enum InvoicePaymentStatus {
-  Paid
+  Draft
   Open
+  Sent
+  Paid
+  PartiallyPaid
+  Overdue
   Cancelled
 }
 
@@ -59,11 +79,24 @@ model User {
   role         UserRole      @default(staff)
   isActive     Boolean       @default(true) @map("is_active")
   createdAt    DateTime      @default(now()) @map("created_at")
-  contracts    Contract[]
-  repairOrders    RepairOrder[]
+  contracts       Contract[]
+  repairOrders    RepairOrder[]   @relation("UserRepairs")
   invoices        Invoice[]
   shopSettings    ShopSettings?
   repairCompanies RepairCompany[]
+  customers       Customer[]
+  assignedRepairs RepairOrder[]   @relation("AssignedEmployeeRepairs")
+  quotations      Quotation[]     @relation("UserQuotations")
+  assignedQuotations Quotation[]   @relation("EmployeeQuotations")
+  assignedInvoices   Invoice[]     @relation("EmployeeInvoices")
+  smtpSettings       SmtpSettings?
+  imapSettings       ImapSettings?
+  emailTemplates     EmailTemplate[]
+  emailLogs          EmailLog[]
+  appointments       Appointment[]
+  googleAccessToken  String?       @map("google_access_token")
+  googleRefreshToken String?       @map("google_refresh_token")
+  googleTokenExpiry  DateTime?     @map("google_token_expiry")
 
   @@map("users")
 }
@@ -101,7 +134,7 @@ model Contract {
   id                      String         @id @default(uuid())
   userId                  String         @map("user_id")
   contractNumber          String         @map("contract_number")
-  salutation              String?
+  salutation              String?        @map("salutation")
   customerFirstName       String?        @map("customer_first_name")
   customerLastName        String?        @map("customer_last_name")
   customerName            String?        @map("customer_name")
@@ -134,7 +167,7 @@ model Contract {
   purchasePrice           Decimal?       @map("purchase_price") @db.Decimal(12, 2)
   paymentMethod           String?        @map("payment_method")
   paymentStatus           String?        @map("payment_status")
-  notes                   String?
+  notes                   String?        @map("notes")
   ownershipConfirmed      Boolean        @default(false) @map("ownership_confirmed")
   notStolenConfirmed      Boolean        @default(false) @map("not_stolen_confirmed")
   icloudRemoved           Boolean        @default(false) @map("icloud_removed")
@@ -150,6 +183,8 @@ model Contract {
   createdAt               DateTime       @default(now()) @map("created_at")
   updatedAt               DateTime       @updatedAt @map("updated_at")
   user                    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId              String?        @map("customer_id")
+  customer                Customer?      @relation(fields: [customerId], references: [id], onDelete: SetNull)
   files                   ContractFile[]
 
   @@unique([userId, contractNumber])
@@ -209,20 +244,34 @@ model RepairOrder {
   passwordPin            String?           @map("password_pin")
   accessoriesReceived    String?           @map("accessories_received")
   problemDescription     String            @map("problem_description")
+  issueCategory          String?           @map("issue_category")
+  diagnosis              String?           @map("diagnosis")
+  requiredSpareParts     String?           @map("required_spare_parts")
+  sparePartStatus        SparePartStatus?  @map("spare_part_status")
   visibleDamage          String?           @map("visible_damage")
   technicianNotes        String?           @map("technician_notes")
   estimatedPrice         Decimal?          @map("estimated_price") @db.Decimal(12, 2)
+  discountPercent        Decimal?          @map("discount_percent") @db.Decimal(5, 2)
   depositAmount          Decimal?          @map("deposit_amount") @db.Decimal(12, 2)
+  paymentMethod          String?           @map("payment_method")
   expectedCompletionDate DateTime?         @map("expected_completion_date") @db.Date
   status                 RepairOrderStatus @default(Open)
   repairCompanyId        String?           @map("repair_company_id")
   repairCompanyNotes     String?           @map("repair_company_notes")
   pdfPath                String?           @map("pdf_path")
+  assignedEmployeeId     String?           @map("assigned_employee_id")
+  customerId             String?           @map("customer_id")
   createdAt              DateTime          @default(now()) @map("created_at")
   updatedAt              DateTime          @updatedAt @map("updated_at")
-  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  repairCompany          RepairCompany?    @relation(fields: [repairCompanyId], references: [id], onDelete: SetNull)
+  user                   User              @relation("UserRepairs", fields: [userId], references: [id], onDelete: Cascade)
   invoices               Invoice[]
+  repairCompany          RepairCompany?    @relation(fields: [repairCompanyId], references: [id], onDelete: SetNull)
+  history                RepairOrderHistory[]
+  assignedEmployee       User?             @relation("AssignedEmployeeRepairs", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  customer               Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  quotationId            String?           @map("quotation_id")
+  quotation              Quotation?        @relation("QuotationRepairOrders", fields: [quotationId], references: [id], onDelete: SetNull)
+  appointments           Appointment[]
 
   @@unique([userId, repairOrderNumber])
   @@index([userId])
@@ -234,6 +283,8 @@ model RepairOrder {
   @@index([status])
   @@index([repairCompanyId])
   @@index([createdAt])
+  @@index([assignedEmployeeId])
+  @@index([customerId])
   @@map("repair_orders")
 }
 
@@ -259,9 +310,18 @@ model Invoice {
   grossTotalOverride   Decimal?              @map("gross_total_override") @db.Decimal(12, 2)
   notes                String?
   pdfPath              String?               @map("pdf_path")
+  serviceDate          DateTime?             @map("service_date") @db.Date
+  dueDate              DateTime?             @map("due_date") @db.Date
+  paymentDate          DateTime?             @map("payment_date") @db.Date
+  paymentReference     String?               @map("payment_reference")
+  cancellationReason   String?               @map("cancellation_reason")
+  employeeId           String?               @map("employee_id")
+  employee             User?                 @relation("EmployeeInvoices", fields: [employeeId], references: [id], onDelete: SetNull)
   createdAt            DateTime              @default(now()) @map("created_at")
   updatedAt            DateTime              @updatedAt @map("updated_at")
   user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerId           String?               @map("customer_id")
+  customer             Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
   repairOrder          RepairOrder?          @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
   items                InvoiceItem[]
 
@@ -292,4 +352,225 @@ model InvoiceItem {
 
   @@index([invoiceId])
   @@map("invoice_items")
+}
+
+model RepairOrderHistory {
+  id            String             @id @default(uuid())
+  repairOrderId String             @map("repair_order_id")
+  userId        String             @map("user_id")
+  employeeName  String             @map("employee_name")
+  fromStatus    RepairOrderStatus? @map("from_status")
+  toStatus      RepairOrderStatus  @map("to_status")
+  comment       String?
+  createdAt     DateTime           @default(now()) @map("created_at")
+  repairOrder   RepairOrder        @relation(fields: [repairOrderId], references: [id], onDelete: Cascade)
+
+  @@index([repairOrderId])
+  @@index([createdAt])
+  @@map("repair_order_history")
+}
+
+model Customer {
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  customerNumber String?         @map("customer_number")
+  salutation     String?
+  firstName      String?         @map("first_name")
+  lastName       String?         @map("last_name")
+  company        String?
+  vatId          String?         @map("vat_id")
+  street         String?
+  zipCode        String?         @map("zip_code")
+  city           String?
+  dateOfBirth    DateTime?       @map("date_of_birth") @db.Date
+  newsletter     Boolean         @default(false)
+  notes          String?         @db.Text
+  name           String
+  phone          String
+  email          String?
+  address        String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairOrders   RepairOrder[]
+  quotations     Quotation[]
+  contracts      Contract[]
+  invoices       Invoice[]
+  appointments   Appointment[]
+
+  @@unique([userId, name, phone])
+  @@unique([userId, customerNumber])
+  @@index([userId])
+  @@index([name])
+  @@index([phone])
+  @@map("customers")
+}
+
+enum QuotationStatus {
+  Draft
+  Sent
+  Accepted
+  Rejected
+  Expired
+}
+
+model Quotation {
+  id              String          @id @default(uuid())
+  userId          String          @map("user_id")
+  quotationNumber String          @map("quotation_number")
+  validUntilDate  DateTime        @map("valid_until_date") @db.Date
+  status          QuotationStatus @default(Draft)
+  
+  employeeId      String?         @map("employee_id")
+  
+  customerId      String?         @map("customer_id")
+  customerName    String          @map("customer_name")
+  customerPhone   String          @map("customer_phone")
+  customerEmail   String?         @map("customer_email")
+  customerAddress String?         @map("customer_address")
+  
+  deviceType      String          @map("device_type")
+  brand           String?
+  model           String
+  imeiOrSerial    String?         @map("imei_or_serial")
+  
+  pdfPath         String?         @map("pdf_path")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  
+  user            User            @relation("UserQuotations", fields: [userId], references: [id], onDelete: Cascade)
+  employee        User?           @relation("EmployeeQuotations", fields: [employeeId], references: [id], onDelete: SetNull)
+  customer        Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items           QuotationItem[]
+  repairOrders    RepairOrder[]   @relation("QuotationRepairOrders")
+
+  @@unique([userId, quotationNumber])
+  @@index([userId])
+  @@index([quotationNumber])
+  @@index([customerName])
+  @@index([customerPhone])
+  @@index([model])
+  @@index([createdAt])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String    @id @default(uuid())
+  quotationId String    @map("quotation_id")
+  repairType  String    @map("repair_type")
+  description String
+  unitPrice   Decimal   @map("unit_price") @db.Decimal(12, 2)
+  quantity    Decimal   @default(1) @db.Decimal(12, 2)
+  discount    Decimal?  @db.Decimal(5, 2)
+  lineTotal   Decimal   @map("line_total") @db.Decimal(12, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+model SmtpSettings {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  host       String
+  port       Int
+  encryption String   @default("none")
+  username   String
+  password   String   @map("encrypted_password")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("smtp_settings")
+}
+
+model ImapSettings {
+  id         String   @id @default(uuid())
+  userId     String   @unique @map("user_id")
+  host       String
+  port       Int
+  encryption String   @default("none")
+  username   String
+  password   String   @map("encrypted_password")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("imap_settings")
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  subject   String
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  to        String
+  subject   String
+  body      String   @db.Text
+  status    String
+  error     String?  @db.Text
+  sentAt    DateTime @default(now()) @map("sent_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sentAt])
+  @@map("email_logs")
+}
+
+enum AppointmentStatus {
+  Booked
+  Confirmed
+  Arrived
+  Cancelled
+  Voided
+}
+
+enum AppointmentSource {
+  Manual
+  Order
+  Website
+}
+
+model Appointment {
+  id            String            @id @default(uuid())
+  userId        String            @map("user_id")
+  title         String
+  customerId    String?           @map("customer_id")
+  deviceBrand   String?           @map("device_brand")
+  deviceModel   String?           @map("device_model")
+  deviceImei    String?           @map("device_imei")
+  repairOrderId String?           @map("repair_order_id")
+  startTime     DateTime          @map("start_time")
+  endTime       DateTime          @map("end_time")
+  duration      Int
+  note          String?           @db.Text
+  status        AppointmentStatus @default(Booked)
+  source        AppointmentSource @default(Manual)
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  googleCalendarEventId String?           @map("google_calendar_event_id")
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customer      Customer?         @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  repairOrder   RepairOrder?      @relation(fields: [repairOrderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([repairOrderId])
+  @@index([startTime])
+  @@map("appointments")
 }

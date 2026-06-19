@@ -17,6 +17,7 @@ export type PdfShopSettings = {
   zipCode?: string;
   city?: string;
   country?: string;
+  defaultVatRate?: string;
 };
 
 export type MoneyLike = { toString: () => string } | number | null | undefined;
@@ -59,6 +60,9 @@ export type ContractForPdf = {
   paymentMethod: string | null;
   paymentStatus?: string | null;
   notes?: string | null;
+  employeeName?: string | null;
+  netPrice?: MoneyLike;
+  vatAmount?: MoneyLike;
   ownershipConfirmed: boolean;
   notStolenConfirmed: boolean;
   icloudRemoved: boolean;
@@ -88,7 +92,9 @@ export type RepairOrderForPdf = {
   visibleDamage: string | null;
   technicianNotes: string | null;
   estimatedPrice: MoneyLike;
+  discountPercent: MoneyLike;
   depositAmount: MoneyLike;
+  paymentMethod: string | null;
   expectedCompletionDate: Date | null;
   status: string;
   repairCompanyNotes: string | null;
@@ -118,6 +124,10 @@ export type InvoiceForPdf = {
   vatAmountOverride: MoneyLike;
   grossTotalOverride: MoneyLike;
   notes: string | null;
+  serviceDate?: Date | null;
+  dueDate?: Date | null;
+  paymentDate?: Date | null;
+  paymentReference?: string | null;
   signatureDataUrl?: string | null;
   signatureName?: string | null;
   items: Array<{
@@ -138,3 +148,31 @@ export type DocumentMeta = {
   date?: Date;
   europeanDate?: boolean;
 };
+
+export type QuotationItemForPdf = {
+  repairType: string;
+  description: string;
+  unitPrice: MoneyLike;
+  quantity: MoneyLike;
+  discount: MoneyLike;
+  lineTotal: MoneyLike;
+};
+
+export type QuotationForPdf = {
+  userId: string;
+  quotationNumber: string;
+  validUntilDate: Date;
+  status: string;
+  createdAt: Date;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string | null;
+  customerAddress: string | null;
+  deviceType: string;
+  brand: string | null;
+  model: string;
+  imeiOrSerial: string | null;
+  notes: string | null;
+  items: Array<QuotationItemForPdf>;
+};
+

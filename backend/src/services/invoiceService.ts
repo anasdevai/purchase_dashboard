@@ -17,7 +17,8 @@ import { calculateInvoiceItems } from "../utils/invoiceCalculations.js";
 
 const includeItems = {
   items: { orderBy: { sortOrder: "asc" as const } },
-  repairOrder: { select: { id: true, repairOrderNumber: true } }
+  repairOrder: { select: { id: true, repairOrderNumber: true } },
+  employee: { select: { id: true, name: true } }
 };
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -140,6 +141,12 @@ export const createInvoice = async (
           vatAmountOverride: null,
           grossTotalOverride: null,
           notes: parsed.notes,
+          serviceDate: parsed.serviceDate ?? new Date(),
+          dueDate: parsed.dueDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          paymentDate: parsed.paymentDate,
+          paymentReference: parsed.paymentReference,
+          cancellationReason: parsed.cancellationReason,
+          employeeId: parsed.employeeId,
           items: { create: totals.preparedItems }
         },
         include: includeItems
@@ -201,6 +208,45 @@ export const createInvoiceFromRepairOrder = async (
   const shopSettings = await getShopSettingsForUser(userId);
   const defaultVatPercent = Math.round(getDefaultVatPercent(shopSettings));
 
+  const items: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    vatPercent: number;
+  }> = [
+    {
+      description: repairOrder.problemDescription || "Repair service",
+      quantity: 1,
+      unitPrice: repairOrder.estimatedPrice
+        ? Math.round(Number(repairOrder.estimatedPrice.toString()))
+        : 0,
+      vatPercent: defaultVatPercent
+    }
+  ];
+
+  const estPrice = repairOrder.estimatedPrice ? Number(repairOrder.estimatedPrice.toString()) : 0;
+
+  if (repairOrder.discountPercent && Number(repairOrder.discountPercent) > 0) {
+    const discPercent = Number(repairOrder.discountPercent);
+    const discAmount = estPrice * (discPercent / 100);
+    items.push({
+      description: `Discount (${discPercent}%)`,
+      quantity: 1,
+      unitPrice: -Math.round(discAmount),
+      vatPercent: defaultVatPercent
+    });
+  }
+
+  if (repairOrder.depositAmount && Number(repairOrder.depositAmount) > 0) {
+    const depAmount = Number(repairOrder.depositAmount);
+    items.push({
+      description: "Deposit Paid",
+      quantity: 1,
+      unitPrice: -Math.round(depAmount),
+      vatPercent: defaultVatPercent
+    });
+  }
+
   return createInvoice(
     userId,
     {
@@ -212,16 +258,7 @@ export const createInvoiceFromRepairOrder = async (
       deviceSummary,
       repairSummary: repairOrder.problemDescription,
       paymentStatus: "Open",
-      items: [
-        {
-          description: repairOrder.problemDescription || "Repair service",
-          quantity: 1,
-          unitPrice: repairOrder.estimatedPrice
-            ? Math.round(Number(repairOrder.estimatedPrice.toString()))
-            : 0,
-          vatPercent: defaultVatPercent
-        }
-      ]
+      items
     },
     language
   );
@@ -261,6 +298,12 @@ export const updateInvoice = async (
         vatAmountOverride: null,
         grossTotalOverride: null,
         notes: parsed.notes,
+        serviceDate: parsed.serviceDate ?? new Date(),
+        dueDate: parsed.dueDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        paymentDate: parsed.paymentDate,
+        paymentReference: parsed.paymentReference,
+        cancellationReason: parsed.cancellationReason,
+        employeeId: parsed.employeeId,
         pdfPath: null,
         items: { create: totals.preparedItems }
       }
@@ -278,11 +321,24 @@ export const updateInvoicePaymentStatus = async (
   await getInvoiceOrThrow(id, userId);
   const parsed = invoicePaymentStatusSchema.parse(input);
 
-  return prisma.invoice.update({
+  const updatedInvoice = await prisma.invoice.update({
     where: { id },
-    data: { paymentStatus: parsed.paymentStatus },
+    data: {
+      paymentStatus: parsed.paymentStatus,
+      cancellationReason: parsed.cancellationReason ?? null,
+      paymentDate: parsed.paymentDate ?? null,
+      paymentReference: parsed.paymentReference ?? null,
+      pdfPath: null
+    },
     include: includeItems
   });
+
+  try {
+    return await attachInvoicePdf(id, userId);
+  } catch (error) {
+    console.error("[invoice] Failed to regenerate PDF on status update:", error);
+    return updatedInvoice;
+  }
 };
 
 export const generatePdfForInvoice = async (
@@ -347,4 +403,53 @@ export const searchInvoices = async (userId: string, query: Record<string, unkno
     take: 100,
     include: includeItems
   });
+};
+
+export const copyInvoice = async (id: string, userId: string) => {
+  const source = await getInvoiceOrThrow(id, userId);
+
+  const items = source.items.map((item) => ({
+    description: item.description,
+    quantity: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+    vatPercent: Number(item.vatPercent)
+  }));
+
+  return createInvoice(userId, {
+    repairOrderId: source.repairOrderId || undefined,
+    customerName: source.customerName,
+    customerAddress: source.customerAddress || undefined,
+    customerPhone: source.customerPhone || undefined,
+    customerEmail: source.customerEmail || undefined,
+    deviceSummary: source.deviceSummary || undefined,
+    repairSummary: source.repairSummary || undefined,
+    paymentMethod: source.paymentMethod || undefined,
+    paymentStatus: "Draft",
+    notes: source.notes || undefined,
+    serviceDate: source.serviceDate ?? new Date(),
+    dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+    employeeId: source.employeeId || undefined,
+    items
+  });
+};
+
+export const cancelInvoice = async (id: string, userId: string, reason?: string) => {
+  await getInvoiceOrThrow(id, userId);
+
+  const updatedInvoice = await prisma.invoice.update({
+    where: { id },
+    data: {
+      paymentStatus: "Cancelled",
+      cancellationReason: reason ?? null,
+      pdfPath: null
+    },
+    include: includeItems
+  });
+
+  try {
+    return await attachInvoicePdf(id, userId);
+  } catch (error) {
+    console.error("[invoice] Failed to regenerate PDF on cancellation:", error);
+    return updatedInvoice;
+  }
 };

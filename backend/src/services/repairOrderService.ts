@@ -12,6 +12,9 @@ import {
 } from "../validators/repairOrderValidators.js";
 import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
 import { assertRepairCompanyAccess } from "./repairCompanyService.js";
+import * as emailService from "./emailService.js";
+import { findOrCreateCustomerForRepair } from "./customerService.js";
+import { createPickupAppointmentFromOrder } from "./appointmentService.js";
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
@@ -20,7 +23,10 @@ const UUID_RE =
 
 const includeRepairOrder = {
   invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } },
-  repairCompany: { select: { id: true, name: true, contactInfo: true, notes: true } }
+  repairCompany: { select: { id: true, name: true, contactInfo: true, notes: true } },
+  history: { orderBy: { createdAt: "asc" as const } },
+  assignedEmployee: { select: { id: true, name: true, email: true } },
+  customer: true
 };
 
 export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, isAdmin = false) => {
@@ -43,6 +49,14 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
   await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
 
+  const customer = await findOrCreateCustomerForRepair(
+    userId,
+    orderData.customerName,
+    orderData.customerPhone,
+    orderData.customerEmail,
+    orderData.customerAddress
+  );
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const repairOrderNumber = await generateRepairOrderNumber(userId);
 
@@ -51,7 +65,8 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
         data: {
           userId,
           ...orderData,
-          repairOrderNumber
+          repairOrderNumber,
+          customerId: customer.id
         }
       });
 
@@ -65,21 +80,107 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
   throw new HttpError(500, "Unable to generate repair order number");
 };
 
+async function triggerStatusChangeEmails(current: {
+  userId: string;
+  id: string;
+  customerEmail: string | null;
+  repairOrderNumber: string;
+  customerName: string;
+  status: string;
+}, toStatus: string) {
+  try {
+    if (toStatus === "Finished" && current.customerEmail) {
+      await emailService.sendRepairFinishedEmail(
+        current.userId,
+        current.customerEmail,
+        current.repairOrderNumber,
+        current.customerName
+      );
+    } else if (toStatus === "ReadyForPickup") {
+      const shopSettings = await getShopSettingsForUser(current.userId);
+      const shopAddress = shopSettings.shopAddress || null;
+      const openingHours = "Mo-Fr: 09:00 - 18:00, Sa: 09:00 - 13:00";
+
+      if (current.customerEmail) {
+        await emailService.sendReadyForPickupEmail(
+          current.userId,
+          current.customerEmail,
+          current.repairOrderNumber,
+          current.customerName,
+          shopAddress,
+          openingHours
+        );
+      }
+
+      const tomorrowAtTen = new Date();
+      tomorrowAtTen.setDate(tomorrowAtTen.getDate() + 1);
+      tomorrowAtTen.setHours(10, 0, 0, 0);
+
+      await createPickupAppointmentFromOrder(
+        current.userId,
+        current.id,
+        tomorrowAtTen.toISOString()
+      );
+    } else if (toStatus === "SparePartArrived") {
+      const user = await prisma.user.findUnique({
+        where: { id: current.userId },
+        select: { email: true }
+      });
+      if (user?.email) {
+        await emailService.sendSparePartArrivedNotification(
+          current.userId,
+          user.email,
+          current.repairOrderNumber
+        );
+      }
+    }
+  } catch (emailErr) {
+    console.error("Failed to send status update email:", emailErr);
+  }
+}
+
 export const updateRepairOrder = async (
   id: string,
   userId: string,
   input: Record<string, unknown>,
+  employeeName: string,
   isAdmin = false
 ) => {
-  await getRepairOrderOrThrow(id, userId, isAdmin);
+  const current = await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
   await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
 
+  const customer = await findOrCreateCustomerForRepair(
+    userId,
+    orderData.customerName,
+    orderData.customerPhone,
+    orderData.customerEmail,
+    orderData.customerAddress
+  );
+
   await prisma.repairOrder.update({
     where: { id },
-    data: orderData
+    data: {
+      ...orderData,
+      customerId: customer.id
+    }
   });
+
+  if (orderData.status && current.status !== orderData.status) {
+    await prisma.repairOrderHistory.create({
+      data: {
+        repairOrderId: id,
+        userId: current.userId,
+        employeeName,
+        fromStatus: current.status,
+        toStatus: orderData.status,
+        comment: "Status updated in repair order editor"
+      }
+    });
+
+    void triggerStatusChangeEmails(current, orderData.status);
+  }
 
   return getRepairOrderOrThrow(id, userId, isAdmin);
 };
@@ -88,9 +189,10 @@ export const updateRepairOrderStatus = async (
   id: string,
   userId: string,
   input: Record<string, unknown>,
+  employeeName: string,
   isAdmin = false
 ) => {
-  await getRepairOrderOrThrow(id, userId, isAdmin);
+  const current = await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = repairOrderStatusSchema.parse(input);
 
   await prisma.repairOrder.update({
@@ -98,7 +200,43 @@ export const updateRepairOrderStatus = async (
     data: { status: parsed.status }
   });
 
+  if (current.status !== parsed.status) {
+    await prisma.repairOrderHistory.create({
+      data: {
+        repairOrderId: id,
+        userId: current.userId,
+        employeeName,
+        fromStatus: current.status,
+        toStatus: parsed.status,
+        comment: parsed.comment || null
+      }
+    });
+
+    void triggerStatusChangeEmails(current, parsed.status);
+  }
+
   return getRepairOrderOrThrow(id, userId, isAdmin);
+};
+
+export const addHistoryComment = async (
+  id: string,
+  userId: string,
+  employeeName: string,
+  comment: string,
+  isAdmin = false
+) => {
+  const current = await getRepairOrderOrThrow(id, userId, isAdmin);
+
+  return prisma.repairOrderHistory.create({
+    data: {
+      repairOrderId: id,
+      userId: current.userId,
+      employeeName,
+      fromStatus: current.status,
+      toStatus: current.status,
+      comment
+    }
+  });
 };
 
 export const generatePdfForRepairOrder = async (id: string, userId: string, isAdmin = false) => {

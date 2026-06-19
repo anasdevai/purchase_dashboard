@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const invoicePaymentMethods = ["Cash", "BankTransfer", "Card", "Other"] as const;
-export const invoicePaymentStatuses = ["Paid", "Open", "Cancelled"] as const;
+export const invoicePaymentMethods = ["Cash", "BankTransfer", "Card", "PayPal", "Other"] as const;
+export const invoicePaymentStatuses = ["Draft", "Open", "Sent", "Paid", "PartiallyPaid", "Overdue", "Cancelled"] as const;
 
 const optionalText = z.preprocess(
   (value) => (value === "" || value === null ? undefined : value),
@@ -26,7 +26,6 @@ const quantitySchema = z.coerce
 
 const wholeEuroSchema = z.coerce
   .number({ invalid_type_error: wholeNumberMessage })
-  .min(0, "Amount must be zero or greater")
   .refine(isWholeNumber, { message: wholeNumberMessage });
 
 const wholeVatSchema = z.coerce
@@ -57,6 +56,12 @@ export const invoiceSchema = z.object({
   paymentMethod: z.enum(invoicePaymentMethods).optional(),
   paymentStatus: z.enum(invoicePaymentStatuses).optional(),
   notes: optionalText,
+  serviceDate: optionalDate,
+  dueDate: optionalDate,
+  paymentDate: optionalDate,
+  paymentReference: optionalText,
+  cancellationReason: optionalText,
+  employeeId: z.string().uuid().optional().nullable(),
   items: z.array(invoiceItemSchema).min(1)
 });
 
@@ -69,5 +74,8 @@ export const searchInvoicesSchema = z.object({
 });
 
 export const invoicePaymentStatusSchema = z.object({
-  paymentStatus: z.enum(invoicePaymentStatuses)
+  paymentStatus: z.enum(invoicePaymentStatuses),
+  cancellationReason: optionalText,
+  paymentDate: optionalDate,
+  paymentReference: optionalText,
 });

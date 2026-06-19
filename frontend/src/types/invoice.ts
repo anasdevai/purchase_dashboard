@@ -1,5 +1,5 @@
-export type InvoicePaymentMethod = 'Cash' | 'BankTransfer' | 'Card' | 'Other'
-export type InvoicePaymentStatus = 'Paid' | 'Open' | 'Cancelled'
+export type InvoicePaymentMethod = 'Cash' | 'BankTransfer' | 'Card' | 'PayPal' | 'Other'
+export type InvoicePaymentStatus = 'Draft' | 'Open' | 'Sent' | 'Paid' | 'PartiallyPaid' | 'Overdue' | 'Cancelled'
 
 export type InvoiceItem = {
   id?: string
@@ -33,6 +33,13 @@ export type Invoice = {
   grossTotalOverride?: string | number | null
   notes?: string | null
   pdfPath?: string | null
+  serviceDate?: string | null
+  dueDate?: string | null
+  paymentDate?: string | null
+  paymentReference?: string | null
+  cancellationReason?: string | null
+  employeeId?: string | null
+  employee?: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
   items: InvoiceItem[]
@@ -51,6 +58,12 @@ export type InvoicePayload = {
   paymentMethod?: InvoicePaymentMethod
   paymentStatus?: InvoicePaymentStatus
   notes?: string
+  serviceDate?: string
+  dueDate?: string
+  paymentDate?: string | null
+  paymentReference?: string | null
+  cancellationReason?: string | null
+  employeeId?: string | null
   items: Array<{
     description: string
     quantity: number

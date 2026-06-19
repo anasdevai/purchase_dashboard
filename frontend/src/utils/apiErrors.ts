@@ -104,6 +104,10 @@ export function resolveApiErrorMessage(
     return { message: t.login.accountDeactivated, userFacing: true }
   }
 
+  if (status === 409) {
+    return { message: _rawMessage || t.common.friendlyErrors.generic, userFacing: true }
+  }
+
   return { message: t.common.friendlyErrors.generic, userFacing: false }
 }
 

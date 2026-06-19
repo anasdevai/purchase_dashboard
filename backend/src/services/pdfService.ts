@@ -3,6 +3,7 @@ import {
   getContractStorageDir,
   getInvoiceStorageDir,
   getRepairOrderStorageDir,
+  getQuotationStorageDir,
   toRelativeStoragePath
 } from "../utils/paths.js";
 import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
@@ -10,15 +11,34 @@ import { renderHtmlToPdf, renderHtmlToPdfBuffer } from "../pdf/htmlToPdf.js";
 import { renderContractHtml } from "../pdf/templates/contractTemplate.js";
 import { renderInvoiceHtml } from "../pdf/templates/invoiceTemplate.js";
 import { renderRepairOrderHtml } from "../pdf/templates/repairOrderTemplate.js";
+import { renderQuotationHtml } from "../pdf/templates/quotationTemplate.js";
+import { renderCustomerListHtml } from "../pdf/templates/customerListTemplate.js";
 import type {
   ContractForPdf,
   InvoiceForPdf,
   PdfShopSettings,
-  RepairOrderForPdf
+  RepairOrderForPdf,
+  QuotationForPdf
 } from "../pdf/types.js";
 
 export type { PdfShopSettings } from "../pdf/types.js";
 export type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
+
+export const generateQuotationPdf = async (
+  quotation: QuotationForPdf,
+  shopSettings?: PdfShopSettings,
+  language: "de" | "en" = "de"
+) => {
+  const storageDir = getQuotationStorageDir(quotation.userId, quotation.quotationNumber);
+  await ensureDirectory(storageDir);
+
+  const absolutePdfPath = `${storageDir}/quotation.pdf`;
+  const html = renderQuotationHtml(quotation, shopSettings, language);
+  await renderHtmlToPdf(html, absolutePdfPath);
+
+  return toRelativeStoragePath(absolutePdfPath);
+};
+
 
 export const generateContractPdf = async (
   contract: ContractForPdf,
@@ -92,3 +112,28 @@ export const generateInvoicePdf = async (
 
   return toRelativeStoragePath(absolutePdfPath);
 };
+
+export type CustomerForPdfExport = {
+  customerNumber: string | null;
+  salutation: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  name: string;
+  company: string | null;
+  street: string | null;
+  zipCode: string | null;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  newsletter: boolean | null;
+  createdAt: Date;
+};
+
+export const generateCustomersPdf = async (
+  customers: CustomerForPdfExport[],
+  shopSettings?: PdfShopSettings
+): Promise<Buffer> => {
+  const html = renderCustomerListHtml(customers, shopSettings);
+  return renderHtmlToPdfBuffer(html);
+};
+

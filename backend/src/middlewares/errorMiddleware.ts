@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { AUTH_ERROR_CODES } from "../constants/authErrorCodes.js";
 import { HttpError } from "../utils/httpError.js";
+import fs from "node:fs";
 
 const readHttpErrorCode = (error: HttpError): string | undefined => {
   const details = error.details;
@@ -73,6 +74,12 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
   }
 
   console.error(error);
+  try {
+    const logMsg = `[${new Date().toISOString()}] ERROR: ${error instanceof Error ? error.stack || error.message : String(error)}\n`;
+    fs.appendFileSync("c:/Users/AbdulRauf(AIEngineer/Downloads/purchase_dashboard (2)/purchase_dashboard/backend_errors.log", logMsg);
+  } catch (logErr) {
+    // Ignore logging errors
+  }
   if (error instanceof Error && error.message.includes("Failed to launch browser for PDF generation")) {
     return res.status(500).json({ message: "PDF could not be created. Please try again." });
   }
