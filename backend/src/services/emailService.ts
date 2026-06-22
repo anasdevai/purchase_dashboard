@@ -1,60 +1,11 @@
 import nodemailer from "nodemailer";
-import { env } from "../config/env.js";
 import { toAbsolutePath } from "../utils/paths.js";
 import { HttpError } from "../utils/httpError.js";
 import fs from "node:fs";
-import dotenv from "dotenv";
 import { prisma } from "../config/prisma.js";
-import { decrypt } from "../utils/crypto.js";
+import { getSmtpMailerForUser } from "../utils/smtpTransport.js";
 
-const getTransporterForUser = async (userId: string) => {
-  const smtpSettings = await prisma.smtpSettings.findUnique({
-    where: { userId }
-  });
-
-  if (smtpSettings) {
-    const password = decrypt(smtpSettings.password);
-    const secure = smtpSettings.encryption === "SSL" || (smtpSettings.encryption === "TLS" && smtpSettings.port === 465);
-    return {
-      transporter: nodemailer.createTransport({
-        host: smtpSettings.host,
-        port: smtpSettings.port,
-        secure,
-        auth: {
-          user: smtpSettings.username,
-          pass: password
-        }
-      }),
-      from: smtpSettings.username
-    };
-  }
-
-  dotenv.config({ override: true });
-  const host = process.env.SMTP_HOST || env.SMTP_HOST || "localhost";
-  const port = Number(process.env.SMTP_PORT || env.SMTP_PORT || 1025);
-  const secure = port === 465;
-
-  const config: Record<string, unknown> = {
-    host,
-    port,
-    secure
-  };
-
-  const user = process.env.SMTP_USER !== undefined ? process.env.SMTP_USER : env.SMTP_USER;
-  const pass = process.env.SMTP_PASS !== undefined ? process.env.SMTP_PASS : env.SMTP_PASS;
-
-  if (user) {
-    config.auth = {
-      user,
-      pass
-    };
-  }
-
-  return {
-    transporter: nodemailer.createTransport(config as nodemailer.TransportOptions),
-    from: process.env.SMTP_FROM || env.SMTP_FROM || "noreply@sclera.io"
-  };
-};
+const getTransporterForUser = getSmtpMailerForUser;
 
 const buildGermanGreeting = (
   customerName?: string | null,

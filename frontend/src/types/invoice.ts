@@ -21,6 +21,7 @@ export type Invoice = {
   customerAddress?: string | null
   customerPhone?: string | null
   customerEmail?: string | null
+  customer?: { id: string; email?: string | null; lastName?: string | null; salutation?: string | null } | null
   deviceSummary?: string | null
   repairSummary?: string | null
   paymentMethod?: InvoicePaymentMethod | null

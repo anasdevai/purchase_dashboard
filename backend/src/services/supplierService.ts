@@ -1,12 +1,16 @@
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/httpError.js";
+import { runInventoryQuery } from "../utils/inventoryPrisma.js";
 import { createSupplierSchema, updateSupplierSchema } from "../validators/supplierValidators.js";
 
 export const listSuppliers = async (userId: string) => {
-  return prisma.supplier.findMany({
-    where: { userId },
-    orderBy: { companyName: "asc" }
-  });
+  const suppliers = await runInventoryQuery("listSuppliers", () =>
+    prisma.supplier.findMany({
+      where: { userId },
+      orderBy: { companyName: "asc" },
+    })
+  );
+  return suppliers ?? [];
 };
 
 export const getSupplierById = async (id: string, userId: string) => {

@@ -10,7 +10,7 @@ import type { Quotation, QuotationStatus } from '../types/quotation'
 
 export function QuotationsPage() {
   const { t, interpolate, formatDate } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { showToast, confirm } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState('')
   const [quotations, setQuotations] = useState<Quotation[]>([])
@@ -33,22 +33,19 @@ export function QuotationsPage() {
     return () => window.clearTimeout(timeout)
   }, [query, status, t])
 
-  const handleDelete = async (quotation: Quotation) => {
-    if (!window.confirm(interpolate(t.quotations.confirmDelete, { quotationNumber: quotation.quotationNumber }))) {
-      return
-    }
+  const handleDelete = (quotation: Quotation) => confirm({title:t.common.confirm,message:interpolate(t.quotations.confirmDelete,{quotationNumber:quotation.quotationNumber}),variant:'danger',onConfirm:async()=>{
     setDeletingId(quotation.id)
     try {
       await deleteQuotation(quotation.id)
       setQuotations((current) => current.filter((item) => item.id !== quotation.id))
-      showToast('success', t.common.toasts.pdfDownloaded) // Reuse or toast success
+      showToast('success', t.common.toasts.recordDeleted)
     } catch (err) {
       logApiError('quotation delete', err)
       showToast('error', getFriendlyErrorMessage(err, 'generic', t))
     } finally {
       setDeletingId(null)
     }
-  }
+  }})
 
   const getStatusBadgeClass = (status: QuotationStatus) => {
     switch (status) {
@@ -163,8 +160,7 @@ export function QuotationsPage() {
                           <Link className="btn btn-secondary h-8 w-8 p-0" data-testid={`quotation-view-${quotation.id}`} to={`/quotations/${quotation.id}`} title={t.table.open}>
                             <Eye className="h-4 w-4" />
                           </Link>
-                          {quotation.pdfPath ? (
-                            <button
+                          <button
                               type="button"
                               className="btn btn-secondary h-8 w-8 p-0"
                               title={t.table.download}
@@ -179,8 +175,7 @@ export function QuotationsPage() {
                               }}
                             >
                               <Download className="h-4 w-4" />
-                            </button>
-                          ) : null}
+                          </button>
                           <button
                             type="button"
                             data-testid={`quotation-delete-${quotation.id}`}

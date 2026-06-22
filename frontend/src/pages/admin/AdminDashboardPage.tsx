@@ -102,7 +102,7 @@ export function AdminDashboardPage() {
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'EUR' }).format(amount)
 
   return (
-    <div className="min-h-screen px-8 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Admin Dashboard</h1>
@@ -251,7 +251,7 @@ export function AdminDashboardPage() {
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/50">
                 <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">User</th>

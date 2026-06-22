@@ -1,9 +1,11 @@
 import type { Request, Response } from "express";
+import fs from "node:fs";
 import * as contractService from "../services/contractService.js";
 import * as dashboardService from "../services/dashboardService.js";
 import * as emailService from "../services/emailService.js";
 import * as fileService from "../services/fileService.js";
 import { HttpError } from "../utils/httpError.js";
+import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { getSignatureUrl } from "../utils/lanIp.js";
 import { toAbsolutePath } from "../utils/paths.js";
 
@@ -132,8 +134,16 @@ export const sendEmail = async (req: Request, res: Response) => {
     req.user?.role === "admin"
   );
 
-  if (!contract.customerEmail) {
+  const toEmailOverride = readOptionalToEmail(req.body);
+  const toEmail =
+    toEmailOverride || resolveCustomerEmail(contract.customerEmail, contract.customer);
+
+  if (!toEmail) {
     throw new HttpError(400, "Contract does not have a customer email address configured");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+    throw new HttpError(400, "Customer email address is invalid");
   }
 
   if (!contract.pdfPath) {
@@ -142,7 +152,7 @@ export const sendEmail = async (req: Request, res: Response) => {
 
   await emailService.sendContractPdfEmail(
     userId(req),
-    contract.customerEmail,
+    toEmail,
     contract.contractNumber,
     contract.pdfPath,
     contract.customerName,
@@ -154,29 +164,29 @@ export const sendEmail = async (req: Request, res: Response) => {
 };
 
 export const openPdf = async (req: Request, res: Response) => {
-  const contract = await contractService.getContractOrThrow(
+  let contract = await contractService.getContractOrThrow(
     paramId(req),
     userId(req),
     req.user?.role === "admin"
   );
 
-  if (!contract.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this contract");
+  if (!contract.pdfPath || !fs.existsSync(toAbsolutePath(contract.pdfPath))) {
+    contract = await contractService.generatePdfForContract(paramId(req), userId(req), req.user?.role === "admin");
   }
-
+  if (!contract.pdfPath) throw new HttpError(500, "Contract PDF generation failed");
   res.sendFile(toAbsolutePath(contract.pdfPath));
 };
 
 export const downloadPdf = async (req: Request, res: Response) => {
-  const contract = await contractService.getContractOrThrow(
+  let contract = await contractService.getContractOrThrow(
     paramId(req),
     userId(req),
     req.user?.role === "admin"
   );
 
-  if (!contract.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this contract");
+  if (!contract.pdfPath || !fs.existsSync(toAbsolutePath(contract.pdfPath))) {
+    contract = await contractService.generatePdfForContract(paramId(req), userId(req), req.user?.role === "admin");
   }
-
+  if (!contract.pdfPath) throw new HttpError(500, "Contract PDF generation failed");
   res.download(toAbsolutePath(contract.pdfPath), `${contract.contractNumber}.pdf`);
 };

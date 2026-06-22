@@ -342,7 +342,7 @@ export function NewRepairOrderPage() {
 
 export function RepairOrderDetailPage(props: { mode?: 'new' }) {
   const { t, interpolate, language } = useLanguage()
-  const { confirm, showToast } = useAppConfirm()
+  const { confirm, showToast, prompt } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
   const repairOrderId = props.mode === 'new' ? undefined : params.repairOrderId
@@ -461,15 +461,9 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     }
   }
 
-  const handleStatusChange = async (nextStatus: RepairOrderStatus) => {
+  const handleStatusChange = (nextStatus: RepairOrderStatus) => {
     if (!repairOrder) return
-    const commentInput = window.prompt(
-      t.repairOrders.detail.historyPromptCommentMessage.replace('{status}', t.repairOrders.statuses[nextStatus])
-    )
-    if (commentInput === null) {
-      return
-    }
-
+    prompt({title:t.repairOrders.detail.historyPromptCommentTitle,message:t.repairOrders.detail.historyPromptCommentMessage.replace('{status}',t.repairOrders.statuses[nextStatus]),onSubmit:async commentInput=>{
     setSaving(true)
     try {
       const updated = await updateRepairOrderStatus(repairOrder.id, nextStatus, commentInput.trim() || undefined)
@@ -483,6 +477,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     } finally {
       setSaving(false)
     }
+    }})
   }
 
   const handleGeneratePdf = async (order = repairOrder) => {
@@ -519,21 +514,60 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     }
   }
 
+  const resolveCustomerEmail = () =>
+    form.customerEmail?.trim() ||
+    repairOrder?.customerEmail?.trim() ||
+    repairOrder?.customer?.email?.trim() ||
+    ''
+
   const handleSendEmail = () => {
-    if (!repairOrder?.customerEmail) {
+    const email = resolveCustomerEmail()
+    if (!email) {
       showToast('error', t.repairOrders.detail.emailSendFailed)
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('error', t.repairOrders.validation.emailInvalid)
       return
     }
 
     confirm({
       title: t.repairOrders.detail.sendEmailConfirmTitle,
       message: interpolate(t.repairOrders.detail.sendEmailConfirmMessage, {
-        email: repairOrder.customerEmail,
+        email,
       }),
       onConfirm: async () => {
         setSendingEmail(true)
         try {
+          const validation = validateForm(
+            { ...form, customerEmail: email },
+            selectedAccessories,
+            accessoryOtherText,
+            t,
+          )
+          if (Object.keys(validation.errors).length > 0) {
+            setFieldErrors(validation.errors)
+            showToast('error', t.repairOrders.detail.emailSendFailed)
+            return
+          }
+
           let current = repairOrder
+          if (repairOrderId && validation.payload) {
+            const saved = await saveRepairOrder(validation.payload, repairOrderId)
+            const next = applyRepairOrderToForm(saved, t.repairOrders.accessories)
+            current = saved
+            setRepairOrder(saved)
+            setForm(next.form)
+            setSelectedAccessories(next.accessoriesState.selected)
+            setAccessoryOtherText(next.accessoriesState.otherText)
+          }
+
+          if (!current?.id) {
+            showToast('error', t.repairOrders.detail.emailSendFailed)
+            return
+          }
+
           if (!current.pdfPath) {
             const updated = await handleGeneratePdf(current)
             if (!updated?.pdfPath) {
@@ -542,11 +576,12 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
             }
             current = updated
           }
-          await emailRepairOrderPdf(current.id)
+
+          await emailRepairOrderPdf(current.id, email)
           showToast('success', t.repairOrders.detail.emailSentSuccess)
         } catch (err) {
           logApiError('repair order email send', err)
-          showToast('error', t.repairOrders.detail.emailSendFailed)
+          showToast('error', getFriendlyErrorMessage(err, 'generic', t))
         } finally {
           setSendingEmail(false)
         }
@@ -726,7 +761,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
                 <Download className="h-4 w-4" />
                 {t.repairOrders.detail.downloadPdf}
               </button>
-              {repairOrder.customerEmail ? (
+              {resolveCustomerEmail() ? (
                 <button
                   type="button"
                   data-testid="repair-order-send-email"

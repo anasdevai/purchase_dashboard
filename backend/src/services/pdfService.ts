@@ -34,7 +34,7 @@ export const generateQuotationPdf = async (
 
   const absolutePdfPath = `${storageDir}/quotation.pdf`;
   const html = renderQuotationHtml(quotation, shopSettings, language);
-  await renderHtmlToPdf(html, absolutePdfPath);
+  await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
 
   return toRelativeStoragePath(absolutePdfPath);
 };
@@ -49,7 +49,7 @@ export const generateContractPdf = async (
 
   const absolutePdfPath = `${storageDir}/contract.pdf`;
   const html = renderContractHtml(contract, shopSettings);
-  await renderHtmlToPdf(html, absolutePdfPath);
+  await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
 
   return toRelativeStoragePath(absolutePdfPath);
 };
@@ -63,7 +63,7 @@ export const generateRepairOrderPdf = async (
 
   const absolutePdfPath = `${storageDir}/repair-order.pdf`;
   const html = renderRepairOrderHtml(repairOrder, shopSettings);
-  await renderHtmlToPdf(html, absolutePdfPath);
+  await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
 
   return toRelativeStoragePath(absolutePdfPath);
 };

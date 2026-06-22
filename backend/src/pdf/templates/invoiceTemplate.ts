@@ -5,11 +5,13 @@ import {
   type InvoicePdfLanguage
 } from "../i18n/invoicePdfI18n.js";
 import type { InvoiceForPdf, PdfShopSettings } from "../types.js";
+import { getPdfStyles } from "../styles/pdfStyles.js";
 import {
   displayValue,
   escapeHtml,
   formatDateEuropean,
   formatMoneyDecimal,
+  getScleraLogoDataUrl,
   getStructuredAddressLines,
   hasText,
   numericValue,
@@ -415,7 +417,7 @@ export const renderInvoiceHtml = (
   const addressLines = getStructuredAddressLines(shopSettings);
   const addressText = addressLines.join(", ");
 
-  const logoSrc = shopSettings?.logoDataUrl ?? "";
+  const logoSrc = shopSettings?.logoDataUrl || getScleraLogoDataUrl() || "";
   const logoHtml = logoSrc
     ? `<img class="inv-logo" src="${logoSrc}" alt="Logo" />`
     : `<div class="inv-logo inv-logo--placeholder"></div>`;
@@ -669,5 +671,5 @@ export const renderInvoiceHtml = (
   const pageTitle =
     language === "en" ? `Invoice ${invoice.invoiceNumber}` : `Rechnung ${invoice.invoiceNumber}`;
 
-  return wrapHtmlDocument(pageTitle, getInvoiceStyles(), body, language);
+  return wrapHtmlDocument(pageTitle, `${getInvoiceStyles()}\n${getPdfStyles()}`, body, language);
 };

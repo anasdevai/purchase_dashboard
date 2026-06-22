@@ -152,7 +152,7 @@ export function NewInvoicePage() {
 export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const { user } = useAuth()
   const { t, interpolate, language } = useLanguage()
-  const { showToast, confirm } = useAppConfirm()
+  const { showToast, confirm, prompt } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
   const invoiceId = props.mode === 'new' ? undefined : params.invoiceId
@@ -167,6 +167,8 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const [fieldErrors, setFieldErrors] = useState<{
     customerName?: string
     customerEmail?: string
+    customerPhone?: string
+    customerAddress?: string
     items?: string
   }>({})
   const [pdfNeedsRegeneration, setPdfNeedsRegeneration] = useState(false)
@@ -189,11 +191,9 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       .catch((err) => console.error('Failed to fetch employees:', err))
   }, [])
 
-  const handleCancelInvoice = async () => {
+  const handleCancelInvoice = () => {
     if (!invoice) return
-    const reason = window.prompt(language === 'de' ? 'Bitte geben Sie einen Stornierungsgrund ein:' : 'Please enter a cancellation reason:')
-    if (reason === null) return
-
+    prompt({title:language==='de'?'Rechnung stornieren':'Cancel invoice',message:language==='de'?'Bitte geben Sie einen Stornierungsgrund ein.':'Please enter a cancellation reason.',onSubmit:async reason=>{
     setSaving(true)
     setError(null)
     try {
@@ -207,6 +207,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     } finally {
       setSaving(false)
     }
+    }})
   }
 
   const handleCopyInvoice = async () => {
@@ -332,6 +333,8 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     const errors: {
       customerName?: string
       customerEmail?: string
+      customerPhone?: string
+      customerAddress?: string
       items?: string
     } = {}
 
@@ -339,9 +342,14 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       errors.customerName = t.invoices.validation.customerNameRequired
     }
 
-    if (form.customerEmail?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) {
+    if (!form.customerEmail?.trim()) {
+      errors.customerEmail = t.invoices.validation.customerEmailRequired
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) {
       errors.customerEmail = t.invoices.validation.emailInvalid
     }
+
+    if (!form.customerPhone?.trim()) errors.customerPhone = t.invoices.validation.customerPhoneRequired
+    if (!form.customerAddress?.trim()) errors.customerAddress = t.invoices.validation.customerAddressRequired
 
     if (!form.items.some((item) => item.description.trim())) {
       errors.items = t.invoices.validation.itemDescriptionRequired
@@ -395,25 +403,49 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     }
   }
 
+  const resolveCustomerEmail = () =>
+    form.customerEmail?.trim() ||
+    invoice?.customerEmail?.trim() ||
+    invoice?.customer?.email?.trim() ||
+    ''
+
   const handleSendEmail = () => {
-    if (!invoice?.customerEmail) {
+    const email = resolveCustomerEmail()
+    if (!email) {
       showToast('error', t.invoices.detail.emailSendFailed)
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('error', t.invoices.validation.emailInvalid)
       return
     }
 
     confirm({
       title: t.invoices.detail.sendEmailConfirmTitle,
       message: interpolate(t.invoices.detail.sendEmailConfirmMessage, {
-        email: invoice.customerEmail,
+        email,
       }),
       onConfirm: async () => {
         setSendingEmail(true)
         try {
-          await emailInvoicePdf(invoice.id)
+          let current = invoice
+          if (invoiceId) {
+            const saved = await saveInvoice(cleanForm({ ...form, customerEmail: email }), invoiceId, language)
+            current = saved
+            setInvoice(saved)
+            setForm(fromInvoice(saved))
+            setPdfNeedsRegeneration(false)
+          }
+          if (!current?.id) {
+            showToast('error', t.invoices.detail.emailSendFailed)
+            return
+          }
+          await emailInvoicePdf(current.id, email)
           showToast('success', t.invoices.detail.emailSentSuccess)
         } catch (err) {
           logApiError('invoice email send', err)
-          showToast('error', t.invoices.detail.emailSendFailed)
+          showToast('error', getFriendlyErrorMessage(err, 'generic', t))
         } finally {
           setSendingEmail(false)
         }
@@ -576,6 +608,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               label={t.invoices.detail.customerEmail}
               type="email"
               placeholder={t.invoices.detail.customerEmailPlaceholder}
+              required
               value={form.customerEmail ?? ''}
               error={fieldErrors.customerEmail}
               onChange={(value) => {
@@ -589,14 +622,24 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               testId="invoice-customer-phone"
               label={t.invoices.detail.customerPhone}
               placeholder={t.invoices.detail.customerPhonePlaceholder}
+              required
               value={form.customerPhone ?? ''}
-              onChange={(value) => setField('customerPhone', value)}
+              error={fieldErrors.customerPhone}
+              onChange={(value) => {
+                setField('customerPhone', value)
+                if (fieldErrors.customerPhone) setFieldErrors((current) => ({ ...current, customerPhone: undefined }))
+              }}
             />
             <Field
               label={t.invoices.detail.customerAddress}
               placeholder={t.invoices.detail.customerAddressPlaceholder}
+              required
               value={form.customerAddress ?? ''}
-              onChange={(value) => setField('customerAddress', value)}
+              error={fieldErrors.customerAddress}
+              onChange={(value) => {
+                setField('customerAddress', value)
+                if (fieldErrors.customerAddress) setFieldErrors((current) => ({ ...current, customerAddress: undefined }))
+              }}
               multiline
             />
           </InvoiceCard>
@@ -935,19 +978,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 </button>
               </>
             ) : null}
-            {invoice?.customerEmail ? (
-              <button
-                type="button"
-                data-testid="invoice-send-email"
-                className="btn btn-secondary h-11 px-5"
-                disabled={saving || sendingEmail}
-                onClick={handleSendEmail}
-              >
-                <Mail className="h-4 w-4" />
-                {sendingEmail ? t.common.pleaseWait : t.invoices.detail.sendEmailBtn}
-              </button>
-            ) : null}
-            {invoice && invoice.customerEmail ? (
+            {resolveCustomerEmail() ? (
               <button
                 type="button"
                 data-testid="invoice-send-email"
@@ -956,7 +987,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 disabled={saving || sendingEmail}
               >
                 <Mail className="h-4 w-4" />
-                {t.invoices.detail.sendEmailBtn}
+                {sendingEmail ? t.common.pleaseWait : t.invoices.detail.sendEmailBtn}
               </button>
             ) : null}
           </div>

@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma.js";
 import { HttpError } from "../utils/httpError.js";
+import { runInventoryQuery } from "../utils/inventoryPrisma.js";
 import { createSparePartSchema, updateSparePartSchema, adjustStockSchema } from "../validators/sparePartValidators.js";
 
 // We will dynamically call the auto-order checker to avoid circular dependencies
@@ -17,11 +18,13 @@ export const listSpareParts = async (
   if (category) where.category = category;
   if (activeOnly) where.isActive = true;
 
-  return prisma.sparePart.findMany({
-    where,
-    include: { supplier: true },
-    orderBy: { itemNumber: "asc" }
-  });
+  return runInventoryQuery("listSpareParts", () =>
+    prisma.sparePart.findMany({
+      where,
+      include: { supplier: true },
+      orderBy: { itemNumber: "asc" },
+    })
+  ).then((parts) => parts ?? []);
 };
 
 export const getSparePartById = async (id: string, userId: string) => {
@@ -178,17 +181,19 @@ export const getStockAdjustmentsHistory = async (userId: string, sparePartId?: s
   const where: any = { userId };
   if (sparePartId) where.sparePartId = sparePartId;
 
-  return prisma.stockAdjustment.findMany({
-    where,
-    include: {
-      sparePart: {
-        select: {
-          id: true,
-          itemNumber: true,
-          name: true
-        }
-      }
-    },
-    orderBy: { createdAt: "desc" }
-  });
+  return runInventoryQuery("getStockAdjustmentsHistory", () =>
+    prisma.stockAdjustment.findMany({
+      where,
+      include: {
+        sparePart: {
+          select: {
+            id: true,
+            itemNumber: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  ).then((rows) => rows ?? []);
 };

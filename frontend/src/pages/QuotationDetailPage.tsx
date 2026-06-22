@@ -299,18 +299,36 @@ export function QuotationDetailPage(props: { mode?: 'new' }) {
     }
   }
 
+  const resolveCustomerEmail = () =>
+    form.customerEmail?.trim() ||
+    quotation?.customerEmail?.trim() ||
+    quotation?.customer?.email?.trim() ||
+    ''
+
   const handleSendEmail = () => {
-    if (!quotation || !quotation.customerEmail) return
+    const email = resolveCustomerEmail()
+    if (!quotation || !email) {
+      showToast('error', t.quotations.detail.emailSendFailed)
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('error', t.invoices.validation.emailInvalid)
+      return
+    }
 
     confirm({
       title: t.quotations.detail.sendEmailConfirmTitle,
       message: interpolate(t.quotations.detail.sendEmailConfirmMessage, {
-        email: quotation.customerEmail,
+        email,
       }),
       onConfirm: async () => {
         setSendingEmail(true)
         try {
-          await emailQuotationPdf(quotation.id)
+          const saved = await saveQuotation(cleanForm({ ...form, customerEmail: email }), quotation.id)
+          setQuotation(saved)
+          setForm(fromQuotation(saved))
+          await emailQuotationPdf(saved.id, email)
           showToast('success', t.quotations.detail.emailSentSuccess)
         } catch (err) {
           logApiError('quotation email send', err)
@@ -454,27 +472,27 @@ export function QuotationDetailPage(props: { mode?: 'new' }) {
             <div className="text-sm font-semibold text-slate-900">{t.quotations.detail.actionsTitle}</div>
           </div>
           <div className="card-body flex flex-wrap gap-2">
-            {quotation.pdfPath ? (
-              <button type="button" className="btn btn-secondary" onClick={handleDownloadPdf}>
-                <Download className="h-4 w-4" />
-                {t.quotations.detail.downloadPdf}
-              </button>
-            ) : (
+            <button type="button" className="btn btn-secondary" onClick={handleDownloadPdf}>
+              <Download className="h-4 w-4" />
+              {t.quotations.detail.downloadPdf}
+            </button>
+            {!quotation.pdfPath ? (
               <button type="button" className="btn btn-secondary" onClick={handleGeneratePdf} disabled={saving}>
                 <RefreshCw className="h-4 w-4" />
                 {t.invoices.detail.generatePdf}
               </button>
-            )}
+            ) : null}
 
-            {quotation.customerEmail && quotation.pdfPath && (
+            {resolveCustomerEmail() && (
               <button
                 type="button"
-                className="btn btn-secondary"
+                data-testid="quotation-send-email"
+                className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
                 onClick={handleSendEmail}
                 disabled={sendingEmail || saving}
               >
                 <Mail className="h-4 w-4" />
-                {t.quotations.detail.sendEmailBtn}
+                {sendingEmail ? t.common.pleaseWait : t.quotations.detail.sendEmailBtn}
               </button>
             )}
 

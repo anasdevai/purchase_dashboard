@@ -25,7 +25,7 @@ function filterLabel(filter: RepairOrderListFilter, t: ReturnType<typeof useLang
 
 export function RepairOrdersPage() {
   const { t, interpolate, formatDate, formatMoney } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { showToast, confirm, prompt } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<RepairOrderListFilter>('active')
   const [repairOrders, setRepairOrders] = useState<RepairOrder[]>([])
@@ -49,16 +49,7 @@ export function RepairOrdersPage() {
     return () => window.clearTimeout(timeout)
   }, [query, filter, t.repairOrders.errors.loadFailed])
 
-  const handleDelete = async (repairOrder: RepairOrder) => {
-    if (
-      !window.confirm(
-        interpolate(t.repairOrders.confirmDelete, {
-          repairOrderNumber: repairOrder.repairOrderNumber,
-        }),
-      )
-    ) {
-      return
-    }
+  const handleDelete = (repairOrder: RepairOrder) => confirm({title:t.common.confirm,message:interpolate(t.repairOrders.confirmDelete,{repairOrderNumber:repairOrder.repairOrderNumber}),variant:'danger',onConfirm:async()=>{
     setDeletingId(repairOrder.id)
     try {
       await deleteRepairOrder(repairOrder.id)
@@ -69,16 +60,9 @@ export function RepairOrdersPage() {
     } finally {
       setDeletingId(null)
     }
-  }
+  }})
 
-  const handleStatusChange = async (repairOrder: RepairOrder, nextStatus: RepairOrderStatus) => {
-    const commentInput = window.prompt(
-      t.repairOrders.detail.historyPromptCommentMessage.replace('{status}', t.repairOrders.statuses[nextStatus])
-    )
-    if (commentInput === null) {
-      return
-    }
-
+  const handleStatusChange = (repairOrder: RepairOrder, nextStatus: RepairOrderStatus) => prompt({title:t.repairOrders.detail.historyPromptCommentTitle,message:t.repairOrders.detail.historyPromptCommentMessage.replace('{status}',t.repairOrders.statuses[nextStatus]),onSubmit:async commentInput=>{
     setUpdatingStatusId(repairOrder.id)
     try {
       const updated = await updateRepairOrderStatus(repairOrder.id, nextStatus, commentInput.trim() || undefined)
@@ -101,7 +85,7 @@ export function RepairOrdersPage() {
     } finally {
       setUpdatingStatusId(null)
     }
-  }
+  }})
 
   return (
     <div className="space-y-4">
@@ -236,8 +220,7 @@ export function RepairOrdersPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Link>
-                        {order.pdfPath ? (
-                          <button
+                        <button
                             type="button"
                             className="btn btn-secondary h-8 w-8 p-0"
                             title={t.table.download}
@@ -252,8 +235,7 @@ export function RepairOrdersPage() {
                             }}
                           >
                             <Download className="h-4 w-4" />
-                          </button>
-                        ) : null}
+                        </button>
                         <button
                           type="button"
                           disabled={deletingId === order.id}

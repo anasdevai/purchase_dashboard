@@ -45,12 +45,9 @@ export const invoiceSchema = z.object({
   repairOrderId: optionalText,
   invoiceDate: optionalDate,
   customerName: requiredText(150),
-  customerAddress: optionalText,
-  customerPhone: optionalText,
-  customerEmail: z.preprocess(
-    (value) => (value === "" || value === undefined || value === null ? undefined : value),
-    z.string().trim().email().max(150).optional()
-  ),
+  customerAddress: requiredText(2000),
+  customerPhone: requiredText(200),
+  customerEmail: z.string().trim().min(1).email().max(150),
   deviceSummary: optionalText,
   repairSummary: optionalText,
   paymentMethod: z.enum(invoicePaymentMethods).optional(),

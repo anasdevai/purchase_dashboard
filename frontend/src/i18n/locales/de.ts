@@ -46,6 +46,7 @@ export const de: TranslationSchema = {
     },
     toasts: {
       contractCreated: 'Vertrag erfolgreich erstellt.',
+      recordDeleted: 'Eintrag erfolgreich gelöscht.',
       contractDraftSaved: 'Entwurf erfolgreich gespeichert.',
       contractPdfDownloaded: 'PDF erfolgreich heruntergeladen.',
       pdfDownloaded: 'PDF erfolgreich heruntergeladen.',
@@ -608,6 +609,9 @@ export const de: TranslationSchema = {
     confirmDelete: 'Rechnung {invoiceNumber} löschen?',
     validation: {
       customerNameRequired: 'Kundenname ist erforderlich.',
+      customerEmailRequired: 'Kunden-E-Mail ist erforderlich.',
+      customerPhoneRequired: 'Kundentelefonnummer ist erforderlich.',
+      customerAddressRequired: 'Kundenadresse ist erforderlich.',
       emailInvalid: 'Bitte eine gültige E-Mail-Adresse eingeben.',
       itemDescriptionRequired: 'Jede Position benötigt eine Beschreibung.',
     },

@@ -23,7 +23,6 @@ export function ContractTableActions({
   contractId,
   contractNumber,
   status,
-  pdfPath,
   onDelete,
   deleteDisabled,
 }: ContractTableActionsProps) {
@@ -41,7 +40,7 @@ export function ContractTableActions({
       >
         <Eye className="h-4 w-4" aria-hidden />
       </Link>
-      {pdfPath ? (
+      {status !== 'draft' ? (
         <button
           type="button"
           data-testid={`contract-action-download-${contractId}`}

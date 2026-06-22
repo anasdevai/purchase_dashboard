@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
+import fs from "node:fs";
 import * as quotationService from "../services/quotationService.js";
 import * as emailService from "../services/emailService.js";
 import { HttpError } from "../utils/httpError.js";
+import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { toAbsolutePath } from "../utils/paths.js";
 
 const paramId = (req: Request) => String(req.params.id);
@@ -65,62 +67,70 @@ export const remove = async (req: Request, res: Response) => {
 };
 
 export const openPdf = async (req: Request, res: Response) => {
-  const quotation = await quotationService.getQuotationOrThrow(
+  let quotation = await quotationService.getQuotationOrThrow(
     paramId(req),
     userId(req),
     req.user?.role === "admin"
   );
 
-  if (!quotation.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this quotation");
+  if (!quotation.pdfPath || !fs.existsSync(toAbsolutePath(quotation.pdfPath))) {
+    quotation = await quotationService.generatePdfForQuotation(paramId(req), userId(req), req.user?.role === "admin");
   }
-
+  if (!quotation.pdfPath) throw new HttpError(500, "Quotation PDF generation failed");
   res.sendFile(toAbsolutePath(quotation.pdfPath));
 };
 
 export const downloadPdf = async (req: Request, res: Response) => {
-  const quotation = await quotationService.getQuotationOrThrow(
+  let quotation = await quotationService.getQuotationOrThrow(
     paramId(req),
     userId(req),
     req.user?.role === "admin"
   );
 
-  if (!quotation.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this quotation");
+  if (!quotation.pdfPath || !fs.existsSync(toAbsolutePath(quotation.pdfPath))) {
+    quotation = await quotationService.generatePdfForQuotation(paramId(req), userId(req), req.user?.role === "admin");
   }
-
+  if (!quotation.pdfPath) throw new HttpError(500, "Quotation PDF generation failed");
   res.download(toAbsolutePath(quotation.pdfPath), `${quotation.quotationNumber}.pdf`);
 };
 
 export const sendEmail = async (req: Request, res: Response) => {
   const id = paramId(req);
   const uid = userId(req);
+  const isAdmin = req.user?.role === "admin";
+  const toEmailOverride = readOptionalToEmail(req.body);
 
-  const quotation = await quotationService.getQuotationOrThrow(
-    id,
-    uid,
-    req.user?.role === "admin"
-  );
+  let quotation = await quotationService.getQuotationOrThrow(id, uid, isAdmin);
 
-  if (!quotation.customerEmail) {
+  const toEmail =
+    toEmailOverride || resolveCustomerEmail(quotation.customerEmail, quotation.customer);
+
+  if (!toEmail) {
     throw new HttpError(400, "Quotation does not have a customer email address configured");
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+    throw new HttpError(400, "Customer email address is invalid");
+  }
+
   if (!quotation.pdfPath) {
-    throw new HttpError(400, "Quotation PDF has not been generated yet");
+    quotation = await quotationService.generatePdfForQuotation(id, uid, isAdmin);
+  }
+
+  if (!quotation.pdfPath) {
+    throw new HttpError(400, "Quotation PDF could not be generated");
   }
 
   await emailService.sendQuotationPdfEmail(
     uid,
-    quotation.customerEmail,
+    toEmail,
     quotation.quotationNumber,
     quotation.pdfPath,
     quotation.customerName
   );
 
-  // Mark quotation as Sent after successful email delivery
   if (quotation.status === "Draft") {
-    await quotationService.updateQuotationStatus(id, uid, { status: "Sent" }, req.user?.role === "admin");
+    await quotationService.updateQuotationStatus(id, uid, { status: "Sent" }, isAdmin);
   }
 
   res.json({ success: true });

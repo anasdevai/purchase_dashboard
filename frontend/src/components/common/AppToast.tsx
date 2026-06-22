@@ -1,9 +1,9 @@
-import { CheckCircle2, X, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { useLanguage } from '../../i18n/LanguageProvider'
 
 export type ToastState = {
-  type: 'success' | 'error'
+  type: 'success' | 'error' | 'warning' | 'info'
   message: string
 } | null
 
@@ -17,6 +17,8 @@ export function AppToast({ toast, onDismiss }: AppToastProps) {
   if (!toast) return null
 
   const isSuccess = toast.type === 'success'
+  const isWarning = toast.type === 'warning'
+  const isInfo = toast.type === 'info'
 
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[110] flex justify-center px-4 sm:bottom-6">
@@ -25,19 +27,19 @@ export function AppToast({ toast, onDismiss }: AppToastProps) {
         className={
           isSuccess
             ? 'pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-emerald-200 bg-white px-4 py-3 shadow-lg ring-1 ring-emerald-100'
-            : 'pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 shadow-lg ring-1 ring-red-100'
+            : isWarning ? 'pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3 shadow-lg ring-1 ring-amber-100' : isInfo ? 'pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-blue-200 bg-white px-4 py-3 shadow-lg ring-1 ring-blue-100' : 'pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-red-200 bg-white px-4 py-3 shadow-lg ring-1 ring-red-100'
         }
       >
         {isSuccess ? (
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden />
-        ) : (
+        ) : isWarning ? (<AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />) : isInfo ? (<Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />) : (
           <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden />
         )}
         <p
           className={
             isSuccess
               ? 'min-w-0 flex-1 text-sm font-medium text-emerald-800'
-              : 'min-w-0 flex-1 text-sm font-medium text-red-700'
+              : isWarning ? 'min-w-0 flex-1 text-sm font-medium text-amber-800' : isInfo ? 'min-w-0 flex-1 text-sm font-medium text-blue-800' : 'min-w-0 flex-1 text-sm font-medium text-red-700'
           }
         >
           {toast.message}

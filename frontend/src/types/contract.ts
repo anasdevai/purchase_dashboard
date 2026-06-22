@@ -25,6 +25,7 @@ export type ApiContract = {
   customerAddress?: string | null
   customerPhone?: string | null
   customerEmail?: string | null
+  customer?: { email?: string | null } | null
   customerDateOfBirth?: string | null
   idDocumentNumber?: string | null
   idType?: string | null

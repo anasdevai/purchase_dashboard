@@ -3,6 +3,30 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Wrench, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import { fetchUserRepairOrders, fetchUser, type AdminUser } from '../../api/admin'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import {
+  adminBackLinkClass,
+  adminEmptyStateClass,
+  adminErrorStateClass,
+  adminIconButtonClass,
+  adminLoadingSpinnerClass,
+  adminLoadingTextClass,
+  adminPageSubtitleClass,
+  adminPageTitleClass,
+  adminPaginationFooterClass,
+  adminPaginationTextClass,
+  adminTableCellMutedClass,
+  adminTableCellPrimaryClass,
+  adminTableCellSecondaryClass,
+  adminTableHeadClass,
+  adminTableRowClass,
+} from './adminUi'
+
+function repairStatusClass(status: string) {
+  if (status === 'Completed') return 'border border-emerald-100 bg-emerald-50 text-emerald-700'
+  if (status === 'InRepair') return 'border border-sky-100 bg-sky-50 text-sky-700'
+  if (status === 'Cancelled') return 'border border-red-100 bg-red-50 text-red-700'
+  return 'border border-amber-100 bg-amber-50 text-amber-700'
+}
 
 export function AdminUserRepairOrdersPage() {
   const { userId } = useParams<{ userId: string }>()
@@ -38,22 +62,15 @@ export function AdminUserRepairOrdersPage() {
   }, [userId, page])
 
   return (
-    <div className="min-h-screen px-8 py-8">
-      {/* Back link */}
-      <button
-        onClick={() => navigate(`/admin/users/${userId}`)}
-        className="group mb-6 flex items-center gap-2 text-xs font-semibold text-white/50 transition hover:text-white"
-      >
+    <div className="space-y-6">
+      <button type="button" onClick={() => navigate(`/admin/users/${userId}`)} className={adminBackLinkClass}>
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
         <span>Back to User Profile</span>
       </button>
 
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-white">
-          {user ? `${user.name}'s Repair Orders` : 'Repair Orders'}
-        </h1>
-        <p className="mt-1 text-sm text-white/40">
+      <div>
+        <h1 className={adminPageTitleClass}>{user ? `${user.name}'s Repair Orders` : 'Repair Orders'}</h1>
+        <p className={adminPageSubtitleClass}>
           Viewing all repair tickets and orders created by {user?.name || 'this user'}.
         </p>
       </div>
@@ -61,69 +78,67 @@ export function AdminUserRepairOrdersPage() {
       {loading ? (
         <div className="flex h-[300px] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
-            <p className="text-xs font-medium text-white/40">Loading repair orders...</p>
+            <div className={adminLoadingSpinnerClass} />
+            <p className={adminLoadingTextClass}>Loading repair orders...</p>
           </div>
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-8 py-6 text-center">
-          <p className="text-sm font-medium text-red-300">{error}</p>
-        </div>
+        <div className={adminErrorStateClass}>{error}</div>
       ) : repairOrders.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-16 text-center">
-          <Wrench className="mx-auto h-10 w-10 text-white/20" />
-          <p className="mt-3 text-sm font-medium text-white/40">No repair orders found for this user.</p>
+        <div className={adminEmptyStateClass}>
+          <Wrench className="h-10 w-10 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-500">No repair orders found for this user.</p>
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+        <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Order No</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Customer</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Device Model</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Issue</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Est. Cost</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Date Created</th>
-                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">Status</th>
-                  <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-white/30">Actions</th>
+                <tr>
+                  <th className={adminTableHeadClass}>Order No</th>
+                  <th className={adminTableHeadClass}>Customer</th>
+                  <th className={adminTableHeadClass}>Device Model</th>
+                  <th className={adminTableHeadClass}>Issue</th>
+                  <th className={adminTableHeadClass}>Est. Cost</th>
+                  <th className={adminTableHeadClass}>Date Created</th>
+                  <th className={adminTableHeadClass}>Status</th>
+                  <th className={`${adminTableHeadClass} text-right`}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.02]">
+              <tbody className="divide-y divide-slate-100">
                 {repairOrders.map((ro) => (
-                  <tr key={ro.id} className="transition hover:bg-white/[0.01]">
-                    <td className="px-6 py-4 text-sm font-semibold text-white/80">{ro.orderNumber}</td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-white/80">{ro.customerName}</p>
-                      <p className="text-[11px] text-white/30">{ro.customerPhone || 'No phone'}</p>
+                  <tr key={ro.id} className={adminTableRowClass}>
+                    <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>{ro.orderNumber}</td>
+                    <td className="px-4 py-4 sm:px-6">
+                      <p className={adminTableCellPrimaryClass}>{ro.customerName}</p>
+                      <p className={adminTableCellSecondaryClass}>{ro.customerPhone || 'No phone'}</p>
                     </td>
-                    <td className="px-6 py-4 text-sm text-white/80 font-medium">{ro.deviceModel}</td>
-                    <td className="px-6 py-4 text-xs text-white/60 truncate max-w-[150px]" title={ro.problemDescription}>
+                    <td className={`px-4 py-4 sm:px-6 text-sm font-medium text-slate-800`}>{ro.deviceModel}</td>
+                    <td
+                      className="max-w-[150px] truncate px-4 py-4 text-xs text-slate-600 sm:px-6"
+                      title={ro.problemDescription}
+                    >
                       {ro.problemDescription}
                     </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-white/80">{formatMoney(ro.estimatedCost)}</td>
-                    <td className="px-6 py-4 text-xs text-white/40">{formatDate(ro.createdAt)}</td>
-                    <td className="px-6 py-4">
+                    <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>
+                      {formatMoney(ro.estimatedCost)}
+                    </td>
+                    <td className={`px-4 py-4 sm:px-6 ${adminTableCellMutedClass}`}>
+                      {formatDate(ro.createdAt)}
+                    </td>
+                    <td className="px-4 py-4 sm:px-6">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                          ro.status === 'Completed'
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : ro.status === 'InRepair'
-                            ? 'bg-sky-500/10 text-sky-400'
-                            : ro.status === 'Cancelled'
-                            ? 'bg-red-500/10 text-red-400'
-                            : 'bg-amber-500/10 text-amber-400'
-                        }`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${repairStatusClass(ro.status)}`}
                       >
                         {ro.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-4 text-right sm:px-6">
                       <div className="flex justify-end gap-2">
                         <button
+                          type="button"
                           onClick={() => navigate(`/repair-orders/${ro.id}`)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+                          className={adminIconButtonClass}
                           title="View Details"
                         >
                           <ExternalLink className="h-4 w-4" />
@@ -136,31 +151,33 @@ export function AdminUserRepairOrdersPage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-white/[0.06] px-6 py-4">
-              <p className="text-xs text-white/35">
-                Page <span className="font-semibold text-white/60">{page}</span> of{' '}
-                <span className="font-semibold text-white/60">{totalPages}</span> · Total{' '}
-                <span className="font-semibold text-white/60">{total}</span> repair orders
+          {totalPages > 1 ? (
+            <div className={adminPaginationFooterClass}>
+              <p className={adminPaginationTextClass}>
+                Page <span className="font-semibold text-slate-800">{page}</span> of{' '}
+                <span className="font-semibold text-slate-800">{totalPages}</span> · Total{' '}
+                <span className="font-semibold text-slate-800">{total}</span> repair orders
               </p>
               <div className="flex gap-2">
                 <button
+                  type="button"
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.03] text-white transition hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-30"
+                  className="btn btn-secondary h-9 w-9 p-0 disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
+                  type="button"
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.03] text-white transition hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-30"
+                  className="btn btn-secondary h-9 w-9 p-0 disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>

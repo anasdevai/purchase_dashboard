@@ -34,7 +34,7 @@ export function AdminNewUserPage() {
   }
 
   return (
-    <div className="min-h-screen px-8 py-8 flex flex-col items-center justify-center bg-slate-50">
+    <div className="flex flex-col items-center justify-center py-4 sm:py-8">
       <div className="w-full max-w-xl">
         {/* Back Button */}
         <button

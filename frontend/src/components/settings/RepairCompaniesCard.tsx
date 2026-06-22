@@ -21,7 +21,7 @@ const emptyForm = (): CompanyForm => ({
 
 export function RepairCompaniesCard() {
   const { t, interpolate } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { showToast, confirm } = useAppConfirm()
   const [companies, setCompanies] = useState<RepairCompany[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -93,11 +93,7 @@ export function RepairCompaniesCard() {
     })
   }
 
-  const handleDelete = async (company: RepairCompany) => {
-    if (!window.confirm(interpolate(t.settings.repairCompanies.confirmDelete, { name: company.name }))) {
-      return
-    }
-
+  const handleDelete = (company: RepairCompany) => confirm({title:t.common.confirm,message:interpolate(t.settings.repairCompanies.confirmDelete,{name:company.name}),variant:'danger',onConfirm:async()=>{
     setDeletingId(company.id)
     try {
       await deleteRepairCompany(company.id)
@@ -110,7 +106,7 @@ export function RepairCompaniesCard() {
     } finally {
       setDeletingId(null)
     }
-  }
+  }})
 
   return (
     <section className="card overflow-hidden">

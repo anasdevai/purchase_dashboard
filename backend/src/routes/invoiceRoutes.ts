@@ -17,7 +17,6 @@ invoiceRouter.post("/:id/pdf", asyncHandler(invoiceController.generatePdf));
 invoiceRouter.post("/:id/email", asyncHandler(invoiceController.sendEmail));
 invoiceRouter.get("/:id/pdf", asyncHandler(invoiceController.openPdf));
 invoiceRouter.get("/:id/pdf/download", asyncHandler(invoiceController.downloadPdf));
-invoiceRouter.post("/:id/email", asyncHandler(invoiceController.sendEmail));
 invoiceRouter.post("/:id/copy", asyncHandler(invoiceController.copy));
 invoiceRouter.post("/:id/cancel", asyncHandler(invoiceController.cancel));
 invoiceRouter.post("/:id/reminder", asyncHandler(invoiceController.sendReminder));

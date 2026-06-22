@@ -4,14 +4,9 @@ import {
   Search,
   Trash2,
   Edit2,
-  Layers,
   Smartphone,
   Wrench,
-  Euro,
-  Tag,
-  Check,
   X,
-  AlertTriangle
 } from 'lucide-react';
 import { useAppConfirm } from '../../components/common/ConfirmDialogProvider';
 import * as api from '../../api/masterData';

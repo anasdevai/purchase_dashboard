@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
+import fs from "node:fs";
 import * as emailService from "../services/emailService.js";
 import * as repairOrderService from "../services/repairOrderService.js";
 import { HttpError } from "../utils/httpError.js";
+import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { toAbsolutePath } from "../utils/paths.js";
 
 const paramId = (req: Request) => String(req.params.id);
@@ -90,11 +92,12 @@ export const openPdf = async (req: Request, res: Response) => {
     req.user?.role === "admin"
   );
 
-  if (!repairOrder.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this repair order");
+  let pdfPath = repairOrder.pdfPath;
+  if (!pdfPath || !fs.existsSync(toAbsolutePath(pdfPath))) {
+    pdfPath = (await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req), req.user?.role === "admin")).pdfPath;
   }
-
-  res.sendFile(toAbsolutePath(repairOrder.pdfPath));
+  if (!pdfPath) throw new HttpError(500, "Repair order PDF generation failed");
+  res.sendFile(toAbsolutePath(pdfPath));
 };
 
 export const downloadPdf = async (req: Request, res: Response) => {
@@ -104,31 +107,45 @@ export const downloadPdf = async (req: Request, res: Response) => {
     req.user?.role === "admin"
   );
 
-  if (!repairOrder.pdfPath) {
-    throw new HttpError(404, "PDF has not been generated for this repair order");
+  let pdfPath = repairOrder.pdfPath;
+  if (!pdfPath || !fs.existsSync(toAbsolutePath(pdfPath))) {
+    pdfPath = (await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req), req.user?.role === "admin")).pdfPath;
   }
-
-  res.download(toAbsolutePath(repairOrder.pdfPath), `${repairOrder.repairOrderNumber}.pdf`);
+  if (!pdfPath) throw new HttpError(500, "Repair order PDF generation failed");
+  res.download(toAbsolutePath(pdfPath), `${repairOrder.repairOrderNumber}.pdf`);
 };
 
 export const sendEmail = async (req: Request, res: Response) => {
-  const repairOrder = await repairOrderService.getRepairOrderOrThrow(
-    paramId(req),
-    userId(req),
-    req.user?.role === "admin"
-  );
+  const id = paramId(req);
+  const uid = userId(req);
+  const isAdmin = req.user?.role === "admin";
+  const toEmailOverride = readOptionalToEmail(req.body);
 
-  if (!repairOrder.customerEmail) {
+  let repairOrder = await repairOrderService.getRepairOrderOrThrow(id, uid, isAdmin);
+
+  const toEmail =
+    toEmailOverride || resolveCustomerEmail(repairOrder.customerEmail, repairOrder.customer);
+
+  if (!toEmail) {
     throw new HttpError(400, "Repair order does not have a customer email address configured");
   }
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+    throw new HttpError(400, "Customer email address is invalid");
+  }
+
   if (!repairOrder.pdfPath) {
-    throw new HttpError(400, "Repair order PDF has not been generated yet");
+    await repairOrderService.generatePdfForRepairOrder(id, uid, isAdmin);
+    repairOrder = await repairOrderService.getRepairOrderOrThrow(id, uid, isAdmin);
+  }
+
+  if (!repairOrder.pdfPath) {
+    throw new HttpError(400, "Repair order PDF could not be generated");
   }
 
   await emailService.sendRepairOrderPdfEmail(
-    userId(req),
-    repairOrder.customerEmail,
+    uid,
+    toEmail,
     repairOrder.repairOrderNumber,
     repairOrder.pdfPath,
     repairOrder.customerName

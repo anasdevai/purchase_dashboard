@@ -100,6 +100,7 @@ export type TranslationSchema = {
     }
     toasts: {
       contractCreated: string
+      recordDeleted: string
       contractDraftSaved: string
       contractPdfDownloaded: string
       pdfDownloaded: string
@@ -600,6 +601,9 @@ export type TranslationSchema = {
     confirmDelete: string
     validation: {
       customerNameRequired: string
+      customerEmailRequired: string
+      customerPhoneRequired: string
+      customerAddressRequired: string
       emailInvalid: string
       itemDescriptionRequired: string
     }

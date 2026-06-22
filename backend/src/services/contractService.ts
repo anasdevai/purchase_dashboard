@@ -14,7 +14,8 @@ import { generateContractPdf } from "./pdfService.js";
 import { getShopSettingsForUser, shopSettingsToPdf, getDefaultVatPercent } from "./settingsService.js";
 
 const includeFiles = {
-  files: true
+  files: true,
+  customer: { select: { email: true, lastName: true, salutation: true } }
 };
 
 const decimalToNumber = (value: { toString: () => string } | number | null | undefined) => {
@@ -370,6 +371,33 @@ export const completeContract = async (
   return prisma.contract.update({
     where: { id },
     data: { status: "Completed", pdfPath },
+    include: includeFiles
+  });
+};
+
+export const generatePdfForContract = async (id: string, userId: string, isAdmin = false) => {
+  const contract = await getContractOrThrow(id, userId, isAdmin);
+  const shopSettings = await getShopSettingsForUser(contract.userId);
+  const employee = await prisma.user.findUnique({
+    where: { id: contract.userId },
+    select: { name: true }
+  });
+  const vatPercent = getDefaultVatPercent(shopSettings);
+  const grossPrice = Number(contract.purchasePrice ?? 0);
+  const netPrice = grossPrice / (1 + vatPercent / 100);
+  const pdfPath = await generateContractPdf(
+    {
+      ...contract,
+      employeeName: employee?.name ?? "",
+      netPrice,
+      vatAmount: grossPrice - netPrice
+    },
+    shopSettingsToPdf(shopSettings)
+  );
+
+  return prisma.contract.update({
+    where: { id },
+    data: { pdfPath },
     include: includeFiles
   });
 };

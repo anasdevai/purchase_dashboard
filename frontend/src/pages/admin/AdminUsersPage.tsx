@@ -69,7 +69,7 @@ export function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen px-8 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -193,7 +193,7 @@ export function AdminUsersPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/50">
                     <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">User Details</th>

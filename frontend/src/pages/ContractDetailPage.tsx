@@ -88,21 +88,30 @@ export function ContractDetailPage() {
 
   const contract = mapContract(apiContract)
 
+  const resolveCustomerEmail = () =>
+    apiContract?.customerEmail?.trim() || apiContract?.customer?.email?.trim() || ''
+
   const handleSendEmail = () => {
-    if (!apiContract?.customerEmail) {
+    const email = resolveCustomerEmail()
+    if (!email) {
       showToast('error', t.contractDetail.emailSendFailed)
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showToast('error', t.invoices.validation.emailInvalid)
       return
     }
 
     confirm({
       title: t.contractDetail.sendEmailConfirmTitle,
       message: interpolate(t.contractDetail.sendEmailConfirmMessage, {
-        email: apiContract.customerEmail,
+        email,
       }),
       onConfirm: async () => {
         setSendingEmail(true)
         try {
-          await emailContractPdf(apiContract.id)
+          await emailContractPdf(apiContract.id, email)
           showToast('success', t.contractDetail.emailSentSuccess)
         } catch (err) {
           logApiError('contract email send', err)
@@ -194,8 +203,7 @@ export function ContractDetailPage() {
             <Trash2 className="h-4 w-4" />
             {t.contractDetail.cancelDelete}
           </button>
-          {apiContract.pdfPath ? (
-            <button
+          <button
               type="button"
               data-testid="contract-detail-download-pdf"
               disabled={downloadingPdf}
@@ -215,8 +223,7 @@ export function ContractDetailPage() {
             >
               <Download className="h-4 w-4" />
               {t.contractDetail.downloadPdf}
-            </button>
-          ) : null}
+          </button>
           {apiContract.pdfPath && apiContract.customerEmail ? (
             <button
               type="button"

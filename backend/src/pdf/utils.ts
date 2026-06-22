@@ -133,7 +133,7 @@ export const buildCompanyHeaderHtml = (
   shopSettings: PdfShopSettings | undefined,
   options?: HeaderOptions
 ) => {
-  const logoSrc = shopSettings?.logoDataUrl ?? "";
+  const logoSrc = shopSettings?.logoDataUrl || getScleraLogoDataUrl() || "";
   const logoClass = options?.contractLogo
     ? "logo logo--contract"
     : options?.largeLogo

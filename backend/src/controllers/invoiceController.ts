@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import * as emailService from "../services/emailService.js";
 import * as invoiceService from "../services/invoiceService.js";
 import { HttpError } from "../utils/httpError.js";
+import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { invoicePdfLanguageFromRequest } from "../utils/invoicePdfLanguage.js";
 
 const paramId = (req: Request) => String(req.params.id);
@@ -101,36 +102,42 @@ export const downloadPdf = async (req: Request, res: Response) => {
 };
 
 export const sendEmail = async (req: Request, res: Response) => {
-  const invoice = await invoiceService.getInvoiceOrThrow(
-    paramId(req),
-    userId(req),
-    req.user?.role === "admin"
-  );
+  const id = paramId(req);
+  const uid = userId(req);
+  const language = pdfLanguage(req);
+  const toEmailOverride = readOptionalToEmail(req.body);
 
-  if (!invoice.customerEmail) {
+  let invoice = await invoiceService.getInvoiceOrThrow(id, uid, req.user?.role === "admin");
+
+  const toEmail =
+    toEmailOverride || resolveCustomerEmail(invoice.customerEmail, invoice.customer);
+
+  if (!toEmail) {
     throw new HttpError(400, "Invoice does not have a customer email address configured");
   }
 
-  if (!invoice.pdfPath) {
-    await invoiceService.generatePdfForInvoice(paramId(req), userId(req), pdfLanguage(req));
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(toEmail)) {
+    throw new HttpError(400, "Customer email address is invalid");
   }
 
-  const updatedInvoice = await invoiceService.getInvoiceOrThrow(
-    paramId(req),
-    userId(req),
-    req.user?.role === "admin"
-  );
+  if (!invoice.pdfPath) {
+    invoice = await invoiceService.generatePdfForInvoice(id, uid, language);
+  }
+
+  if (!invoice.pdfPath) {
+    throw new HttpError(400, "Invoice PDF could not be generated");
+  }
 
   await emailService.sendInvoicePdfEmail(
-    userId(req),
-    updatedInvoice.customerEmail!,
-    updatedInvoice.invoiceNumber,
-    updatedInvoice.pdfPath,
-    updatedInvoice.customerName
+    uid,
+    toEmail,
+    invoice.invoiceNumber,
+    invoice.pdfPath,
+    invoice.customerName
   );
 
-  if (["Draft", "Open"].includes(updatedInvoice.paymentStatus || "")) {
-    await invoiceService.updateInvoicePaymentStatus(paramId(req), userId(req), {
+  if (["Draft", "Open"].includes(invoice.paymentStatus || "")) {
+    await invoiceService.updateInvoicePaymentStatus(id, uid, {
       paymentStatus: "Sent"
     });
   }

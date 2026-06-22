@@ -313,6 +313,9 @@ export async function submitSignatureByToken(token: string, signature: Blob) {
   )
 }
 
-export async function emailContractPdf(id: string) {
-  return apiRequest<{ success: true }>(`/api/contracts/${id}/email`, { method: 'POST' })
+export async function emailContractPdf(id: string, toEmail?: string) {
+  return apiRequest<{ success: true }>(`/api/contracts/${id}/email`, {
+    method: 'POST',
+    body: toEmail ? JSON.stringify({ toEmail }) : undefined,
+  })
 }

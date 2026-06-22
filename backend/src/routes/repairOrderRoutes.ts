@@ -17,5 +17,4 @@ repairOrderRouter.post("/:id/pdf", asyncHandler(repairOrderController.generatePd
 repairOrderRouter.post("/:id/email", asyncHandler(repairOrderController.sendEmail));
 repairOrderRouter.get("/:id/pdf", asyncHandler(repairOrderController.openPdf));
 repairOrderRouter.get("/:id/pdf/download", asyncHandler(repairOrderController.downloadPdf));
-repairOrderRouter.post("/:id/email", asyncHandler(repairOrderController.sendEmail));
 repairOrderRouter.delete("/:id", asyncHandler(repairOrderController.remove));

@@ -98,9 +98,10 @@ export async function downloadQuotationPdf(id: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export async function emailQuotationPdf(id: string) {
+export async function emailQuotationPdf(id: string, toEmail?: string) {
   return apiRequest<{ success: true }>(`/api/quotations/${id}/email`, {
     method: 'POST',
+    body: JSON.stringify(toEmail ? { toEmail } : {}),
   })
 }
 

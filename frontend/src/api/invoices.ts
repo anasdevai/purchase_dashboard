@@ -128,8 +128,11 @@ export async function openInvoicePdf(id: string, language?: Language) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
-export async function emailInvoicePdf(id: string) {
-  return apiRequest<{ success: true }>(`/api/invoices/${id}/email`, { method: 'POST' })
+export async function emailInvoicePdf(id: string, toEmail?: string) {
+  return apiRequest<{ success: true }>(`/api/invoices/${id}/email`, {
+    method: 'POST',
+    body: toEmail ? JSON.stringify({ toEmail }) : undefined,
+  })
 }
 
 export async function copyInvoice(id: string) {

@@ -11,6 +11,7 @@
 
   html {
     overflow: auto;
+    overflow-x: hidden;
   }
 
   body,
@@ -20,6 +21,24 @@
 
   body {
     @apply text-slate-700;
+    overflow-x: hidden;
+  }
+}
+
+@supports (height: 100dvh) {
+  .app-viewport {
+    height: 100dvh;
+  }
+}
+
+.app-scroll-content {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  overscroll-behavior-y: contain;
+}
+
+@media (min-width: 640px) {
+  .app-scroll-content {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -50,7 +69,7 @@
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition;
+    @apply inline-flex max-w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition;
   }
 
   .btn-primary {

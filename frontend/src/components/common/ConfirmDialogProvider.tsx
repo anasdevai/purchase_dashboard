@@ -12,6 +12,7 @@ import { getFriendlyErrorMessage, logApiError } from '../../utils/apiErrors'
 import { AppToast, type ToastState } from './AppToast'
 import { AlertModal } from './AlertModal'
 import { ConfirmDialog } from './ConfirmDialog'
+import { PromptDialog } from './PromptDialog'
 
 export type ConfirmOptions = {
   title: string
@@ -28,11 +29,13 @@ export type AlertOptions = {
   message: string
   confirmLabel?: string
 }
+export type PromptOptions = { title:string; message:string; placeholder?:string; initialValue?:string; confirmLabel?:string; cancelLabel?:string; onSubmit:(value:string)=>void|Promise<void> }
 
 type ConfirmDialogContextValue = {
   confirm: (options: ConfirmOptions) => void
   alert: (options: AlertOptions) => void
-  showToast: (type: 'success' | 'error', message: string) => void
+  showToast: (type: 'success' | 'error' | 'warning' | 'info', message: string) => void
+  prompt: (options: PromptOptions) => void
 }
 
 const ConfirmDialogContext = createContext<ConfirmDialogContextValue | null>(null)
@@ -50,6 +53,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
   const [alertOptions, setAlertOptions] = useState<AlertOptions | null>(null)
 
   const [toast, setToast] = useState<ToastState>(null)
+  const [promptOptions,setPromptOptions]=useState<PromptOptions|null>(null)
   const toastTimerRef = useRef<number | null>(null)
 
   const dismissToast = useCallback(() => {
@@ -61,7 +65,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const showToast = useCallback(
-    (type: 'success' | 'error', message: string) => {
+    (type: 'success' | 'error' | 'warning' | 'info', message: string) => {
       dismissToast()
       setToast({ type, message })
       toastTimerRef.current = window.setTimeout(() => {
@@ -105,6 +109,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
     setAlertOptions(options)
     setAlertOpen(true)
   }, [])
+  const prompt = useCallback((options:PromptOptions)=>setPromptOptions(options),[])
 
   const closeAlert = useCallback(() => {
     setAlertOpen(false)
@@ -116,8 +121,9 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
       confirm,
       alert,
       showToast,
+      prompt,
     }),
-    [confirm, alert, showToast],
+    [confirm, alert, showToast, prompt],
   )
 
   return (
@@ -144,6 +150,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
         onClose={closeAlert}
       />
       <AppToast toast={toast} onDismiss={dismissToast} />
+      <PromptDialog open={Boolean(promptOptions)} title={promptOptions?.title??''} message={promptOptions?.message??''} placeholder={promptOptions?.placeholder} initialValue={promptOptions?.initialValue} confirmLabel={promptOptions?.confirmLabel} cancelLabel={promptOptions?.cancelLabel} onCancel={()=>setPromptOptions(null)} onSubmit={async value=>{const current=promptOptions;setPromptOptions(null);await current?.onSubmit(value)}} />
     </ConfirmDialogContext.Provider>
   )
 }

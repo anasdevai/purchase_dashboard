@@ -18,7 +18,8 @@ import { calculateInvoiceItems } from "../utils/invoiceCalculations.js";
 const includeItems = {
   items: { orderBy: { sortOrder: "asc" as const } },
   repairOrder: { select: { id: true, repairOrderNumber: true } },
-  employee: { select: { id: true, name: true } }
+  employee: { select: { id: true, name: true } },
+  customer: { select: { id: true, email: true, lastName: true, salutation: true } }
 };
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -182,7 +183,8 @@ export const createInvoiceFromRepairOrder = async (
   language: InvoicePdfLanguage = "en"
 ) => {
   const repairOrder = await prisma.repairOrder.findFirst({
-    where: { id: repairOrderId, userId }
+    where: { id: repairOrderId, userId },
+    include: { customer: { select: { email: true } } }
   });
 
   if (!repairOrder) {
@@ -254,7 +256,7 @@ export const createInvoiceFromRepairOrder = async (
       customerName: repairOrder.customerName,
       customerAddress: repairOrder.customerAddress,
       customerPhone: repairOrder.customerPhone,
-      customerEmail: repairOrder.customerEmail,
+      customerEmail: repairOrder.customerEmail || repairOrder.customer?.email || undefined,
       deviceSummary,
       repairSummary: repairOrder.problemDescription,
       paymentStatus: "Open",

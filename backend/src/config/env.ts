@@ -1,7 +1,10 @@
 import dotenv from "dotenv";
+import path from "node:path";
 import { z } from "zod";
 
-dotenv.config();
+// Always load the backend environment file, regardless of the directory used to
+// launch the monorepo script (for example `npm --prefix backend`).
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),

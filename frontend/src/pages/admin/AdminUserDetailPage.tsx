@@ -12,9 +12,17 @@ import {
   AlertTriangle,
   Calendar,
   Lock,
+  ChevronRight,
 } from 'lucide-react'
 import { fetchUser, updateUser, deleteUser, type AdminUser } from '../../api/admin'
 import { useAuth } from '../../auth/AuthContext'
+import {
+  adminAlertClass,
+  adminBackLinkClass,
+  adminLoadingSpinnerClass,
+  adminLoadingTextClass,
+  adminStatusBadge,
+} from './adminUi'
 
 export function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>()
@@ -25,14 +33,12 @@ export function AdminUserDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Edit fields
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<'admin' | 'staff'>('staff')
   const [isActive, setIsActive] = useState(true)
   const [password, setPassword] = useState('')
 
-  // UI state
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -68,21 +74,21 @@ export function AdminUserDetailPage() {
     setMessage(null)
 
     try {
-      const data = {
+      const res = await updateUser(userId, {
         name,
         email,
         role,
         isActive,
         password: password || undefined,
-      }
-      const res = await updateUser(userId, data)
+      })
       setUser(res.user)
       setPassword('')
       setEditing(false)
       setMessage({ type: 'success', text: 'User updated successfully!' })
       setTimeout(() => setMessage(null), 3000)
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to update user' })
+    } catch (err: unknown) {
+      const text = err instanceof Error ? err.message : 'Failed to update user'
+      setMessage({ type: 'error', text })
     } finally {
       setSaving(false)
     }
@@ -97,19 +103,29 @@ export function AdminUserDetailPage() {
       await deleteUser(userId)
       setDeleteModalOpen(false)
       navigate('/admin/users')
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to delete user' })
+    } catch (err: unknown) {
+      const text = err instanceof Error ? err.message : 'Failed to delete user'
+      setMessage({ type: 'error', text })
       setDeleting(false)
       setDeleteModalOpen(false)
     }
   }
 
+  const resetForm = () => {
+    if (!user) return
+    setName(user.name)
+    setEmail(user.email)
+    setRole(user.role)
+    setIsActive(user.isActive)
+    setPassword('')
+  }
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
-          <p className="text-xs font-medium text-white/40">Loading user details...</p>
+          <div className={adminLoadingSpinnerClass} />
+          <p className={adminLoadingTextClass}>Loading user details...</p>
         </div>
       </div>
     )
@@ -117,14 +133,11 @@ export function AdminUserDetailPage() {
 
   if (error || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4 text-center">
+      <div className="flex min-h-[50vh] items-center justify-center px-4 text-center">
         <div>
-          <UserX className="mx-auto h-8 w-8 text-red-400" />
-          <p className="mt-3 text-sm font-medium text-red-300">{error || 'User not found'}</p>
-          <button
-            onClick={() => navigate('/admin/users')}
-            className="mt-4 rounded-xl bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/15"
-          >
+          <UserX className="mx-auto h-8 w-8 text-red-500" />
+          <p className="mt-3 text-sm font-medium text-red-700">{error || 'User not found'}</p>
+          <button type="button" onClick={() => navigate('/admin/users')} className="btn btn-secondary mt-4 h-9 text-xs">
             Back to Users
           </button>
         </div>
@@ -132,218 +145,189 @@ export function AdminUserDetailPage() {
     )
   }
 
+  const analyticsLinks = [
+    {
+      to: `/admin/users/${user.id}/contracts`,
+      label: 'Contracts',
+      subtitle: 'Purchase agreements',
+      count: user._count?.contracts ?? 0,
+      icon: FileText,
+      iconClass: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',
+      countClass: 'text-sky-700',
+    },
+    {
+      to: `/admin/users/${user.id}/invoices`,
+      label: 'Invoices',
+      subtitle: 'Billing history',
+      count: user._count?.invoices ?? 0,
+      icon: Receipt,
+      iconClass: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100',
+      countClass: 'text-emerald-700',
+    },
+    {
+      to: `/admin/users/${user.id}/repair-orders`,
+      label: 'Repair Orders',
+      subtitle: 'Device repairs',
+      count: user._count?.repairOrders ?? 0,
+      icon: Wrench,
+      iconClass: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',
+      countClass: 'text-amber-700',
+    },
+  ] as const
+
   return (
-    <div className="min-h-screen px-8 py-8">
-      {/* Back link */}
-      <button
-        onClick={() => navigate('/admin/users')}
-        className="group mb-6 flex items-center gap-2 text-xs font-semibold text-white/50 transition hover:text-white"
-      >
+    <div className="space-y-6">
+      <button type="button" onClick={() => navigate('/admin/users')} className={adminBackLinkClass}>
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
         <span>Back to Users</span>
       </button>
 
-      {/* Alert Message */}
-      {message && (
-        <div
-          className={`mb-6 rounded-xl border px-4 py-3 text-xs font-semibold ${
-            message.type === 'success'
-              ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-300'
-              : 'border-red-500/20 bg-red-500/5 text-red-300'
-          }`}
-        >
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{user.name}</h1>
+        <p className="mt-1 text-sm text-slate-500">{user.email}</p>
+      </div>
+
+      {message ? (
+        <div className={message.type === 'success' ? adminAlertClass.success : adminAlertClass.error}>
           {message.text}
         </div>
-      )}
+      ) : null}
 
-      {/* Main layout grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Profile Card & Info */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-6 shadow-xl">
-            {/* Header info */}
+        <div className="space-y-6 lg:col-span-1">
+          <div className="card p-6">
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-2xl font-bold text-white shadow-lg shadow-violet-500/20">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 text-2xl font-bold text-white shadow-md">
                 {user.name.charAt(0).toUpperCase()}
               </div>
-              <h2 className="mt-4 text-lg font-bold text-white">{user.name}</h2>
-              <p className="text-xs text-white/40">{user.email}</p>
-
-              {/* Badges */}
+              <h2 className="mt-4 text-lg font-bold text-slate-900">{user.name}</h2>
+              <p className="text-xs text-slate-500">{user.email}</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                    user.role === 'admin'
-                      ? 'bg-violet-500/10 text-violet-400'
-                      : 'bg-sky-500/10 text-sky-400'
-                  }`}
-                >
-                  {user.role === 'admin' && <Shield className="h-3 w-3" />}
+                <span className={user.role === 'admin' ? adminStatusBadge.admin : adminStatusBadge.staff}>
+                  {user.role === 'admin' ? <Shield className="h-3 w-3" /> : null}
                   {user.role}
                 </span>
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                    user.isActive
-                      ? 'bg-emerald-500/10 text-emerald-400'
-                      : 'bg-red-500/10 text-red-400'
-                  }`}
-                >
+                <span className={user.isActive ? adminStatusBadge.active : adminStatusBadge.inactive}>
                   {user.isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
             </div>
 
-            {/* General metadata */}
-            <div className="mt-6 border-t border-white/[0.06] pt-5 space-y-3.5">
+            <div className="mt-6 space-y-3.5 border-t border-slate-200 pt-5">
               <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-2 text-white/40">
-                  <Calendar className="h-4 w-4 text-white/20" />
+                <span className="flex items-center gap-2 text-slate-500">
+                  <Calendar className="h-4 w-4 text-slate-400" />
                   Joined
                 </span>
-                <span className="font-semibold text-white/80">
+                <span className="font-semibold text-slate-800">
                   {new Date(user.createdAt).toLocaleDateString()}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-2 text-white/40">
-                  <UserCog className="h-4 w-4 text-white/20" />
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex shrink-0 items-center gap-2 text-slate-500">
+                  <UserCog className="h-4 w-4 text-slate-400" />
                   User ID
                 </span>
-                <span className="font-mono text-[10px] text-white/30 truncate max-w-[120px]" title={user.id}>
+                <span className="truncate font-mono text-[10px] text-slate-400" title={user.id}>
                   {user.id}
                 </span>
               </div>
             </div>
 
-            {/* Actions for editing and deleting */}
             <div className="mt-6 space-y-2">
-              <button
-                onClick={() => setEditing(!editing)}
-                className="w-full rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white transition hover:bg-white/15"
-              >
+              <button type="button" onClick={() => setEditing(!editing)} className="btn btn-secondary w-full">
                 {editing ? 'Cancel Editing' : 'Edit Account'}
               </button>
-              {!isSelf && (
+              {!isSelf ? (
                 <button
+                  type="button"
                   onClick={() => setDeleteModalOpen(true)}
-                  className="w-full rounded-xl bg-red-500/10 py-2.5 text-xs font-bold text-red-400 transition hover:bg-red-500/15"
+                  className="btn w-full border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
                 >
                   Delete Account
                 </button>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Stats & Data Browsing Cards */}
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-white/30">User Analytics</h3>
-
-            <Link
-              to={`/admin/users/${user.id}/contracts`}
-              className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.01] p-3.5 transition hover:border-white/[0.08] hover:bg-white/[0.03]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/10 text-sky-400">
-                  <FileText className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white/80">Contracts</p>
-                  <p className="text-[10px] text-white/30">Purchase agreements</p>
-                </div>
-              </div>
-              <span className="text-lg font-bold text-sky-400">{user._count?.contracts ?? 0}</span>
-            </Link>
-
-            <Link
-              to={`/admin/users/${user.id}/invoices`}
-              className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.01] p-3.5 transition hover:border-white/[0.08] hover:bg-white/[0.03]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400">
-                  <Receipt className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white/80">Invoices</p>
-                  <p className="text-[10px] text-white/30">Billing history</p>
-                </div>
-              </div>
-              <span className="text-lg font-bold text-emerald-400">{user._count?.invoices ?? 0}</span>
-            </Link>
-
-            <Link
-              to={`/admin/users/${user.id}/repair-orders`}
-              className="flex items-center justify-between rounded-xl border border-white/[0.04] bg-white/[0.01] p-3.5 transition hover:border-white/[0.08] hover:bg-white/[0.03]"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400">
-                  <Wrench className="h-4.5 w-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white/80">Repair Orders</p>
-                  <p className="text-[10px] text-white/30">Device repairs</p>
-                </div>
-              </div>
-              <span className="text-lg font-bold text-amber-400">{user._count?.repairOrders ?? 0}</span>
-            </Link>
+          <div className="card p-5">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">User Analytics</h3>
+            <div className="mt-4 space-y-2">
+              {analyticsLinks.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 transition hover:border-slate-300 hover:bg-white"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.iconClass}`}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">{item.label}</p>
+                        <p className="text-[10px] text-slate-500">{item.subtitle}</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className={`text-lg font-bold ${item.countClass}`}>{item.count}</span>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Editing Column */}
         <div className="lg:col-span-2">
           {editing ? (
-            <div className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-8 shadow-xl">
-              <h3 className="text-base font-bold text-white mb-6">Modify Account Settings</h3>
+            <div className="card p-6 sm:p-8">
+              <h3 className="mb-6 text-base font-bold text-slate-900">Modify Account Settings</h3>
               <form onSubmit={handleUpdate} className="space-y-5">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                    Display Name
-                  </label>
+                  <label className="label">Display Name</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder-white/20 transition-all focus:border-violet-500 focus:bg-white/[0.05] focus:outline-none"
+                    className="input h-11"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                    Email Address
-                  </label>
+                  <label className="label">Email Address</label>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder-white/20 transition-all focus:border-violet-500 focus:bg-white/[0.05] focus:outline-none"
+                    className="input h-11"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                    Change Password
-                  </label>
-                  <div className="relative mt-1.5">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
+                  <label className="label">Change Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
                       type="password"
                       placeholder="Leave blank to keep current password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] py-2.5 pl-10 pr-4 text-sm text-white placeholder-white/20 transition-all focus:border-violet-500 focus:bg-white/[0.05] focus:outline-none"
+                      className="input h-11 pl-10"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                    Account Status
-                  </label>
+                  <label className="label">Account Status</label>
                   {isSelf ? (
-                    <div className="mt-1.5 rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-3 text-xs text-white/40">
+                    <p className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                       You cannot deactivate your own administrative account.
-                    </div>
+                    </p>
                   ) : (
                     <div className="mt-2 grid grid-cols-2 gap-3">
                       <button
@@ -351,86 +335,75 @@ export function AdminUserDetailPage() {
                         onClick={() => setIsActive(true)}
                         className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
                           isActive
-                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                            : 'border-white/[0.08] bg-white/[0.02] text-white/60 hover:bg-white/[0.04]'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        <UserCheck className="h-4.5 w-4.5" />
-                        <span>Active</span>
+                        <UserCheck className="h-4 w-4" />
+                        Active
                       </button>
                       <button
                         type="button"
                         onClick={() => setIsActive(false)}
                         className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
                           !isActive
-                            ? 'border-red-500 bg-red-500/10 text-red-400'
-                            : 'border-white/[0.08] bg-white/[0.02] text-white/60 hover:bg-white/[0.04]'
+                            ? 'border-red-200 bg-red-50 text-red-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        <UserX className="h-4.5 w-4.5" />
-                        <span>Inactive</span>
+                        <UserX className="h-4 w-4" />
+                        Inactive
                       </button>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                    Account Role
-                  </label>
+                  <label className="label">Account Role</label>
                   {isSelf ? (
-                    <div className="mt-1.5 rounded-xl border border-white/[0.04] bg-white/[0.01] px-4 py-3 text-xs text-white/40">
+                    <p className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                       You cannot demote or change your own administrative role.
-                    </div>
+                    </p>
                   ) : (
                     <div className="mt-2 grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setRole('staff')}
-                        className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
+                        className={`rounded-xl border py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
                           role === 'staff'
-                            ? 'border-sky-500 bg-sky-500/10 text-sky-400'
-                            : 'border-white/[0.08] bg-white/[0.02] text-white/60 hover:bg-white/[0.04]'
+                            ? 'border-sky-200 bg-sky-50 text-sky-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        <span>Staff</span>
+                        Staff
                       </button>
                       <button
                         type="button"
                         onClick={() => setRole('admin')}
                         className={`flex items-center justify-center gap-2 rounded-xl border py-2.5 text-xs font-semibold uppercase tracking-wider transition ${
                           role === 'admin'
-                            ? 'border-violet-500 bg-violet-500/10 text-violet-400'
-                            : 'border-white/[0.08] bg-white/[0.02] text-white/60 hover:bg-white/[0.04]'
+                            ? 'border-violet-200 bg-violet-50 text-violet-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        <Shield className="h-4.5 w-4.5" />
-                        <span>Admin</span>
+                        <Shield className="h-4 w-4" />
+                        Admin
                       </button>
                     </div>
                   )}
                 </div>
 
-                <div className="pt-4 flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-lg transition hover:from-violet-500 hover:to-indigo-500 disabled:pointer-events-none disabled:opacity-50"
-                  >
+                <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                  <button type="submit" disabled={saving} className="btn btn-primary h-11 flex-1">
                     {saving ? 'Saving Changes...' : 'Save User Settings'}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setEditing(false)
-                      // Reset values
-                      setName(user.name)
-                      setEmail(user.email)
-                      setRole(user.role)
-                      setIsActive(user.isActive)
-                      setPassword('')
+                      resetForm()
                     }}
-                    className="rounded-xl bg-white/[0.04] px-6 py-3 text-sm font-semibold text-white/50 transition hover:bg-white/[0.08]"
+                    className="btn btn-secondary h-11 px-6"
                   >
                     Cancel
                   </button>
@@ -438,50 +411,45 @@ export function AdminUserDetailPage() {
               </form>
             </div>
           ) : (
-            /* Dashboard user insights placeholders */
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] p-8 text-center flex flex-col items-center justify-center h-full min-h-[350px]">
-              <UserCog className="h-12 w-12 text-white/10 mb-4 animate-pulse" />
-              <h3 className="text-base font-bold text-white/60">Overview & Insights</h3>
-              <p className="mt-2 text-sm text-white/30 max-w-sm">
-                Use the left-hand column to edit account configurations or browse contracts, invoices, and repair orders generated by this user.
+            <div className="card flex min-h-[280px] flex-col items-center justify-center p-8 text-center sm:min-h-[350px]">
+              <UserCog className="mb-4 h-12 w-12 text-slate-300" />
+              <h3 className="text-base font-bold text-slate-800">Overview &amp; Insights</h3>
+              <p className="mt-2 max-w-sm text-sm text-slate-500">
+                Use the profile column to edit account settings or browse contracts, invoices, and repair
+                orders created by this user.
               </p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {deleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md rounded-2xl border border-red-500/20 bg-gray-900 p-6 shadow-2xl animate-scale-in">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-400 mb-4">
+      {deleteModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4">
+          <div className="card w-full max-w-md p-6 shadow-xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
               <AlertTriangle className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-bold text-white">Delete User Account</h3>
-            <p className="mt-2 text-xs leading-relaxed text-white/50">
-              Are you absolutely sure you want to delete <span className="font-semibold text-white/80">{user.name}</span>?
-              This action is <span className="text-red-400 font-semibold">permanent</span> and will cascade, hard-deleting
-              all associated contracts, invoices, and repair orders.
+            <h3 className="text-base font-bold text-slate-900">Delete User Account</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Are you sure you want to delete <span className="font-semibold text-slate-900">{user.name}</span>?
+              This action is permanent and will remove all associated contracts, invoices, and repair orders.
             </p>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteModalOpen(false)}
-                className="rounded-xl bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-white/60 transition hover:bg-white/[0.08]"
-              >
+            <div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+              <button type="button" onClick={() => setDeleteModalOpen(false)} className="btn btn-secondary h-10">
                 No, Keep Account
               </button>
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20"
+                className="btn h-10 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
               >
                 {deleting ? 'Deleting...' : 'Yes, Delete Account'}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -5,8 +5,8 @@ import {
   imapSettingsSchema,
   emailTemplateSchema,
 } from "../validators/emailSettingsValidators.js";
-import nodemailer from "nodemailer";
 import { HttpError } from "../utils/httpError.js";
+import { getSmtpMailerForUser } from "../utils/smtpTransport.js";
 
 export const getSmtpSettings = async (userId: string) => {
   const settings = await prisma.smtpSettings.findUnique({
@@ -197,38 +197,7 @@ export const getEmailLogs = async (userId: string, page = 1, limit = 20) => {
 };
 
 export const testSmtpConnection = async (userId: string, testEmail: string) => {
-  const settings = await prisma.smtpSettings.findUnique({
-    where: { userId },
-  });
-
-  let transporter: nodemailer.Transporter;
-
-  if (settings) {
-    const password = decrypt(settings.password);
-    const secure = settings.encryption === "SSL" || (settings.encryption === "TLS" && settings.port === 465);
-
-    transporter = nodemailer.createTransport({
-      host: settings.host,
-      port: settings.port,
-      secure,
-      auth: {
-        user: settings.username,
-        pass: password,
-      },
-    });
-  } else {
-    const host = process.env.SMTP_HOST || "localhost";
-    const port = Number(process.env.SMTP_PORT || 1025);
-    const secure = port === 465;
-    const user = process.env.SMTP_USER || "";
-    const pass = process.env.SMTP_PASS || "";
-
-    const config: any = { host, port, secure };
-    if (user) config.auth = { user, pass };
-    transporter = nodemailer.createTransport(config);
-  }
-
-  const from = settings?.username || process.env.SMTP_FROM || "noreply@sclera.io";
+  const { transporter, from } = await getSmtpMailerForUser(userId);
 
   await transporter.verify();
 

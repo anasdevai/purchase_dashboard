@@ -44,6 +44,7 @@ export const en: TranslationSchema = {
     },
     toasts: {
       contractCreated: 'Contract created successfully.',
+      recordDeleted: 'Record deleted successfully.',
       contractDraftSaved: 'Draft saved successfully.',
       contractPdfDownloaded: 'PDF downloaded successfully.',
       pdfDownloaded: 'PDF downloaded successfully.',
@@ -605,6 +606,9 @@ export const en: TranslationSchema = {
     confirmDelete: 'Delete invoice {invoiceNumber}?',
     validation: {
       customerNameRequired: 'Customer name is required.',
+      customerEmailRequired: 'Customer email is required.',
+      customerPhoneRequired: 'Customer phone number is required.',
+      customerAddressRequired: 'Customer address is required.',
       emailInvalid: 'Enter a valid email address.',
       itemDescriptionRequired: 'Each line item needs a description.',
     },

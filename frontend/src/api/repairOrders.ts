@@ -104,8 +104,11 @@ export async function downloadRepairOrderPdf(id: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export async function emailRepairOrderPdf(id: string) {
-  return apiRequest<{ success: true }>(`/api/repair-orders/${id}/email`, { method: 'POST' })
+export async function emailRepairOrderPdf(id: string, toEmail?: string) {
+  return apiRequest<{ success: true }>(`/api/repair-orders/${id}/email`, {
+    method: 'POST',
+    body: toEmail ? JSON.stringify({ toEmail }) : undefined,
+  })
 }
 
 export type Employee = {

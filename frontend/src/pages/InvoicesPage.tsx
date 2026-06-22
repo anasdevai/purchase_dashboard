@@ -11,7 +11,7 @@ import type { Invoice, InvoicePaymentStatus } from '../types/invoice'
 
 export function InvoicesPage() {
   const { t, interpolate, formatDate, language } = useLanguage()
-  const { showToast } = useAppConfirm()
+  const { showToast, confirm } = useAppConfirm()
   const [query, setQuery] = useState('')
   const [date, setDate] = useState('')
   const [statusFilter, setStatusFilter] = useState<InvoicePaymentStatus | ''>('')
@@ -36,10 +36,7 @@ export function InvoicesPage() {
     return () => window.clearTimeout(timeout)
   }, [query, date, t.invoices.errors.loadFailed])
 
-  const handleDelete = async (invoice: Invoice) => {
-    if (!window.confirm(interpolate(t.invoices.confirmDelete, { invoiceNumber: invoice.invoiceNumber }))) {
-      return
-    }
+  const handleDelete = (invoice: Invoice) => confirm({ title:t.common.confirm, message:interpolate(t.invoices.confirmDelete,{invoiceNumber:invoice.invoiceNumber}), variant:'danger', onConfirm:async()=>{
     setDeletingId(invoice.id)
     try {
       await deleteInvoice(invoice.id)
@@ -50,7 +47,7 @@ export function InvoicesPage() {
     } finally {
       setDeletingId(null)
     }
-  }
+  }})
 
   const handlePaymentStatusChange = async (invoice: Invoice, paymentStatus: InvoicePaymentStatus) => {
     setUpdatingStatusId(invoice.id)
