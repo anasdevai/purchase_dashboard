@@ -23,6 +23,14 @@ import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { MobileSignaturePage } from './pages/MobileSignaturePage'
 import { CalendarPage } from './pages/CalendarPage'
 
+// Inventory imports
+import { InventoryLayout } from './app/layout/InventoryLayout'
+import SparePartsPage from './pages/inventory/SparePartsPage'
+import SuppliersPage from './pages/inventory/SuppliersPage'
+import OrdersPage from './pages/inventory/OrdersPage'
+import GoodsReceiptPage from './pages/inventory/GoodsReceiptPage'
+import StockAdjustmentsPage from './pages/inventory/StockAdjustmentsPage'
+
 // Admin imports
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
@@ -65,6 +73,16 @@ export default function App() {
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+
+                {/* Inventory routes */}
+                <Route path="/inventory" element={<InventoryLayout />}>
+                  <Route index element={<Navigate to="parts" replace />} />
+                  <Route path="parts" element={<SparePartsPage />} />
+                  <Route path="suppliers" element={<SuppliersPage />} />
+                  <Route path="orders" element={<OrdersPage />} />
+                  <Route path="receipts" element={<GoodsReceiptPage />} />
+                  <Route path="adjustments" element={<StockAdjustmentsPage />} />
+                </Route>
               </Route>
             </Route>
 

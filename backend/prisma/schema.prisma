@@ -93,6 +93,11 @@ model User {
   googleAccessToken  String?       @map("google_access_token")
   googleRefreshToken String?       @map("google_refresh_token")
   googleTokenExpiry  DateTime?     @map("google_token_expiry")
+  suppliers          Supplier[]
+  spareParts         SparePart[]
+  inventoryOrders    InventoryOrder[]
+  goodsReceipts      GoodsReceipt[]
+  stockAdjustments   StockAdjustment[]
 
   @@map("users")
 }
@@ -666,4 +671,133 @@ model PriceList {
   @@unique([modelId, repairTypeId])
   @@map("price_lists")
 }
+
+model Supplier {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  companyName   String           @map("company_name")
+  contactPerson String?          @map("contact_person")
+  phone         String?
+  email         String
+  website       String?
+  deliveryTime  Int?             @map("delivery_time")
+  paymentTerms  String?          @map("payment_terms")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spareParts    SparePart[]
+  orders        InventoryOrder[]
+
+  @@unique([userId, companyName])
+  @@index([userId])
+  @@map("suppliers")
+}
+
+model SparePart {
+  id              String            @id @default(uuid())
+  userId          String            @map("user_id")
+  itemNumber      String            @map("item_number")
+  name            String
+  category        String
+  compatibility   String
+  stock           Int               @default(0)
+  minimumStock    Int               @default(0) @map("minimum_stock")
+  supplierId      String?           @map("supplier_id")
+  purchasePrice   Decimal           @map("purchase_price") @db.Decimal(12, 2)
+  salePrice       Decimal           @map("sale_price") @db.Decimal(12, 2)
+  storageLocation String?           @map("storage_location")
+  isActive        Boolean           @default(true) @map("is_active")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier        Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  orderItems      InventoryOrderItem[]
+  adjustments     StockAdjustment[]
+
+  @@unique([userId, itemNumber])
+  @@index([userId])
+  @@index([supplierId])
+  @@map("spare_parts")
+}
+
+enum InventoryOrderStatus {
+  Ordered
+  Shipped
+  PartiallyDelivered
+  Delivered
+  Cancelled
+}
+
+model InventoryOrder {
+  id            String               @id @default(uuid())
+  userId        String               @map("user_id")
+  orderNumber   String               @map("order_number")
+  supplierId    String               @map("supplier_id")
+  orderDate     DateTime             @default(now()) @map("order_date")
+  expectedDate  DateTime?            @map("expected_date")
+  status        InventoryOrderStatus @default(Ordered)
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supplier      Supplier             @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  items         InventoryOrderItem[]
+  goodsReceipts GoodsReceipt[]
+
+  @@unique([userId, orderNumber])
+  @@index([userId])
+  @@index([supplierId])
+  @@map("inventory_orders")
+}
+
+model InventoryOrderItem {
+  id               String         @id @default(uuid())
+  orderId          String         @map("order_id")
+  sparePartId      String         @map("spare_part_id")
+  quantityOrdered  Int            @map("quantity_ordered")
+  quantityReceived Int            @default(0) @map("quantity_received")
+
+  order            InventoryOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sparePart        SparePart      @relation(fields: [sparePartId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, sparePartId])
+  @@index([orderId])
+  @@index([sparePartId])
+  @@map("inventory_order_items")
+}
+
+model GoodsReceipt {
+  id            String         @id @default(uuid())
+  userId        String         @map("user_id")
+  orderId       String         @map("order_id")
+  receivedDate  DateTime       @default(now()) @map("received_date")
+  notes         String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order         InventoryOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([orderId])
+  @@map("goods_receipts")
+}
+
+model StockAdjustment {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  sparePartId  String    @map("spare_part_id")
+  quantityDiff Int       @map("quantity_diff")
+  reason       String
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sparePart    SparePart @relation(fields: [sparePartId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sparePartId])
+  @@map("stock_adjustments")
+}
+
 

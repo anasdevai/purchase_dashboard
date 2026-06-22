@@ -12,6 +12,7 @@ import {
   Mail,
   Users,
   Calendar,
+  Package,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
@@ -204,6 +205,17 @@ function SidebarNav(props: { onNavigate?: () => void }) {
           icon: FileText,
           testId: 'nav-invoices',
           end: true,
+        },
+      ],
+    },
+    {
+      title: t.pages.settings === 'Einstellungen' ? 'Lagerverwaltung' : 'Inventory',
+      items: [
+        {
+          to: '/inventory',
+          label: t.pages.settings === 'Einstellungen' ? 'Lager' : 'Inventory',
+          icon: Package,
+          testId: 'nav-inventory',
         },
       ],
     },

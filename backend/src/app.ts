@@ -13,6 +13,10 @@ import { quotationRouter } from "./routes/quotationRoutes.js";
 import { emailSettingsRouter, emailLogsRouter } from "./routes/emailSettingsRoutes.js";
 import appointmentRouter from "./routes/appointmentRoutes.js";
 import { masterDataRouter } from "./routes/masterDataRoutes.js";
+import { supplierRouter } from "./routes/supplierRoutes.js";
+import { sparePartRouter } from "./routes/sparePartRoutes.js";
+import { inventoryOrderRouter } from "./routes/inventoryOrderRoutes.js";
+import { goodsReceiptRouter } from "./routes/goodsReceiptRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 
 export const app = express();
@@ -47,6 +51,10 @@ app.use("/api/customers", customerRouter);
 app.use("/api/quotations", quotationRouter);
 app.use("/api/appointments", appointmentRouter);
 app.use("/api/master-data", masterDataRouter);
+app.use("/api/inventory/suppliers", supplierRouter);
+app.use("/api/inventory/parts", sparePartRouter);
+app.use("/api/inventory/orders", inventoryOrderRouter);
+app.use("/api/inventory/receipts", goodsReceiptRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

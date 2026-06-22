@@ -124,3 +124,28 @@ export const generateInvoiceNumber = async (userId: string) => {
   const nextSequence = maxSequence + 1;
   return `${INVOICE_NUMBER_PREFIX}${String(nextSequence).padStart(3, "0")}`;
 };
+
+export const generateInventoryOrderNumber = async (userId: string) => {
+  const year = new Date().getFullYear();
+  const prefix = `ORD-${year}-`;
+
+  return nextNumber(prefix, async () => {
+    const latest = await prisma.inventoryOrder.findFirst({
+      where: {
+        userId,
+        orderNumber: {
+          startsWith: prefix
+        }
+      },
+      orderBy: {
+        orderNumber: "desc"
+      },
+      select: {
+        orderNumber: true
+      }
+    });
+
+    return latest?.orderNumber ?? null;
+  });
+};
+
