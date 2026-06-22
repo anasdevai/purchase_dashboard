@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -8,10 +7,7 @@ import {
   FileText,
   Search,
   Users,
-  Grid,
-  List,
   Clock,
-  Settings,
 } from "lucide-react";
 import {
   fetchAppointments,
@@ -22,7 +18,7 @@ import {
   fetchGoogleCalendarStatus,
   disconnectGoogleCalendar,
 } from "../api/appointments";
-import type { Appointment, AppointmentStatus, AppointmentSource } from "../types/appointment";
+import type { Appointment, AppointmentStatus } from "../types/appointment";
 import { useLanguage } from "../i18n/LanguageProvider";
 import { useAppConfirm } from "../components/common/ConfirmDialogProvider";
 import { AppointmentFormModal } from "../components/appointments/AppointmentFormModal";

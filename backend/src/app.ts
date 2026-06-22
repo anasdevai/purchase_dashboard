@@ -17,6 +17,7 @@ import { supplierRouter } from "./routes/supplierRoutes.js";
 import { sparePartRouter } from "./routes/sparePartRoutes.js";
 import { inventoryOrderRouter } from "./routes/inventoryOrderRoutes.js";
 import { goodsReceiptRouter } from "./routes/goodsReceiptRoutes.js";
+import { publicWidgetRouter, repairRequestRouter } from "./routes/repairRequestRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 
 export const app = express();
@@ -55,6 +56,8 @@ app.use("/api/inventory/suppliers", supplierRouter);
 app.use("/api/inventory/parts", sparePartRouter);
 app.use("/api/inventory/orders", inventoryOrderRouter);
 app.use("/api/inventory/receipts", goodsReceiptRouter);
+app.use("/api/public/widget", publicWidgetRouter);
+app.use("/api/repair-requests", repairRequestRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

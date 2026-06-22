@@ -7,6 +7,7 @@ export const contractsRoot = path.join(storageRoot, "contracts");
 export const repairOrdersRoot = path.join(storageRoot, "repair-orders");
 export const invoicesRoot = path.join(storageRoot, "invoices");
 export const quotationsRoot = path.join(storageRoot, "quotations");
+export const repairRequestsRoot = path.join(storageRoot, "repair-requests");
 
 export const ensureDirectory = async (dirPath: string) => {
   await fs.promises.mkdir(dirPath, { recursive: true });

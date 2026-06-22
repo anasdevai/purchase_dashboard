@@ -13,6 +13,7 @@ import {
   Users,
   Calendar,
   Package,
+  Inbox,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
@@ -116,6 +117,12 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       title: t.nav.sections.overview,
       items: [
         { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
+        {
+          to: '/repair-requests',
+          label: t.pages.settings === 'Einstellungen' ? 'Online-Anfragen' : 'Website Requests',
+          icon: Inbox,
+          testId: 'nav-repair-requests',
+        },
         {
           to: '/customers',
           label: t.pages.settings === 'Einstellungen' ? 'Kunden' : 'Customers',

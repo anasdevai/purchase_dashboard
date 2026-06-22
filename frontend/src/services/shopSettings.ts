@@ -27,6 +27,10 @@ export type ShopSettings = {
   defaultVatRate: string
   defaultVatCustom: string
   logoDataUrl?: string
+  widgetPrimaryColor: string
+  widgetAccentColor: string
+  widgetFont: string
+  widgetShowLogo: boolean
 }
 
 const storageKeyForUser = (userId: string) => `purchase-dashboard.shop-settings.${userId}`
@@ -85,6 +89,10 @@ export const defaultShopSettings = (): ShopSettings => ({
   bankName: '',
   defaultVatRate: '20',
   defaultVatCustom: '',
+  widgetPrimaryColor: '#0284c7',
+  widgetAccentColor: '#0f172a',
+  widgetFont: 'Inter',
+  widgetShowLogo: true
 })
 
 export function getDefaultVatPercent(settings: ShopSettings): string {
@@ -204,5 +212,9 @@ export function shopSettingsForPdf(settings: ShopSettings): ShopSettingsPayload 
     defaultVatRate: settings.defaultVatRate,
     defaultVatCustom: settings.defaultVatRate === 'custom' ? settings.defaultVatCustom.trim() : '',
     logoDataUrl: settings.logoDataUrl,
+    widgetPrimaryColor: settings.widgetPrimaryColor,
+    widgetAccentColor: settings.widgetAccentColor,
+    widgetFont: settings.widgetFont,
+    widgetShowLogo: settings.widgetShowLogo,
   }
 }

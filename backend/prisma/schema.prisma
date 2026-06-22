@@ -98,6 +98,7 @@ model User {
   inventoryOrders    InventoryOrder[]
   goodsReceipts      GoodsReceipt[]
   stockAdjustments   StockAdjustment[]
+  repairRequests     RepairRequest[]
 
   @@map("users")
 }
@@ -125,6 +126,10 @@ model ShopSettings {
   defaultVatRate            String   @default("20") @map("default_vat_rate")
   defaultVatCustom          String   @default("") @map("default_vat_custom")
   logoDataUrl               String?  @map("logo_data_url")
+  widgetPrimaryColor        String   @default("#0284c7") @map("widget_primary_color")
+  widgetAccentColor         String   @default("#0f172a") @map("widget_accent_color")
+  widgetFont                String   @default("Inter") @map("widget_font")
+  widgetShowLogo            Boolean  @default(true) @map("widget_show_logo")
   updatedAt                 DateTime @updatedAt @map("updated_at")
   user                      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -799,5 +804,41 @@ model StockAdjustment {
   @@index([sparePartId])
   @@map("stock_adjustments")
 }
+
+enum RepairRequestStatus {
+  New
+  Seen
+  Contacted
+  Completed
+}
+
+model RepairRequest {
+  id                   String              @id @default(uuid())
+  userId               String              @map("user_id")
+  customerName         String              @map("customer_name")
+  customerEmail        String              @map("customer_email")
+  customerPhone        String              @map("customer_phone")
+  deviceBrand          String              @map("device_brand")
+  deviceType           String              @map("device_type")
+  deviceModel          String              @map("device_model")
+  repairType           String              @map("repair_type")
+  issueDescription     String              @db.Text @map("issue_description")
+  photoPath            String?             @map("photo_path")
+  preferredAppointment DateTime?           @map("preferred_appointment")
+  status               RepairRequestStatus @default(New)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+
+  customerCreatedId    String?             @map("customer_created_id")
+  repairOrderCreatedId String?             @map("repair_order_created_id")
+
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("repair_requests")
+}
+
 
 

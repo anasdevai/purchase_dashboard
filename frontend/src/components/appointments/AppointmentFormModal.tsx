@@ -5,7 +5,7 @@ import { fetchRepairOrders } from "../../api/repairOrders";
 import { createAppointment, updateAppointment, sendAppointmentReminder } from "../../api/appointments";
 import type { Customer } from "../../types/customer";
 import type { RepairOrder } from "../../types/repairOrder";
-import type { Appointment, AppointmentStatus, AppointmentSource } from "../../types/appointment";
+import type { AppointmentStatus, AppointmentSource } from "../../types/appointment";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 interface AppointmentFormModalProps {

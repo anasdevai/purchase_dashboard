@@ -21,6 +21,10 @@ export type ShopSettingsPayload = {
   defaultVatRate: string
   defaultVatCustom: string
   logoDataUrl?: string
+  widgetPrimaryColor?: string
+  widgetAccentColor?: string
+  widgetFont?: string
+  widgetShowLogo?: boolean
 }
 
 type ShopSettingsResponse = {
@@ -49,6 +53,10 @@ function mapSettings(settings: ShopSettingsPayload) {
     defaultVatRate: settings.defaultVatRate ?? '20',
     defaultVatCustom: settings.defaultVatCustom ?? '',
     logoDataUrl: settings.logoDataUrl,
+    widgetPrimaryColor: settings.widgetPrimaryColor ?? '#0284c7',
+    widgetAccentColor: settings.widgetAccentColor ?? '#0f172a',
+    widgetFont: settings.widgetFont ?? 'Inter',
+    widgetShowLogo: settings.widgetShowLogo ?? true,
   }
 }
 
