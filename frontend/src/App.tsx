@@ -23,6 +23,14 @@ import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { MobileSignaturePage } from './pages/MobileSignaturePage'
 import { CalendarPage } from './pages/CalendarPage'
 
+// Inventory imports
+import { InventoryLayout } from './app/layout/InventoryLayout'
+import SparePartsPage from './pages/inventory/SparePartsPage'
+import SuppliersPage from './pages/inventory/SuppliersPage'
+import OrdersPage from './pages/inventory/OrdersPage'
+import GoodsReceiptPage from './pages/inventory/GoodsReceiptPage'
+import StockAdjustmentsPage from './pages/inventory/StockAdjustmentsPage'
+
 // Admin imports
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage'
@@ -32,6 +40,7 @@ import { AdminUserDetailPage } from './pages/admin/AdminUserDetailPage'
 import { AdminUserContractsPage } from './pages/admin/AdminUserContractsPage'
 import { AdminUserInvoicesPage } from './pages/admin/AdminUserInvoicesPage'
 import { AdminUserRepairOrdersPage } from './pages/admin/AdminUserRepairOrdersPage'
+import { MasterDataPage } from './pages/admin/MasterDataPage'
 
 export default function App() {
   return (
@@ -64,6 +73,16 @@ export default function App() {
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+
+                {/* Inventory routes */}
+                <Route path="/inventory" element={<InventoryLayout />}>
+                  <Route index element={<Navigate to="parts" replace />} />
+                  <Route path="parts" element={<SparePartsPage />} />
+                  <Route path="suppliers" element={<SuppliersPage />} />
+                  <Route path="orders" element={<OrdersPage />} />
+                  <Route path="receipts" element={<GoodsReceiptPage />} />
+                  <Route path="adjustments" element={<StockAdjustmentsPage />} />
+                </Route>
               </Route>
             </Route>
 
@@ -77,6 +96,7 @@ export default function App() {
                 <Route path="users/:userId/contracts" element={<AdminUserContractsPage />} />
                 <Route path="users/:userId/invoices" element={<AdminUserInvoicesPage />} />
                 <Route path="users/:userId/repair-orders" element={<AdminUserRepairOrdersPage />} />
+                <Route path="master-data" element={<MasterDataPage />} />
               </Route>
             </Route>
 

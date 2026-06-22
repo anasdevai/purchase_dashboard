@@ -66,6 +66,13 @@ export const handleOAuthCallback = async (userId: string, code: string) => {
     where: { id: userId },
     data: updateData
   });
+
+  // Sync any unsynced future appointments to Google Calendar
+  try {
+    await syncUnsyncedAppointments(userId);
+  } catch (syncErr) {
+    console.error(`Failed to sync appointments after OAuth callback for user ${userId}:`, syncErr);
+  }
 };
 
 export const getGoogleAccessToken = async (userId: string): Promise<string | null> => {
@@ -221,3 +228,36 @@ export const deleteGoogleEvent = async (
 
   return true;
 };
+
+export const syncUnsyncedAppointments = async (userId: string): Promise<void> => {
+  // Find all appointments for this user that don't have a googleCalendarEventId and starting in the future
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      userId,
+      googleCalendarEventId: null,
+      startTime: {
+        gte: new Date()
+      }
+    }
+  });
+
+  for (const appt of appointments) {
+    try {
+      const eventId = await createGoogleEvent(userId, {
+        title: appt.title,
+        startTime: appt.startTime,
+        endTime: appt.endTime,
+        note: appt.note
+      });
+      if (eventId) {
+        await prisma.appointment.update({
+          where: { id: appt.id },
+          data: { googleCalendarEventId: eventId }
+        });
+      }
+    } catch (err) {
+      console.error(`Failed to sync appointment ${appt.id} to Google Calendar during post-auth sync:`, err);
+    }
+  }
+};
+
