@@ -98,90 +98,59 @@ const assertRepairOrderAccess = async (repairOrderId: string | undefined, userId
   }
 };
 
-export const createInvoice = async (
-  userId: string,
-  input: Record<string, unknown>,
-  language: InvoicePdfLanguage = "en"
-) => {
-  const parsed = toData(input);
-  await assertRepairOrderAccess(parsed.repairOrderId, userId);
-  const totals = calculateItems(parsed.items);
-
-  devLog("create started", {
-    userId,
-    customerName: parsed.customerName,
-    itemCount: parsed.items.length,
-    net: totals.calculatedNetAmount,
-    vat: totals.calculatedVatAmount,
-    gross: totals.calculatedGrossTotal,
-    language,
-  });
-
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const invoiceNumber = await generateInvoiceNumber(userId);
-
-    try {
-      const invoice = await prisma.invoice.create({
-        data: {
-          userId,
-          repairOrderId: parsed.repairOrderId,
-          invoiceNumber,
-          invoiceDate: parsed.invoiceDate ?? new Date(),
-          customerName: parsed.customerName,
-          customerAddress: parsed.customerAddress,
-          customerPhone: parsed.customerPhone,
-          customerEmail: parsed.customerEmail,
-          deviceSummary: parsed.deviceSummary,
-          repairSummary: parsed.repairSummary,
-          paymentMethod: parsed.paymentMethod,
-          paymentStatus: parsed.paymentStatus,
-          calculatedNetAmount: totals.calculatedNetAmount,
-          calculatedVatAmount: totals.calculatedVatAmount,
-          calculatedGrossTotal: totals.calculatedGrossTotal,
-          netAmountOverride: null,
-          vatAmountOverride: null,
-          grossTotalOverride: null,
-          notes: parsed.notes,
-          serviceDate: parsed.serviceDate ?? new Date(),
-          dueDate: parsed.dueDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-          paymentDate: parsed.paymentDate,
-          paymentReference: parsed.paymentReference,
-          cancellationReason: parsed.cancellationReason,
-          employeeId: parsed.employeeId,
-          items: { create: totals.preparedItems }
-        },
-        include: includeItems
-      });
-
-      devLog("invoice saved", { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber });
-
-      await ensureDirectory(getInvoiceStorageDir(userId, invoice.invoiceNumber));
-
-      try {
-        return await attachInvoicePdf(invoice.id, userId, language);
-      } catch (error) {
-        devLog("PDF generation failed after create; invoice kept without pdfPath", {
-          invoiceId: invoice.id,
-          invoiceNumber: invoice.invoiceNumber,
-        });
-        return invoice;
-      }
-    } catch (error) {
-      if (isUniqueConstraintError(error) && attempt < 4) {
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  throw new HttpError(500, "Unable to generate invoice number");
+const normalizeInvoiceNumberInput = (value: string | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed || undefined;
 };
 
-export const createInvoiceFromRepairOrder = async (
+const assertInvoiceNumberAvailable = async (
   userId: string,
-  repairOrderId: string,
-  language: InvoicePdfLanguage = "en"
+  invoiceNumber: string,
+  excludeInvoiceId?: string
 ) => {
+  const existing = await prisma.invoice.findFirst({
+    where: {
+      userId,
+      invoiceNumber,
+      ...(excludeInvoiceId ? { NOT: { id: excludeInvoiceId } } : {})
+    },
+    select: { id: true, invoiceNumber: true }
+  });
+
+  if (existing) {
+    throw new HttpError(409, `Invoice number ${invoiceNumber} already exists`, {
+      code: "DUPLICATE_INVOICE_NUMBER",
+      invoiceNumber
+    });
+  }
+};
+
+const moveInvoiceStorageDir = async (
+  userId: string,
+  oldInvoiceNumber: string,
+  newInvoiceNumber: string
+) => {
+  if (oldInvoiceNumber === newInvoiceNumber) return;
+
+  const oldDir = getInvoiceStorageDir(userId, oldInvoiceNumber);
+  const newDir = getInvoiceStorageDir(userId, newInvoiceNumber);
+
+  try {
+    await fs.promises.rename(oldDir, newDir);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT") {
+      throw error;
+    }
+    await ensureDirectory(newDir);
+  }
+};
+
+export const getNextInvoiceNumber = async (userId: string) => ({
+  invoiceNumber: await generateInvoiceNumber(userId)
+});
+
+const buildRepairOrderInvoiceDraft = async (userId: string, repairOrderId: string) => {
   const repairOrder = await prisma.repairOrder.findFirst({
     where: { id: repairOrderId, userId },
     include: { customer: { select: { email: true } } }
@@ -249,9 +218,9 @@ export const createInvoiceFromRepairOrder = async (
     });
   }
 
-  return createInvoice(
-    userId,
-    {
+  return {
+    suggestedInvoiceNumber: await generateInvoiceNumber(userId),
+    draft: {
       repairOrderId: repairOrder.id,
       customerName: repairOrder.customerName,
       customerAddress: repairOrder.customerAddress,
@@ -259,11 +228,119 @@ export const createInvoiceFromRepairOrder = async (
       customerEmail: repairOrder.customerEmail || repairOrder.customer?.email || undefined,
       deviceSummary,
       repairSummary: repairOrder.problemDescription,
-      paymentStatus: "Open",
+      paymentStatus: "Open" as const,
       items
-    },
-    language
-  );
+    }
+  };
+};
+
+export const getInvoiceDraftFromRepairOrder = async (userId: string, repairOrderId: string) =>
+  buildRepairOrderInvoiceDraft(userId, repairOrderId);
+
+export const createInvoice = async (
+  userId: string,
+  input: Record<string, unknown>,
+  language: InvoicePdfLanguage = "en"
+) => {
+  const parsed = toData(input);
+  await assertRepairOrderAccess(parsed.repairOrderId, userId);
+  const totals = calculateItems(parsed.items);
+
+  devLog("create started", {
+    userId,
+    customerName: parsed.customerName,
+    itemCount: parsed.items.length,
+    net: totals.calculatedNetAmount,
+    vat: totals.calculatedVatAmount,
+    gross: totals.calculatedGrossTotal,
+    language,
+    invoiceNumberProvided: Boolean(normalizeInvoiceNumberInput(parsed.invoiceNumber)),
+  });
+
+  const userProvidedNumber = normalizeInvoiceNumberInput(parsed.invoiceNumber);
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const invoiceNumber = userProvidedNumber ?? (await generateInvoiceNumber(userId));
+
+    if (userProvidedNumber) {
+      await assertInvoiceNumberAvailable(userId, invoiceNumber);
+    }
+
+    try {
+      const invoice = await prisma.invoice.create({
+        data: {
+          userId,
+          repairOrderId: parsed.repairOrderId,
+          invoiceNumber,
+          invoiceDate: parsed.invoiceDate ?? new Date(),
+          customerName: parsed.customerName,
+          customerAddress: parsed.customerAddress,
+          customerPhone: parsed.customerPhone,
+          customerEmail: parsed.customerEmail,
+          deviceSummary: parsed.deviceSummary,
+          repairSummary: parsed.repairSummary,
+          paymentMethod: parsed.paymentMethod,
+          paymentStatus: parsed.paymentStatus,
+          calculatedNetAmount: totals.calculatedNetAmount,
+          calculatedVatAmount: totals.calculatedVatAmount,
+          calculatedGrossTotal: totals.calculatedGrossTotal,
+          netAmountOverride: null,
+          vatAmountOverride: null,
+          grossTotalOverride: null,
+          notes: parsed.notes,
+          serviceDate: parsed.serviceDate ?? new Date(),
+          dueDate: parsed.dueDate ?? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          paymentDate: parsed.paymentDate,
+          paymentReference: parsed.paymentReference,
+          cancellationReason: parsed.cancellationReason,
+          employeeId: parsed.employeeId,
+          items: { create: totals.preparedItems }
+        },
+        include: includeItems
+      });
+
+      devLog("invoice saved", { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber });
+
+      await ensureDirectory(getInvoiceStorageDir(userId, invoice.invoiceNumber));
+
+      try {
+        return await attachInvoicePdf(invoice.id, userId, language);
+      } catch (error) {
+        devLog("PDF generation failed after create; invoice kept without pdfPath", {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+        });
+        return invoice;
+      }
+    } catch (error) {
+      if (userProvidedNumber) {
+        if (isUniqueConstraintError(error)) {
+          throw new HttpError(409, `Invoice number ${userProvidedNumber} already exists`, {
+            code: "DUPLICATE_INVOICE_NUMBER",
+            invoiceNumber: userProvidedNumber
+          });
+        }
+        throw error;
+      }
+
+      if (isUniqueConstraintError(error) && attempt < 4) {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new HttpError(500, "Unable to generate invoice number");
+};
+
+export const createInvoiceFromRepairOrder = async (
+  userId: string,
+  repairOrderId: string,
+  input: Record<string, unknown> = {},
+  language: InvoicePdfLanguage = "en"
+) => {
+  const { draft } = await buildRepairOrderInvoiceDraft(userId, repairOrderId);
+  return createInvoice(userId, { ...draft, ...input }, language);
 };
 
 export const updateInvoice = async (
@@ -272,10 +349,17 @@ export const updateInvoice = async (
   input: Record<string, unknown>,
   language: InvoicePdfLanguage = "en"
 ) => {
-  await getInvoiceOrThrow(id, userId);
+  const existing = await getInvoiceOrThrow(id, userId);
   const parsed = toData(input);
   await assertRepairOrderAccess(parsed.repairOrderId, userId);
   const totals = calculateItems(parsed.items);
+
+  const nextInvoiceNumber =
+    normalizeInvoiceNumberInput(parsed.invoiceNumber) ?? existing.invoiceNumber;
+
+  if (nextInvoiceNumber !== existing.invoiceNumber) {
+    await assertInvoiceNumberAvailable(userId, nextInvoiceNumber, id);
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.invoiceItem.deleteMany({ where: { invoiceId: id } });
@@ -284,6 +368,7 @@ export const updateInvoice = async (
       where: { id },
       data: {
         repairOrderId: parsed.repairOrderId,
+        invoiceNumber: nextInvoiceNumber,
         invoiceDate: parsed.invoiceDate ?? new Date(),
         customerName: parsed.customerName,
         customerAddress: parsed.customerAddress,
@@ -311,6 +396,10 @@ export const updateInvoice = async (
       }
     });
   });
+
+  if (nextInvoiceNumber !== existing.invoiceNumber) {
+    await moveInvoiceStorageDir(userId, existing.invoiceNumber, nextInvoiceNumber);
+  }
 
   return attachInvoicePdf(id, userId, language);
 };

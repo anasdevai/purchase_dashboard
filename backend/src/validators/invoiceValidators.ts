@@ -41,8 +41,20 @@ export const invoiceItemSchema = z.object({
   vatPercent: wholeVatSchema
 });
 
+const invoiceNumberSchema = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(50)
+    .regex(/^INV-\d+$/, "Invoice number must match format INV-0001")
+    .optional()
+);
+
 export const invoiceSchema = z.object({
   repairOrderId: optionalText,
+  invoiceNumber: invoiceNumberSchema,
   invoiceDate: optionalDate,
   customerName: requiredText(150),
   customerAddress: requiredText(2000),

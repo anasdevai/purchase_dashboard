@@ -7,6 +7,11 @@ import type { InvoicePaymentStatus } from '../types/invoice'
 
 type InvoiceResponse = { invoice: Invoice }
 type InvoiceListResponse = { invoices: Invoice[] }
+type NextInvoiceNumberResponse = { invoiceNumber: string }
+type InvoicePrefillResponse = {
+  suggestedInvoiceNumber: string
+  draft: InvoicePayload
+}
 
 const resolveLanguage = (language?: Language) => language ?? readStoredLanguage()
 
@@ -28,6 +33,17 @@ export async function fetchInvoice(id: string) {
   return response.invoice
 }
 
+export async function fetchNextInvoiceNumber() {
+  const response = await apiRequest<NextInvoiceNumberResponse>('/api/invoices/next-number')
+  return response.invoiceNumber
+}
+
+export async function fetchInvoicePrefillFromRepairOrder(repairOrderId: string) {
+  return apiRequest<InvoicePrefillResponse>(
+    `/api/invoices/prefill-from-repair-order/${repairOrderId}`,
+  )
+}
+
 export async function saveInvoice(payload: InvoicePayload, id?: string, language?: Language) {
   const lang = resolveLanguage(language)
   const langQuery = `?lang=${lang}`
@@ -42,12 +58,17 @@ export async function saveInvoice(payload: InvoicePayload, id?: string, language
   return response.invoice
 }
 
-export async function createInvoiceFromRepairOrder(repairOrderId: string, language?: Language) {
+export async function createInvoiceFromRepairOrder(
+  repairOrderId: string,
+  payload: Partial<InvoicePayload> = {},
+  language?: Language,
+) {
   const lang = resolveLanguage(language)
   const response = await apiRequest<InvoiceResponse>(
     `/api/invoices/from-repair-order/${repairOrderId}?lang=${lang}`,
     {
       method: 'POST',
+      body: JSON.stringify(payload),
       headers: pdfLanguageHeaders(lang),
     },
   )

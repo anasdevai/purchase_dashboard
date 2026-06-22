@@ -12,11 +12,13 @@ import {
   Store,
   Trash2,
 } from 'lucide-react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   downloadInvoicePdf,
   emailInvoicePdf,
   fetchInvoice,
+  fetchInvoicePrefillFromRepairOrder,
+  fetchNextInvoiceNumber,
   generateInvoicePdf,
   openInvoicePdf,
   saveInvoice,
@@ -37,7 +39,7 @@ import {
 import { InvoicePaymentStatusBadge } from '../components/invoices/InvoicePaymentStatusBadge'
 import { InvoicePaymentStatusSelect } from '../components/invoices/InvoicePaymentStatusSelect'
 import type { Invoice, InvoiceItem, InvoicePayload, InvoicePaymentStatus } from '../types/invoice'
-import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
+import { getFriendlyErrorMessage, logApiError, ApiError } from '../utils/apiErrors'
 import { formatWholeMoney } from '../utils/formatMoney'
 import {
   normalizeQuantityInput,
@@ -59,6 +61,8 @@ type InvoiceForm = Omit<InvoicePayload, 'items'> & {
 }
 
 const today = () => new Date().toISOString().slice(0, 10)
+
+const INVOICE_NUMBER_PATTERN = /^INV-\d+$/
 
 function createEmptyForm(shopSettings: ShopSettings): InvoiceForm {
   const d = new Date()
@@ -124,14 +128,11 @@ function fromInvoice(invoice: Invoice): InvoiceForm {
 }
 
 function cleanForm(form: InvoiceForm): InvoicePayload {
-  const {
-    invoiceNumber: _invoiceNumber,
-    items,
-    ...rest
-  } = form
+  const { invoiceNumber, items, ...rest } = form
 
   return {
     ...rest,
+    invoiceNumber: invoiceNumber?.trim() || undefined,
     paymentDate: form.paymentDate || null,
     paymentReference: form.paymentReference || null,
     cancellationReason: form.cancellationReason || null,
@@ -154,8 +155,10 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const { t, interpolate, language } = useLanguage()
   const { showToast, confirm, prompt } = useAppConfirm()
   const params = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const invoiceId = props.mode === 'new' ? undefined : params.invoiceId
+  const repairOrderIdFromQuery = searchParams.get('repairOrderId') ?? undefined
   const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultShopSettings())
   const [form, setForm] = useState<InvoiceForm>(() => createEmptyForm(defaultShopSettings()))
   const [invoice, setInvoice] = useState<Invoice | null>(null)
@@ -169,6 +172,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     customerEmail?: string
     customerPhone?: string
     customerAddress?: string
+    invoiceNumber?: string
     items?: string
   }>({})
   const [pdfNeedsRegeneration, setPdfNeedsRegeneration] = useState(false)
@@ -267,6 +271,65 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   }, [user?.id, invoiceId])
 
   useEffect(() => {
+    if (invoiceId || !user?.id) return
+
+    let alive = true
+
+    const loadSuggestedNumber = async () => {
+      try {
+        if (repairOrderIdFromQuery) {
+          const prefill = await fetchInvoicePrefillFromRepairOrder(repairOrderIdFromQuery)
+          if (!alive) return
+
+          setForm((current) => ({
+            ...current,
+            repairOrderId: prefill.draft.repairOrderId,
+            customerName: prefill.draft.customerName,
+            customerAddress: prefill.draft.customerAddress ?? '',
+            customerPhone: prefill.draft.customerPhone ?? '',
+            customerEmail: prefill.draft.customerEmail ?? '',
+            deviceSummary: prefill.draft.deviceSummary ?? '',
+            repairSummary: prefill.draft.repairSummary ?? '',
+            paymentStatus: prefill.draft.paymentStatus ?? 'Open',
+            invoiceNumber: prefill.suggestedInvoiceNumber,
+            items: prefill.draft.items.map((item) => ({
+              description: item.description,
+              quantity: String(item.quantity),
+              unitPrice: String(item.unitPrice),
+              vatPercent: String(item.vatPercent),
+            })),
+          }))
+          return
+        }
+
+        const nextNumber = await fetchNextInvoiceNumber()
+        if (!alive) return
+        setForm((current) => ({ ...current, invoiceNumber: nextNumber }))
+      } catch (err) {
+        logApiError('invoice number suggestion', err)
+        if (!alive) return
+        if (
+          repairOrderIdFromQuery &&
+          err instanceof ApiError &&
+          err.status === 409 &&
+          err.details &&
+          typeof err.details === 'object' &&
+          'invoiceId' in err.details &&
+          typeof (err.details as { invoiceId?: unknown }).invoiceId === 'string'
+        ) {
+          navigate(`/invoices/${(err.details as { invoiceId: string }).invoiceId}`, { replace: true })
+        }
+      }
+    }
+
+    void loadSuggestedNumber()
+
+    return () => {
+      alive = false
+    }
+  }, [invoiceId, user?.id, repairOrderIdFromQuery, navigate])
+
+  useEffect(() => {
     if (!invoiceId) return
     let alive = true
     setLoading(true)
@@ -335,8 +398,14 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
       customerEmail?: string
       customerPhone?: string
       customerAddress?: string
+      invoiceNumber?: string
       items?: string
     } = {}
+
+    const invoiceNumber = form.invoiceNumber?.trim()
+    if (invoiceNumber && !INVOICE_NUMBER_PATTERN.test(invoiceNumber)) {
+      errors.invoiceNumber = t.invoices.validation.invoiceNumberInvalid
+    }
 
     if (!form.customerName.trim()) {
       errors.customerName = t.invoices.validation.customerNameRequired
@@ -651,8 +720,13 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 label={t.invoices.detail.invoiceNumber}
                 value={form.invoiceNumber ?? ''}
                 placeholder={t.invoices.detail.invoiceNumberAutoGenerated}
-                readOnly
-                onChange={() => undefined}
+                error={fieldErrors.invoiceNumber}
+                onChange={(value) => {
+                  setField('invoiceNumber', value)
+                  if (fieldErrors.invoiceNumber) {
+                    setFieldErrors((current) => ({ ...current, invoiceNumber: undefined }))
+                  }
+                }}
               />
               <Field
                 label={t.invoices.detail.invoiceDate}
@@ -661,6 +735,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
                 onChange={(value) => setField('invoiceDate', value)}
               />
             </div>
+            <p className="mt-2 text-xs text-slate-500">{t.invoices.detail.invoiceNumberHint}</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
               <Field
                 label={t.invoices.detail.serviceDate}

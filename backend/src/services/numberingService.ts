@@ -85,9 +85,9 @@ export const generateQuotationNumber = async (userId: string) => {
 };
 
 
-const INVOICE_NUMBER_PREFIX = "INV-";
+export const INVOICE_NUMBER_PREFIX = "INV-";
 
-const parseInvoiceSequence = (invoiceNumber: string) => {
+export const parseInvoiceSequence = (invoiceNumber: string) => {
   const simple = invoiceNumber.match(/^INV-(\d+)$/);
   if (simple) {
     const sequence = Number(simple[1]);
@@ -103,7 +103,12 @@ const parseInvoiceSequence = (invoiceNumber: string) => {
   return null;
 };
 
-export const generateInvoiceNumber = async (userId: string) => {
+export const formatInvoiceNumber = (sequence: number, referenceSequence = sequence) => {
+  const padWidth = Math.max(4, String(referenceSequence).length);
+  return `${INVOICE_NUMBER_PREFIX}${String(sequence).padStart(padWidth, "0")}`;
+};
+
+export const getMaxInvoiceSequence = async (userId: string) => {
   const invoices = await prisma.invoice.findMany({
     where: {
       userId,
@@ -116,13 +121,16 @@ export const generateInvoiceNumber = async (userId: string) => {
     }
   });
 
-  const maxSequence = invoices.reduce((max, invoice) => {
+  return invoices.reduce((max, invoice) => {
     const sequence = parseInvoiceSequence(invoice.invoiceNumber);
     return sequence !== null && sequence > max ? sequence : max;
   }, 0);
+};
 
+export const generateInvoiceNumber = async (userId: string) => {
+  const maxSequence = await getMaxInvoiceSequence(userId);
   const nextSequence = maxSequence + 1;
-  return `${INVOICE_NUMBER_PREFIX}${String(nextSequence).padStart(3, "0")}`;
+  return formatInvoiceNumber(nextSequence, nextSequence);
 };
 
 export const generateInventoryOrderNumber = async (userId: string) => {

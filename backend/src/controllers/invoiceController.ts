@@ -20,6 +20,7 @@ export const createFromRepairOrder = async (req: Request, res: Response) => {
   const invoice = await invoiceService.createInvoiceFromRepairOrder(
     userId(req),
     String(req.params.repairOrderId),
+    req.body ?? {},
     language
   );
   res.status(201).json({ invoice });
@@ -48,6 +49,19 @@ export const get = async (req: Request, res: Response) => {
 export const search = async (req: Request, res: Response) => {
   const invoices = await invoiceService.searchInvoices(userId(req), req.query);
   res.json({ invoices });
+};
+
+export const getNextNumber = async (req: Request, res: Response) => {
+  const result = await invoiceService.getNextInvoiceNumber(userId(req));
+  res.json(result);
+};
+
+export const prefillFromRepairOrder = async (req: Request, res: Response) => {
+  const result = await invoiceService.getInvoiceDraftFromRepairOrder(
+    userId(req),
+    String(req.params.repairOrderId)
+  );
+  res.json(result);
 };
 
 export const generatePdf = async (req: Request, res: Response) => {

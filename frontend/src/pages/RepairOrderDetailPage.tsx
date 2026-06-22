@@ -12,7 +12,6 @@ import {
   fetchEmployees,
   type Employee,
 } from '../api/repairOrders'
-import { createInvoiceFromRepairOrder } from '../api/invoices'
 import { fetchRepairCompanies } from '../api/repairCompanies'
 import { RepairCompanyFields } from '../components/repairOrders/RepairCompanyFields'
 import { RepairOrderOcrScan } from '../components/repairOrders/RepairOrderOcrScan'
@@ -21,7 +20,7 @@ import { FloatingSelect } from '../components/common/FloatingSelect'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
-import { getFriendlyErrorMessage, logApiError, ApiError } from '../utils/apiErrors'
+import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import { mergeOcrIntoRepairOrderForm } from '../utils/repairOrderOcr'
 import type { RepairOrderOcrResult } from '../api/ocr'
 import type { RepairCompany } from '../types/repairCompany'
@@ -341,7 +340,7 @@ export function NewRepairOrderPage() {
 }
 
 export function RepairOrderDetailPage(props: { mode?: 'new' }) {
-  const { t, interpolate, language } = useLanguage()
+  const { t, interpolate } = useLanguage()
   const { confirm, showToast, prompt } = useAppConfirm()
   const params = useParams()
   const navigate = useNavigate()
@@ -591,7 +590,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
 
   const linkedInvoice = repairOrder?.invoices?.[0] ?? null
 
-  const handleCreateInvoice = async () => {
+  const handleCreateInvoice = () => {
     if (!repairOrder) return
 
     if (linkedInvoice) {
@@ -608,28 +607,7 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
       return
     }
 
-    setSaving(true)
-    setError(null)
-    try {
-      const invoice = await createInvoiceFromRepairOrder(repairOrder.id, language)
-      navigate(`/invoices/${invoice.id}`)
-    } catch (err) {
-      if (
-        err instanceof ApiError &&
-        err.status === 409 &&
-        err.details &&
-        typeof err.details === 'object' &&
-        'invoiceId' in err.details &&
-        typeof (err.details as { invoiceId?: unknown }).invoiceId === 'string'
-      ) {
-        navigate(`/invoices/${(err.details as { invoiceId: string }).invoiceId}`)
-        return
-      }
-      logApiError('repair order invoice create', err)
-      showToast('error', getFriendlyErrorMessage(err, 'invoiceCreate', t))
-    } finally {
-      setSaving(false)
-    }
+    navigate(`/invoices/new?repairOrderId=${repairOrder.id}`)
   }
 
   const handleOcrApply = (result: RepairOrderOcrResult) => {

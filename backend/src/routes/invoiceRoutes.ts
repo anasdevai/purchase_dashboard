@@ -8,6 +8,11 @@ export const invoiceRouter = Router();
 invoiceRouter.use(requireAuth);
 
 invoiceRouter.get("/search", asyncHandler(invoiceController.search));
+invoiceRouter.get("/next-number", asyncHandler(invoiceController.getNextNumber));
+invoiceRouter.get(
+  "/prefill-from-repair-order/:repairOrderId",
+  asyncHandler(invoiceController.prefillFromRepairOrder)
+);
 invoiceRouter.post("/", asyncHandler(invoiceController.create));
 invoiceRouter.post("/from-repair-order/:repairOrderId", asyncHandler(invoiceController.createFromRepairOrder));
 invoiceRouter.get("/:id", asyncHandler(invoiceController.get));

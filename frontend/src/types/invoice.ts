@@ -49,6 +49,7 @@ export type Invoice = {
 
 export type InvoicePayload = {
   repairOrderId?: string
+  invoiceNumber?: string
   invoiceDate?: string
   customerName: string
   customerAddress?: string
