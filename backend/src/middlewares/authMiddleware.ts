@@ -9,7 +9,9 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
     const parsedUrl = new URL(req.originalUrl, "http://localhost");
     const queryToken =
       typeof req.query.token === "string" ? req.query.token : parsedUrl.searchParams.get("token");
-    const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : queryToken;
+    const cookieToken = req.cookies?.token;
+    const headerToken = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
+    const token = cookieToken || headerToken || queryToken;
 
     if (!token) {
       throw new HttpError(401, "Authentication token is required");

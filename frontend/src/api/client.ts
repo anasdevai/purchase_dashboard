@@ -39,15 +39,15 @@ export function getApiBaseUrl() {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  return sessionStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token)
+  sessionStorage.setItem(TOKEN_KEY, token)
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
 }
 
 async function readError(response: Response) {
@@ -106,6 +106,7 @@ export async function apiRequest<T>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
+    credentials: 'include',
   })
 
   if (!response.ok) {

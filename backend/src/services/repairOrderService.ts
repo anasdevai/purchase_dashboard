@@ -270,11 +270,29 @@ export const searchRepairOrders = async (userId: string, query: Record<string, u
   if (parsed.imeiOrSerial) where.imeiOrSerial = { contains: parsed.imeiOrSerial, mode: "insensitive" };
   if (parsed.status) where.status = parsed.status;
 
-  return prisma.repairOrder.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 100
-  });
+  const page = parsed.page ?? 1;
+  const limit = parsed.limit ?? 15;
+  const skip = (page - 1) * limit;
+
+  const [repairOrders, total] = await Promise.all([
+    prisma.repairOrder.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit
+    }),
+    prisma.repairOrder.count({ where })
+  ]);
+
+  return {
+    repairOrders,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
 };
 
 export const getRepairOrderStats = async (userId: string) => {

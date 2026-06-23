@@ -105,7 +105,15 @@ export const searchRepairOrdersSchema = z.object({
   phone: optionalText,
   model: optionalText,
   imeiOrSerial: optionalText,
-  status: z.enum(repairOrderStatuses).optional()
+  status: z.enum(repairOrderStatuses).optional(),
+  page: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce.number().int().positive().default(1)
+  ),
+  limit: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce.number().int().positive().default(15)
+  )
 });
 
 export const repairOrderStatusSchema = z.object({

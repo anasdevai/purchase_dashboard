@@ -8,7 +8,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().positive().default(4000),
-  CORS_ORIGINS: z
+  ALLOWED_ORIGINS: z
     .string()
     .default("http://localhost:5173,http://127.0.0.1:5173"),
   CORS_ALLOW_LAN: z
@@ -33,7 +33,7 @@ const parsed = envSchema.parse(process.env);
 
 export const env = {
   ...parsed,
-  corsOrigins: parsed.CORS_ORIGINS.split(",")
+  corsOrigins: parsed.ALLOWED_ORIGINS.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean)
 };
