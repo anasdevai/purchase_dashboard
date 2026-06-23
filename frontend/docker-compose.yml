@@ -10,7 +10,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://100.98.57.25:4000}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://scleraai.tail9bdf21.ts.net/api}
     container_name: purchase_dashboard_frontend
     restart: always
     ports:

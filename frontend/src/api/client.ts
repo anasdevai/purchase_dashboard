@@ -19,22 +19,20 @@ function normalizeServerBaseUrl(raw: string): string {
 }
 
 function resolveApiBaseUrl(): string {
-  const fromEnv =
-    firstEnvUrl(import.meta.env.VITE_API_URL as string | undefined) ||
-    firstEnvUrl(import.meta.env.VITE_API_BASE_URL as string | undefined)
+  const fromEnv = firstEnvUrl(import.meta.env.VITE_API_BASE_URL as string | undefined)
 
   if (fromEnv) {
     return normalizeServerBaseUrl(fromEnv)
   }
 
   // Dev-only fallback when opening the UI from another device on the same LAN.
-  if (import.meta.env.DEV && typeof window !== 'undefined') {
-    const { hostname, protocol } = window.location
-    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
-    if (!isLocalHost) {
-      return `${protocol}//${hostname}:${DEFAULT_DEV_API_PORT}`
-    }
-  }
+  // if (import.meta.env.DEV && typeof window !== 'undefined') {
+  //   const { hostname, protocol } = window.location
+  //   const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
+  //   if (!isLocalHost) {
+  //     return `${protocol}//${hostname}:${DEFAULT_DEV_API_PORT}`
+  //   }
+  // }
 
   return DEFAULT_DEV_API_ORIGIN
 }
