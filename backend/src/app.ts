@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { isCorsOriginAllowed } from "./utils/cors.js";
+import { storageRoot } from "./utils/paths.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { contractRouter } from "./routes/contractRoutes.js";
 import { dashboardRouter } from "./routes/dashboardRoutes.js";
@@ -54,6 +55,7 @@ app.use(
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use("/storage", express.static(storageRoot));
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

@@ -1,4 +1,5 @@
 import os from "node:os";
+import { env } from "../config/env.js";
 
 /**
  * Discovers the host computer's primary LAN IPv4 address.
@@ -65,12 +66,10 @@ export const getLocalIpAddress = (): string => {
  */
 export const getSignatureUrl = (origin: string | undefined, token: string): string => {
   const lanIp = getLocalIpAddress();
-  if (!origin) {
-    return `http://${lanIp}:5173/signature/${token}`;
-  }
+  const baseOrigin = origin || env.FRONTEND_URL;
 
   try {
-    const url = new URL(origin);
+    const url = new URL(baseOrigin);
     if (
       url.hostname === "localhost" ||
       url.hostname === "127.0.0.1" ||

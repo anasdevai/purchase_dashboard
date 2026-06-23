@@ -9,6 +9,11 @@ function resolveApiBaseUrl() {
     (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
     (import.meta.env.VITE_API_URL as string | undefined)?.trim()
 
+  // If a production API URL is explicitly configured (not localhost), use it directly.
+  if (fromEnv && !fromEnv.includes('localhost') && !fromEnv.includes('127.0.0.1')) {
+    return fromEnv
+  }
+
   if (typeof window !== 'undefined') {
     const { hostname, protocol } = window.location
     const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
