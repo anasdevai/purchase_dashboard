@@ -719,7 +719,7 @@ export const getPdfStyles = () => `
     display: block; position: relative;
   }
   .compact { display: block; position: relative; }
-  .inv { display: flex; flex-direction: column; min-height: 279mm; }
+  .inv { display: flex; flex-direction: column; min-height: auto; }
 
   .doc-header, .inv-header {
     order: 0; height: 72mm; margin: 0; padding: 7mm 0 0;
@@ -768,11 +768,30 @@ export const getPdfStyles = () => `
     border: 0; font-size: 10pt; font-weight: 700;
   }
   .data-table tbody td, .inv-table tbody td {
-    padding: 8mm 2mm 20mm; background: #fff !important; border: 0; vertical-align: top;
+    padding: 3mm 2mm;
+    background: #fff !important;
+    border: 0;
+    vertical-align: top;
+    height: auto;
+  }
+  .inv-table tbody td.inv-table__desc {
+    padding: 3mm 2mm 4mm;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.45;
+  }
+  .inv-table tbody td.num {
+    padding: 3mm 2mm;
+    white-space: nowrap;
   }
   .data-table .pos, .inv-table .pos { width: 18mm; text-align: left; }
-  .inv-item__sub { color: #000; font-size: 9pt; }
-  .inv-table tbody tr.inv-table__spacer td { display: none; }
+  .inv-item__line, .inv-item__sub { color: #000; font-size: 9pt; line-height: 1.45; }
+  .inv-table tbody tr.inv-item-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .inv-table thead { display: table-header-group; }
 
   .totals-block, .inv-summary {
     margin: 0; padding: 7mm 0; border-top: .35mm solid #8b8b8b;

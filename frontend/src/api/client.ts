@@ -2,28 +2,41 @@ import { getActiveTranslations } from '../i18n/active'
 import { ApiError, resolveApiErrorMessage } from '../utils/apiErrors'
 import { isAuthErrorCode } from '../utils/authErrorCodes'
 
-const API_PORT = '4000'
+const DEFAULT_DEV_API_PORT = '4000'
+const DEFAULT_DEV_API_ORIGIN = `http://localhost:${DEFAULT_DEV_API_PORT}`
 
 function firstEnvUrl(value: string | undefined) {
-  return value?.split(",")[0]?.trim() || undefined
+  return value?.split(',')[0]?.trim() || undefined
 }
 
-function resolveApiBaseUrl() {
-  const fromEnv =
-    firstEnvUrl(import.meta.env.VITE_API_BASE_URL as string | undefined) ||
-    firstEnvUrl(import.meta.env.VITE_API_URL as string | undefined)
+/** Strips trailing slashes and optional `/api` suffix; request paths already start with `/api`. */
+function normalizeServerBaseUrl(raw: string): string {
+  let url = raw.trim().replace(/\/+$/, '')
+  if (url.endsWith('/api')) {
+    url = url.slice(0, -4)
+  }
+  return url
+}
 
-  if (typeof window !== 'undefined') {
+function resolveApiBaseUrl(): string {
+  const fromEnv =
+    firstEnvUrl(import.meta.env.VITE_API_URL as string | undefined) ||
+    firstEnvUrl(import.meta.env.VITE_API_BASE_URL as string | undefined)
+
+  if (fromEnv) {
+    return normalizeServerBaseUrl(fromEnv)
+  }
+
+  // Dev-only fallback when opening the UI from another device on the same LAN.
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
     const { hostname, protocol } = window.location
     const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
-
-    // When opened from another device via LAN IP, target the API on the same host.
     if (!isLocalHost) {
-      return `${protocol}//${hostname}:${API_PORT}`
+      return `${protocol}//${hostname}:${DEFAULT_DEV_API_PORT}`
     }
   }
 
-  return fromEnv || `http://localhost:${API_PORT}`
+  return DEFAULT_DEV_API_ORIGIN
 }
 
 const API_BASE_URL = resolveApiBaseUrl()

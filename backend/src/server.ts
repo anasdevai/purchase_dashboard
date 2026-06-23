@@ -2,6 +2,7 @@ import { app } from "./app.js";
 import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { ensureDirectory, contractsRoot, invoicesRoot, repairOrdersRoot } from "./utils/paths.js";
+import { getConfiguredCorsOrigins } from "./utils/cors.js";
 import { startReminderDaemon } from "./jobs/reminderDaemon.js";
 import os from "node:os";
 
@@ -28,7 +29,7 @@ const start = async () => {
 
   try {
     await prisma.$connect();
-    if (process.env.NODE_ENV !== "production") {
+    if (env.NODE_ENV !== "production") {
       console.log("[db] Connected to PostgreSQL");
       console.log(`[db] Target: ${getDatabaseTarget()}`);
     }
@@ -41,10 +42,18 @@ const start = async () => {
   startReminderDaemon();
 
   const server = app.listen(env.PORT, env.HOST, () => {
-    console.log(`Backend API listening on ${env.HOST}:${env.PORT}`);
+    console.log(`Backend API listening on ${env.HOST}:${env.PORT} (${env.NODE_ENV})`);
     console.log(`  Local:   http://localhost:${env.PORT}`);
     for (const url of getLanUrls()) {
       console.log(`  Network: ${url}`);
+    }
+    const corsOrigins = getConfiguredCorsOrigins();
+    console.log(
+      `[cors] Allowed origins: ${corsOrigins.length > 0 ? corsOrigins.join(", ") : "(none configured)"}`
+    );
+    console.log(`[cors] Frontend URL: ${env.frontendUrl}`);
+    if (env.CORS_ALLOW_LAN && env.NODE_ENV !== "production") {
+      console.log("[cors] LAN private-IP origins enabled for local development");
     }
   });
 

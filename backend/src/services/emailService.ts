@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { env } from "../config/env.js";
 import { toAbsolutePath } from "../utils/paths.js";
 import { HttpError } from "../utils/httpError.js";
 import fs from "node:fs";
@@ -231,7 +232,7 @@ export const sendInvoicePdfEmail = async (
   const device = invoice?.deviceSummary || "";
   const priceStr = invoice ? formatEuro(invoice.calculatedGrossTotal) : "0,00 €";
   const dateStr = invoice ? formatDate(invoice.invoiceDate) : formatDate(new Date());
-  const link = invoice ? `${process.env.FRONTEND_URL || "http://localhost:5173"}/invoices/${invoice.id}` : "";
+  const link = invoice ? `${env.frontendUrl}/invoices/${invoice.id}` : "";
 
   const placeholders = {
     CUSTOMER_FIRST_NAME: firstName,
@@ -474,7 +475,7 @@ export const sendPaymentReminderEmail = async (
   const device = invoice?.deviceSummary || "";
   const priceStr = formatEuro(grossTotal);
   const dateStr = invoice?.dueDate ? formatDate(invoice.dueDate) : formatDate(new Date());
-  const link = invoice ? `${process.env.FRONTEND_URL || "http://localhost:5173"}/invoices/${invoice.id}` : "";
+  const link = invoice ? `${env.frontendUrl}/invoices/${invoice.id}` : "";
 
   const placeholders = {
     CUSTOMER_FIRST_NAME: firstName,

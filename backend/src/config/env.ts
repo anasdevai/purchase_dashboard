@@ -9,15 +9,25 @@ dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   HOST: z.string().default("0.0.0.0"),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGINS: z
     .string()
-    .default("http://localhost:5173,http://127.0.0.1:5173"),
+    .default(
+      "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3001,http://127.0.0.1:3001"
+    ),
   CORS_ALLOW_LAN: z
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
+  FRONTEND_URL: z.string().url().default("http://localhost:5173"),
+  GOOGLE_REDIRECT_URI: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
   SHOP_NAME: z.string().min(1).default("Sceleria"),
   SHOP_ADDRESS: z.string().min(1).default("Your shop address"),
   SHOP_PHONE: z.string().default("Your shop phone"),
@@ -36,10 +46,15 @@ const envSchema = z.object({
 
 const parsed = envSchema.parse(process.env);
 
+const parseCommaSeparated = (value: string) =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 export const env = {
   ...parsed,
-  corsOrigins: parsed.CORS_ORIGINS.split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean)
+  corsOrigins: parseCommaSeparated(parsed.CORS_ORIGINS),
+  frontendUrl: parsed.FRONTEND_URL.replace(/\/+$/, ""),
 };
 

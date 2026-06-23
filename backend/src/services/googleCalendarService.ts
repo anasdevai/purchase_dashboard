@@ -1,9 +1,10 @@
 import { prisma } from "../config/prisma.js";
+import { env } from "../config/env.js";
 import { HttpError } from "../utils/httpError.js";
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+const REDIRECT_URI = env.GOOGLE_REDIRECT_URI;
 
 export const getAuthUrl = (state: string) => {
   if (!CLIENT_ID || !REDIRECT_URI) {

@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import * as appointmentService from "../services/appointmentService.js";
 import * as googleCalendarService from "../services/googleCalendarService.js";
@@ -68,8 +69,7 @@ export const googleCallback = async (req: Request, res: Response) => {
 
   await googleCalendarService.handleOAuthCallback(state, code);
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  res.redirect(`${frontendUrl}/calendar?google_connected=true`);
+  res.redirect(`${env.frontendUrl}/calendar?google_connected=true`);
 };
 
 export const getGoogleStatus = async (req: Request, res: Response) => {

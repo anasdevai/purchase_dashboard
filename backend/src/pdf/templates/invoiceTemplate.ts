@@ -178,10 +178,19 @@ const getInvoiceStyles = () => `
   }
 
   .inv-table tbody td {
-    padding: 12px;
+    padding: 10px 12px;
     border-bottom: 1px solid #e5e7eb;
     vertical-align: top;
     background: #fbfbfc;
+    height: auto;
+  }
+
+  .inv-table tbody td.inv-table__desc {
+    width: auto;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    line-height: 1.45;
   }
 
   .inv-table tbody td.num {
@@ -214,18 +223,29 @@ const getInvoiceStyles = () => `
   .inv-item__name {
     font-weight: 700;
     color: ${INK};
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
   }
 
+  .inv-item__line,
   .inv-item__sub {
-    margin-top: 2px;
+    margin-top: 3px;
     font-size: 7.5pt;
     color: #6b7280;
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
   }
 
-  .inv-table tbody tr.inv-table__spacer td {
-    height: 26px;
-    background: #f3f4f6;
-    border-bottom: 0;
+  .inv-table tbody tr.inv-item-row {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .inv-table thead {
+    display: table-header-group;
   }
 
   .inv-notes {
@@ -397,12 +417,17 @@ const renderDescriptionCell = (description: unknown) => {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const main = lines[0] ?? "-";
-  const sub = lines.slice(1).join(" ");
+  if (lines.length === 0) {
+    return `<div class="inv-item__name">-</div>`;
+  }
 
-  return `<div class="inv-item__name">${escapeHtml(main)}</div>${
-    sub ? `<div class="inv-item__sub">${escapeHtml(sub)}</div>` : ""
-  }`;
+  const [first, ...rest] = lines;
+  const mainHtml = `<div class="inv-item__name">${escapeHtml(first)}</div>`;
+  const restHtml = rest
+    .map((line) => `<div class="inv-item__line">${escapeHtml(line)}</div>`)
+    .join("");
+
+  return `${mainHtml}${restHtml}`;
 };
 
 export const renderInvoiceHtml = (
@@ -510,17 +535,15 @@ export const renderInvoiceHtml = (
 
   const itemRows = items
     .map(
-      (item, index) => `<tr>
+      (item, index) => `<tr class="inv-item-row">
         <td class="pos">${index + 1}</td>
-        <td>${renderDescriptionCell(item.description)}</td>
+        <td class="inv-table__desc">${renderDescriptionCell(item.description)}</td>
         <td class="num col-qty">${escapeHtml(numericValue(item.quantity))}</td>
         <td class="num col-unit">${formatMoneyDecimal(item.unitPrice)}</td>
         <td class="num col-amount">${formatMoneyDecimal(item.lineTotal)}</td>
       </tr>`
     )
     .join("");
-
-  const spacerRow = `<tr class="inv-table__spacer"><td colspan="5"></td></tr>`;
 
   // Group VAT by percentage so the totals reflect each rate (e.g. "VAT 20%").
   const vatBreakdown = new Map<string, number>();
@@ -625,7 +648,7 @@ export const renderInvoiceHtml = (
         </div>
       </section>
 
-      <section class="inv-table-wrap avoid-break">
+      <section class="inv-table-wrap">
         <table class="inv-table">
           <thead>
             <tr>
@@ -637,8 +660,7 @@ export const renderInvoiceHtml = (
             </tr>
           </thead>
           <tbody>
-            ${itemRows || `<tr><td colspan="5">-</td></tr>`}
-            ${spacerRow}
+            ${itemRows || `<tr class="inv-item-row"><td colspan="5">-</td></tr>`}
           </tbody>
         </table>
       </section>
