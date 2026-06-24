@@ -1,10 +1,6 @@
 import { z } from "zod";
 
 export const repairOrderStatuses = [
-  "Open",
-  "WorkPending",
-  "SentToRepairCompany",
-  "AppointmentScheduled",
   "New",
   "Received",
   "InDiagnosis",
@@ -15,11 +11,6 @@ export const repairOrderStatuses = [
   "ReadyForPickup",
   "Completed",
   "Cancelled"
-] as const;
-
-export const repairOrderListFilters = [
-  "active",
-  ...repairOrderStatuses
 ] as const;
 
 export const issueCategoryValues = [
@@ -103,11 +94,6 @@ export const repairOrderSchema = z.object({
   paymentMethod: z.enum(repairPaymentMethods).optional(),
   expectedCompletionDate: optionalDate,
   status: z.enum(repairOrderStatuses).optional(),
-  repairCompanyId: z.preprocess(
-    (value) => (value === "" || value === null || value === undefined ? undefined : value),
-    z.string().uuid().optional()
-  ),
-  repairCompanyNotes: optionalText,
   assignedEmployeeId: z.string().uuid().optional().nullable(),
   customerId: z.string().uuid().optional().nullable()
 });
@@ -120,7 +106,14 @@ export const searchRepairOrdersSchema = z.object({
   model: optionalText,
   imeiOrSerial: optionalText,
   status: z.enum(repairOrderStatuses).optional(),
-  filter: z.enum(repairOrderListFilters).optional()
+  page: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce.number().int().positive().default(1)
+  ),
+  limit: z.preprocess(
+    (value) => (value === "" || value === undefined || value === null ? undefined : value),
+    z.coerce.number().int().positive().default(15)
+  )
 });
 
 export const repairOrderStatusSchema = z.object({

@@ -8,6 +8,7 @@ export const createSupplierSchema = z.object({
   website: z.string().trim().max(255).optional().nullable(),
   deliveryTime: z.number().int().nonnegative().optional().nullable(),
   paymentTerms: z.string().trim().max(255).optional().nullable(),
+  isActive: z.boolean().default(true),
 });
 
 export const updateSupplierSchema = createSupplierSchema.partial();

@@ -6,7 +6,6 @@ import { useLanguage } from '../../i18n/LanguageProvider'
 
 export function AdminNewUserPage() {
   const navigate = useNavigate()
-  const { t } = useLanguage()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,6 +16,9 @@ export function AdminNewUserPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+
+  const { language } = useLanguage()
+  const isDe = language === 'de'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,15 +31,31 @@ export function AdminNewUserPage() {
       setTimeout(() => {
         navigate('/admin/users')
       }, 2000)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t.admin.createUserFailed
-      setError(message)
+    } catch (err: any) {
+      setError(err.message || (isDe ? 'Benutzer konnte nicht erstellt werden' : 'Failed to create user'))
       setLoading(false)
     }
   }
 
+  const t = {
+    backToUsers: isDe ? 'Zurück zur Übersicht' : 'Back to Users',
+    addNewUser: isDe ? 'Benutzer hinzufügen' : 'Add New User',
+    subtitle: isDe ? 'Registrieren Sie ein neues Teammitglied oder einen Systemadministrator.' : 'Register a new team member or system administrator.',
+    successTitle: isDe ? 'Benutzer erfolgreich erstellt!' : 'User Created Successfully!',
+    successSub: isDe ? 'Sie werden zur Benutzerliste weitergeleitet...' : 'Redirecting you back to the user list...',
+    fullName: isDe ? 'Vollständiger Name' : 'Full Name',
+    emailAddress: isDe ? 'E-Mail-Adresse' : 'Email Address',
+    password: isDe ? 'Passwort' : 'Password',
+    passwordPlaceholder: isDe ? 'Benutzerpasswort eingeben' : 'Enter user password',
+    passwordHint: isDe ? 'Muss mindestens 6 Zeichen lang sein.' : 'Must be at least 6 characters.',
+    userRole: isDe ? 'Benutzerrolle' : 'User Role',
+    staff: isDe ? 'Mitarbeiter' : 'Staff',
+    admin: isDe ? 'Admin' : 'Admin',
+    createBtn: isDe ? 'Benutzerkonto erstellen' : 'Create User Account',
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-4 sm:py-8">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 flex flex-col items-center justify-center bg-slate-50">
       <div className="w-full max-w-xl">
         {/* Back Button */}
         <button
@@ -45,18 +63,18 @@ export function AdminNewUserPage() {
           className="group mb-6 flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-slate-800"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          <span>{t.admin.backToUsers}</span>
+          <span>{t.backToUsers}</span>
         </button>
 
         {/* Card */}
-        <div className="card p-8 shadow-sm">
+        <div className="card p-4 sm:p-6 lg:p-8 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-100 text-primary">
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">{t.admin.newUserTitle}</h2>
-              <p className="text-xs text-slate-500">{t.admin.newUserSubtitle}</p>
+              <h2 className="text-lg font-bold text-slate-900">{t.addNewUser}</h2>
+              <p className="text-xs text-slate-500">{t.subtitle}</p>
             </div>
           </div>
 
@@ -65,8 +83,8 @@ export function AdminNewUserPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-4 ring-emerald-50/50">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <p className="mt-4 text-sm font-semibold text-emerald-700">{t.admin.userCreated}</p>
-              <p className="mt-1 text-xs text-slate-400">Redirecting you back to the user list...</p>
+              <p className="mt-4 text-sm font-semibold text-emerald-700">{t.successTitle}</p>
+              <p className="mt-1 text-xs text-slate-400">{t.successSub}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -77,7 +95,9 @@ export function AdminNewUserPage() {
               )}
 
               <div>
-                <label className="label">{t.admin.fullName}</label>
+                <label className="label">
+                  {t.fullName}
+                </label>
                 <input
                   type="text"
                   required
@@ -89,7 +109,9 @@ export function AdminNewUserPage() {
               </div>
 
               <div>
-                <label className="label">{t.admin.emailAddress}</label>
+                <label className="label">
+                  {t.emailAddress}
+                </label>
                 <input
                   type="email"
                   required
@@ -101,12 +123,14 @@ export function AdminNewUserPage() {
               </div>
 
               <div>
-                <label className="label">{t.admin.password}</label>
+                <label className="label">
+                  {t.password}
+                </label>
                 <div className="relative mt-1.5">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="Enter user password"
+                    placeholder={t.passwordPlaceholder}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="input h-11 pr-10"
@@ -119,11 +143,13 @@ export function AdminNewUserPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className="mt-1 text-[10px] text-slate-400">Must be at least 6 characters.</p>
+                <p className="mt-1 text-[10px] text-slate-400">{t.passwordHint}</p>
               </div>
 
               <div>
-                <label className="label">{t.admin.accountRole}</label>
+                <label className="label">
+                  {t.userRole}
+                </label>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -134,7 +160,7 @@ export function AdminNewUserPage() {
                         : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600'
                     }`}
                   >
-                    <span>{t.admin.roleStaffLabel}</span>
+                    <span>{t.staff}</span>
                   </button>
                   <button
                     type="button"
@@ -146,7 +172,7 @@ export function AdminNewUserPage() {
                     }`}
                   >
                     <Shield className="h-4 w-4" />
-                    <span>{t.admin.roleAdminLabel}</span>
+                    <span>{t.admin}</span>
                   </button>
                 </div>
               </div>
@@ -162,7 +188,7 @@ export function AdminNewUserPage() {
                   ) : (
                     <>
                       <UserPlus className="h-4 w-4" />
-                      <span>{t.admin.createUser}</span>
+                      <span>{t.createBtn}</span>
                     </>
                   )}
                 </button>

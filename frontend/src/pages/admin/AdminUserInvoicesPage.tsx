@@ -4,34 +4,12 @@ import { ArrowLeft, Receipt, ChevronLeft, ChevronRight, Download, ExternalLink }
 import { fetchUserInvoices, fetchUser, type AdminUser } from '../../api/admin'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { getApiBaseUrl, getToken } from '../../api/client'
-import {
-  adminBackLinkClass,
-  adminEmptyStateClass,
-  adminErrorStateClass,
-  adminIconButtonClass,
-  adminLoadingSpinnerClass,
-  adminLoadingTextClass,
-  adminPageSubtitleClass,
-  adminPageTitleClass,
-  adminPaginationFooterClass,
-  adminPaginationTextClass,
-  adminTableCellMutedClass,
-  adminTableCellPrimaryClass,
-  adminTableCellSecondaryClass,
-  adminTableHeadClass,
-  adminTableRowClass,
-} from './adminUi'
-
-function invoiceStatusClass(status: string) {
-  if (status === 'Paid') return 'border border-emerald-100 bg-emerald-50 text-emerald-700'
-  if (status === 'Open') return 'border border-amber-100 bg-amber-50 text-amber-700'
-  return 'border border-red-100 bg-red-50 text-red-700'
-}
 
 export function AdminUserInvoicesPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { t, formatMoney, formatDate, interpolate } = useLanguage()
+  const { formatMoney, formatDate, language } = useLanguage()
+  const isDe = language === 'de'
 
   const [user, setUser] = useState<AdminUser | null>(null)
   const [invoices, setInvoices] = useState<any[]>([])
@@ -54,12 +32,12 @@ export function AdminUserInvoicesPage() {
         setError(null)
       })
       .catch((err) => {
-        setError(err.message || t.admin.loadDataFailed)
+        setError(err.message || (isDe ? 'Fehler beim Laden der Daten' : 'Failed to load data'))
       })
       .finally(() => {
         setLoading(false)
       })
-  }, [userId, page])
+  }, [userId, page, isDe])
 
   const handleDownload = (invoiceId: string) => {
     const token = getToken()
@@ -68,88 +46,121 @@ export function AdminUserInvoicesPage() {
     window.open(url, '_blank')
   }
 
+  const t = {
+    backToProfile: isDe ? 'Zurück zum Benutzerprofil' : 'Back to User Profile',
+    title: user
+      ? (isDe ? `Rechnungen von ${user.name}` : `${user.name}'s Invoices`)
+      : (isDe ? 'Rechnungen' : 'Invoices'),
+    subtitle: isDe
+      ? `Alle von ${user?.name || 'diesem Benutzer'} erstellten Rechnungen werden angezeigt.`
+      : `Viewing all sales invoices created by ${user?.name || 'this user'}.`,
+    loading: isDe ? 'Rechnungen werden geladen...' : 'Loading invoices...',
+    noInvoices: isDe ? 'Keine Rechnungen für diesen Benutzer gefunden.' : 'No invoices found for this user.',
+    thNumber: isDe ? 'Nummer' : 'Number',
+    thCustomer: isDe ? 'Kunde' : 'Customer',
+    thPaymentMethod: isDe ? 'Zahlungsart' : 'Payment Method',
+    thTotalAmount: isDe ? 'Gesamtbetrag' : 'Total Amount',
+    thDate: isDe ? 'Datum' : 'Date',
+    thStatus: isDe ? 'Status' : 'Status',
+    thActions: isDe ? 'Aktionen' : 'Actions',
+    noEmail: isDe ? 'Keine E-Mail' : 'No email',
+    pagination: (page: number, totalPages: number, total: number) =>
+      isDe
+        ? `Seite ${page} von ${totalPages} · Gesamt ${total} Rechnungen`
+        : `Page ${page} of ${totalPages} · Total ${total} invoices`,
+  }
+
   return (
-    <div className="space-y-6">
-      <button type="button" onClick={() => navigate(`/admin/users/${userId}`)} className={adminBackLinkClass}>
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+      {/* Back link */}
+      <button
+        onClick={() => navigate(`/admin/users/${userId}`)}
+        className="group mb-6 flex items-center gap-2 text-xs font-semibold text-white/50 transition hover:text-white"
+      >
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        <span>{t.admin.backToUserProfile}</span>
+        <span>{t.backToProfile}</span>
       </button>
 
-      <div>
-        <h1 className={adminPageTitleClass}>
-          {user ? interpolate(t.admin.userInvoicesTitle, { name: user.name }) : t.admin.invoices}
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-white">
+          {t.title}
         </h1>
-        <p className={adminPageSubtitleClass}>{t.admin.userInvoicesSubtitle}</p>
+        <p className="mt-1 text-sm text-white/40">
+          {t.subtitle}
+        </p>
       </div>
 
       {loading ? (
         <div className="flex h-[300px] items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <div className={adminLoadingSpinnerClass} />
-            <p className={adminLoadingTextClass}>Loading invoices...</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-violet-500/30 border-t-violet-500" />
+            <p className="text-xs font-medium text-white/40">{t.loading}</p>
           </div>
         </div>
       ) : error ? (
-        <div className={adminErrorStateClass}>{error}</div>
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 px-8 py-6 text-center">
+          <p className="text-sm font-medium text-red-300">{error}</p>
+        </div>
       ) : invoices.length === 0 ? (
-        <div className={adminEmptyStateClass}>
-          <Receipt className="h-10 w-10 text-slate-300" />
-          <p className="mt-3 text-sm font-medium text-slate-500">No invoices found for this user.</p>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] py-16 text-center">
+          <Receipt className="mx-auto h-10 w-10 text-white/20" />
+          <p className="mt-3 text-sm font-medium text-white/40">{t.noInvoices}</p>
         </div>
       ) : (
-        <div className="card overflow-hidden">
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[800px]">
               <thead>
-                <tr>
-                  <th className={adminTableHeadClass}>Number</th>
-                  <th className={adminTableHeadClass}>Customer</th>
-                  <th className={adminTableHeadClass}>Payment Method</th>
-                  <th className={adminTableHeadClass}>Total Amount</th>
-                  <th className={adminTableHeadClass}>Date</th>
-                  <th className={adminTableHeadClass}>Status</th>
-                  <th className={`${adminTableHeadClass} text-right`}>Actions</th>
+                <tr className="border-b border-white/[0.06]">
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thNumber}</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thCustomer}</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thPaymentMethod}</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thTotalAmount}</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thDate}</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thStatus}</th>
+                  <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-widest text-white/30">{t.thActions}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/[0.02]">
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className={adminTableRowClass}>
-                    <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>{inv.invoiceNumber}</td>
-                    <td className="px-4 py-4 sm:px-6">
-                      <p className={adminTableCellPrimaryClass}>{inv.customerName}</p>
-                      <p className={adminTableCellSecondaryClass}>{inv.customerEmail || t.admin.noEmail}</p>
+                  <tr key={inv.id} className="transition hover:bg-white/[0.01]">
+                    <td className="px-6 py-4 text-sm font-semibold text-white/80">{inv.invoiceNumber}</td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-semibold text-white/80">{inv.customerName}</p>
+                      <p className="text-[11px] text-white/30">{inv.customerEmail || t.noEmail}</p>
                     </td>
-                    <td className={`px-4 py-4 sm:px-6 text-sm text-slate-600`}>{inv.paymentMethod}</td>
-                    <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>
-                      {formatMoney(inv.totalAmount)}
-                    </td>
-                    <td className={`px-4 py-4 sm:px-6 ${adminTableCellMutedClass}`}>
-                      {formatDate(inv.date || inv.createdAt)}
-                    </td>
-                    <td className="px-4 py-4 sm:px-6">
+                    <td className="px-6 py-4 text-sm text-white/60">{inv.paymentMethod}</td>
+                    <td className="px-6 py-4 text-sm font-semibold text-white/80">{formatMoney(inv.totalAmount)}</td>
+                    <td className="px-6 py-4 text-xs text-white/40">{formatDate(inv.date || inv.createdAt)}</td>
+                    <td className="px-6 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${invoiceStatusClass(inv.status)}`}
+                        className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                          inv.status === 'Paid'
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : inv.status === 'Open'
+                            ? 'bg-amber-500/10 text-amber-400'
+                            : 'bg-red-500/10 text-red-400'
+                        }`}
                       >
                         {inv.status}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-right sm:px-6">
+                    <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        {inv.pdfPath ? (
+                        {inv.pdfPath && (
                           <button
-                            type="button"
                             onClick={() => handleDownload(inv.id)}
-                            className={adminIconButtonClass}
-                            title={t.admin.downloadPdf}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+                            title={isDe ? 'PDF herunterladen' : 'Download PDF'}
                           >
                             <Download className="h-4 w-4" />
                           </button>
-                        ) : null}
+                        )}
                         <button
-                          type="button"
                           onClick={() => navigate(`/invoices/${inv.id}`)}
-                          className={adminIconButtonClass}
-                          title={t.admin.viewDetails}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-white/60 transition hover:bg-white/[0.08] hover:text-white"
+                          title={isDe ? 'Details anzeigen' : 'View Details'}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </button>
@@ -161,33 +172,29 @@ export function AdminUserInvoicesPage() {
             </table>
           </div>
 
-          {totalPages > 1 ? (
-            <div className={adminPaginationFooterClass}>
-              <p className={adminPaginationTextClass}>
-                Page <span className="font-semibold text-slate-800">{page}</span> of{' '}
-                <span className="font-semibold text-slate-800">{totalPages}</span> · Total{' '}
-                <span className="font-semibold text-slate-800">{total}</span> invoices
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-white/[0.06] px-6 py-4">
+              <p className="text-xs text-white/35">
+                {t.pagination(page, totalPages, total)}
               </p>
               <div className="flex gap-2">
                 <button
-                  type="button"
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="btn btn-secondary h-9 w-9 p-0 disabled:pointer-events-none disabled:opacity-30"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.03] text-white transition hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <button
-                  type="button"
                   disabled={page === totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="btn btn-secondary h-9 w-9 p-0 disabled:pointer-events-none disabled:opacity-30"
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.03] text-white transition hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-30"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>
             </div>
-          ) : null}
+          )}
         </div>
       )}
     </div>

@@ -2,39 +2,29 @@ import { getActiveTranslations } from '../i18n/active'
 import { ApiError, resolveApiErrorMessage } from '../utils/apiErrors'
 import { isAuthErrorCode } from '../utils/authErrorCodes'
 
-const DEFAULT_DEV_API_PORT = '4000'
-const DEFAULT_DEV_API_ORIGIN = `http://localhost:${DEFAULT_DEV_API_PORT}`
+const API_PORT = '4000'
 
-function firstEnvUrl(value: string | undefined) {
-  return value?.split(',')[0]?.trim() || undefined
-}
+function resolveApiBaseUrl() {
+  const fromEnv =
+    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
+    (import.meta.env.VITE_API_URL as string | undefined)?.trim()
 
-/** Strips trailing slashes and optional `/api` suffix; request paths already start with `/api`. */
-function normalizeServerBaseUrl(raw: string): string {
-  let url = raw.trim().replace(/\/+$/, '')
-  if (url.endsWith('/api')) {
-    url = url.slice(0, -4)
-  }
-  return url
-}
-
-function resolveApiBaseUrl(): string {
-  const fromEnv = firstEnvUrl(import.meta.env.VITE_API_BASE_URL as string | undefined)
-
-  if (fromEnv) {
-    return normalizeServerBaseUrl(fromEnv)
+  // If a production API URL is explicitly configured (not localhost), use it directly.
+  if (fromEnv && !fromEnv.includes('localhost') && !fromEnv.includes('127.0.0.1')) {
+    return fromEnv
   }
 
-  // Dev-only fallback when opening the UI from another device on the same LAN.
-  // if (import.meta.env.DEV && typeof window !== 'undefined') {
-  //   const { hostname, protocol } = window.location
-  //   const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
-  //   if (!isLocalHost) {
-  //     return `${protocol}//${hostname}:${DEFAULT_DEV_API_PORT}`
-  //   }
-  // }
+  if (typeof window !== 'undefined') {
+    const { hostname, protocol } = window.location
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
 
-  return DEFAULT_DEV_API_ORIGIN
+    // When opened from another device via LAN IP, target the API on the same host.
+    if (!isLocalHost) {
+      return `${protocol}//${hostname}:${API_PORT}`
+    }
+  }
+
+  return fromEnv || `http://localhost:${API_PORT}`
 }
 
 const API_BASE_URL = resolveApiBaseUrl()
@@ -54,31 +44,28 @@ export function getApiBaseUrl() {
 }
 
 export function getToken() {
-  return localStorage.getItem(TOKEN_KEY)
+  return sessionStorage.getItem(TOKEN_KEY)
 }
 
 export function setToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token)
+  sessionStorage.setItem(TOKEN_KEY, token)
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
 }
 
 async function readError(response: Response) {
   const t = getActiveTranslations()
   let rawMessage: string | undefined
   let errorCode: string | undefined
-  let errorDetails: unknown
 
   try {
     const body = (await response.json()) as {
       message?: string
       code?: string
-      details?: unknown
       errors?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
     }
-    errorDetails = body.details
     errorCode = body.code
     const fieldMessages = body.errors?.fieldErrors
       ? Object.entries(body.errors.fieldErrors).flatMap(([field, messages]) =>
@@ -103,7 +90,7 @@ async function readError(response: Response) {
     t,
     resolvedCode,
   )
-  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode, errorDetails)
+  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode)
 }
 
 export async function apiRequest<T>(
@@ -124,6 +111,7 @@ export async function apiRequest<T>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
+    credentials: 'include',
   })
 
   if (!response.ok) {

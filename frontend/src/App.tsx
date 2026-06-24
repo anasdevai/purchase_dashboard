@@ -22,6 +22,8 @@ import { CustomersPage } from './pages/CustomersPage'
 import { CustomerDetailPage } from './pages/CustomerDetailPage'
 import { MobileSignaturePage } from './pages/MobileSignaturePage'
 import { CalendarPage } from './pages/CalendarPage'
+import PublicWidgetPage from './pages/public/PublicWidgetPage'
+import IncomingRequestsPage from './pages/repairRequests/IncomingRequestsPage'
 
 // Inventory imports
 import { InventoryLayout } from './app/layout/InventoryLayout'
@@ -50,6 +52,7 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signature/:token" element={<MobileSignaturePage />} />
+            <Route path="/widget/:shopId" element={<PublicWidgetPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
@@ -73,6 +76,7 @@ export default function App() {
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/customers/:customerId" element={<CustomerDetailPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/repair-requests" element={<IncomingRequestsPage />} />
 
                 {/* Inventory routes */}
                 <Route path="/inventory" element={<InventoryLayout />}>

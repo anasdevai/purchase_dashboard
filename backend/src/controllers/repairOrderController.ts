@@ -63,8 +63,11 @@ export const get = async (req: Request, res: Response) => {
 };
 
 export const search = async (req: Request, res: Response) => {
-  const repairOrders = await repairOrderService.searchRepairOrders(userId(req), req.query);
-  res.json({ repairOrders });
+  const result = await repairOrderService.searchRepairOrders(userId(req), req.query);
+  res.json({
+    repairOrders: result.repairOrders,
+    pagination: result.pagination
+  });
 };
 
 export const generatePdf = async (req: Request, res: Response) => {

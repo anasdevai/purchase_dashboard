@@ -23,6 +23,10 @@ type ShopSettingsRecord = {
   defaultVatRate: string;
   defaultVatCustom: string;
   logoDataUrl: string | null;
+  widgetPrimaryColor: string;
+  widgetAccentColor: string;
+  widgetFont: string;
+  widgetShowLogo: boolean;
 };
 
 const emptySettings = (): ShopSettingsRecord => ({
@@ -45,7 +49,11 @@ const emptySettings = (): ShopSettingsRecord => ({
   bankName: "",
   defaultVatRate: "20",
   defaultVatCustom: "",
-  logoDataUrl: null
+  logoDataUrl: null,
+  widgetPrimaryColor: "#0284c7",
+  widgetAccentColor: "#0f172a",
+  widgetFont: "Inter",
+  widgetShowLogo: true
 });
 
 const parseLegacyAddress = (shopAddress: string) => {
@@ -142,7 +150,11 @@ const toResponse = (settings: ShopSettingsRecord) => {
     bankName: enriched.bankName,
     defaultVatRate: enriched.defaultVatRate,
     defaultVatCustom: enriched.defaultVatCustom,
-    logoDataUrl: enriched.logoDataUrl ?? undefined
+    logoDataUrl: enriched.logoDataUrl ?? undefined,
+    widgetPrimaryColor: enriched.widgetPrimaryColor,
+    widgetAccentColor: enriched.widgetAccentColor,
+    widgetFont: enriched.widgetFont,
+    widgetShowLogo: enriched.widgetShowLogo
   };
 };
 
@@ -248,7 +260,11 @@ export const saveShopSettingsForUser = async (userId: string, input: Record<stri
       bankName: data.bankName,
       defaultVatRate: data.defaultVatRate,
       defaultVatCustom: data.defaultVatRate === "custom" ? data.defaultVatCustom : "",
-      logoDataUrl: data.logoDataUrl ?? null
+      logoDataUrl: data.logoDataUrl ?? null,
+      widgetPrimaryColor: data.widgetPrimaryColor,
+      widgetAccentColor: data.widgetAccentColor,
+      widgetFont: data.widgetFont,
+      widgetShowLogo: data.widgetShowLogo
     },
     update: {
       shopName: data.shopName,
@@ -270,7 +286,11 @@ export const saveShopSettingsForUser = async (userId: string, input: Record<stri
       bankName: data.bankName,
       defaultVatRate: data.defaultVatRate,
       defaultVatCustom: data.defaultVatRate === "custom" ? data.defaultVatCustom : "",
-      logoDataUrl: data.logoDataUrl ?? null
+      logoDataUrl: data.logoDataUrl ?? null,
+      widgetPrimaryColor: data.widgetPrimaryColor,
+      widgetAccentColor: data.widgetAccentColor,
+      widgetFont: data.widgetFont,
+      widgetShowLogo: data.widgetShowLogo
     }
   });
 

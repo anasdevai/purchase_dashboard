@@ -6,11 +6,54 @@ import { fetchEmailLogs } from "../api/email";
 import type { EmailLog } from "../types/email";
 import { getFriendlyErrorMessage, logApiError } from "../utils/apiErrors";
 
+const localizations = {
+  de: {
+    title: "E-Mail-Protokolle",
+    description: "Verlauf aller automatisch und manuell gesendeten E-Mails.",
+    tableTo: "Empfänger",
+    tableSubject: "Betreff",
+    tableDate: "Sendedatum",
+    tableStatus: "Status",
+    tableActions: "Aktionen",
+    statusSent: "Gesendet",
+    statusFailed: "Fehlgeschlagen",
+    noLogs: "Keine E-Mail-Protokolle gefunden.",
+    inspectTitle: "E-Mail-Details",
+    inspectSubject: "Betreff:",
+    inspectTo: "Empfänger:",
+    inspectDate: "Gesendet am:",
+    inspectBody: "E-Mail-Inhalt:",
+    errorDetails: "Fehlerdetails:",
+    page: "Seite",
+    of: "von",
+  },
+  en: {
+    title: "Email Logs",
+    description: "History of all outgoing transactional and notification emails.",
+    tableTo: "Recipient",
+    tableSubject: "Subject",
+    tableDate: "Sent Date",
+    tableStatus: "Status",
+    tableActions: "Actions",
+    statusSent: "Sent",
+    statusFailed: "Failed",
+    noLogs: "No email logs found.",
+    inspectTitle: "Email Details",
+    inspectSubject: "Subject:",
+    inspectTo: "Recipient:",
+    inspectDate: "Sent Date:",
+    inspectBody: "Email Body:",
+    errorDetails: "Error Details:",
+    page: "Page",
+    of: "of",
+  },
+};
+
 export function EmailLogsPage() {
   const { t, language } = useLanguage();
   const { showToast } = useAppConfirm();
-  const loc = t.emailLogs;
-  const locale = language === "de" ? "de-DE" : "en-US";
+  const isDe = language === "de";
+  const loc = isDe ? localizations.de : localizations.en;
 
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,7 +84,7 @@ export function EmailLogsPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString(locale, {
+    return date.toLocaleString(isDe ? "de-DE" : "en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -216,7 +259,7 @@ export function EmailLogsPage() {
                 onClick={() => setSelectedLog(null)}
                 className="btn btn-outline border border-slate-200 hover:bg-slate-50 h-10 px-5 text-sm font-semibold text-slate-700"
               >
-                {t.common.closeDialog}
+                {isDe ? "Schließen" : "Close"}
               </button>
             </div>
           </div>

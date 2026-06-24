@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react'
-import { Info, Save, Shield, Upload, X } from 'lucide-react'
+import { Info, Save, Shield, Upload, X, Smartphone } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
@@ -13,8 +13,6 @@ import {
   type ShopSettings,
   type ShopSettingsValidationErrors,
 } from '../services/shopSettings'
-import { RepairCompaniesCard } from '../components/settings/RepairCompaniesCard'
-import { FloatingSelect } from '../components/common/FloatingSelect'
 import {
   fetchEmailSettings,
   saveSmtpSettings,
@@ -168,7 +166,7 @@ export function SettingsPage() {
   const [dragActive, setDragActive] = useState(false)
 
   // Sub-tab state
-  const [activeTab, setActiveTab] = useState<'shop' | 'email'>('shop')
+  const [activeTab, setActiveTab] = useState<'shop' | 'email' | 'widget'>('shop')
   const loc = language === 'de' ? emailLocalizations.de : emailLocalizations.en
 
   // SMTP settings state
@@ -205,7 +203,6 @@ export function SettingsPage() {
   })
 
   const defaultVatRate = watch('defaultVatRate')
-  const country = watch('country')
 
   // Load shop settings
   useEffect(() => {
@@ -538,6 +535,17 @@ export function SettingsPage() {
           >
             {loc.tabTitleEmail}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('widget')}
+            className={`pb-4 px-1 text-sm font-semibold border-b-2 transition-all ${
+              activeTab === 'widget'
+                ? 'border-primary text-primary font-bold'
+                : 'border-transparent text-slate-500 hover:text-slate-950'
+            }`}
+          >
+            Website Widget
+          </button>
         </nav>
       </div>
 
@@ -602,18 +610,14 @@ export function SettingsPage() {
 
                 <div>
                   <FieldLabel label={t.settings.country} required />
-                  <FloatingSelect
-                    value={country ?? ''}
-                    placeholder={t.settings.countryPlaceholder}
-                    options={[
-                      { value: '', label: t.settings.countryPlaceholder },
-                      ...COUNTRIES.map((countryOption) => ({
-                        value: countryOption,
-                        label: countryOption,
-                      })),
-                    ]}
-                    onChange={(value) => setValue('country', value, { shouldDirty: true })}
-                  />
+                  <select className="input h-11" {...register('country')}>
+                    <option value="">{t.settings.countryPlaceholder}</option>
+                    {COUNTRIES.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </SettingsCard>
 
@@ -866,8 +870,6 @@ export function SettingsPage() {
             </div>
           </div>
 
-          <RepairCompaniesCard />
-
           <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
             <p>{t.settings.infoBanner}</p>
@@ -1071,7 +1073,7 @@ export function SettingsPage() {
                     value={selectedTemplateName}
                     onChange={(e) => setSelectedTemplateName(e.target.value)}
                   >
-                    {Object.entries(templateDisplayNames[language]).map(([key, label]) => (
+                    {Object.entries(templateDisplayNames[language === 'de' ? 'de' : 'en']).map(([key, label]) => (
                       <option key={key} value={key}>
                         {label}
                       </option>
@@ -1163,6 +1165,198 @@ export function SettingsPage() {
               </div>
             )}
           </SettingsCard>
+        </div>
+      )}
+
+      {activeTab === 'widget' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            
+            {/* Widget Configuration Card */}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <SettingsCard title="Widget Customization">
+                <p className="text-xs text-slate-500 mb-4">
+                  Customize the look and feel of the booking widget embedded on your company website.
+                </p>
+
+                {/* Primary Color */}
+                <div>
+                  <FieldLabel label="Primary Theme Color" />
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      className="w-11 h-11 p-1 rounded-lg border border-slate-200 cursor-pointer"
+                      {...register('widgetPrimaryColor')}
+                    />
+                    <input
+                      type="text"
+                      className="input h-11 font-mono"
+                      placeholder="#0284c7"
+                      {...register('widgetPrimaryColor')}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Used for progress bars, primary buttons, and highlight rings.</p>
+                </div>
+
+                {/* Accent Color */}
+                <div>
+                  <FieldLabel label="Accent Text / Header Color" />
+                  <div className="flex gap-2">
+                    <input
+                      type="color"
+                      className="w-11 h-11 p-1 rounded-lg border border-slate-200 cursor-pointer"
+                      {...register('widgetAccentColor')}
+                    />
+                    <input
+                      type="text"
+                      className="input h-11 font-mono"
+                      placeholder="#0f172a"
+                      {...register('widgetAccentColor')}
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Used for secondary headings, card borders, and dark highlights.</p>
+                </div>
+
+                {/* Font Selector */}
+                <div>
+                  <FieldLabel label="Widget Typography Font" />
+                  <select className="input h-11 font-medium" {...register('widgetFont')}>
+                    <option value="Inter">Inter (Recommended)</option>
+                    <option value="Roboto">Roboto</option>
+                    <option value="Outfit">Outfit</option>
+                    <option value="system-ui">System UI Defaults</option>
+                  </select>
+                </div>
+
+                {/* Show Logo Toggle */}
+                <div className="flex items-center gap-2 py-2">
+                  <input
+                    type="checkbox"
+                    id="widgetShowLogo"
+                    className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                    {...register('widgetShowLogo')}
+                  />
+                  <label htmlFor="widgetShowLogo" className="text-sm font-semibold text-slate-700 select-none">
+                    Display company logo in header
+                  </label>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="btn btn-primary h-11 px-6 font-bold"
+                  >
+                    <Save className="h-4 w-4" />
+                    {saving ? 'Saving...' : 'Save Settings'}
+                  </button>
+                </div>
+              </SettingsCard>
+
+              {/* Embedding Instructions & Copy Code */}
+              <SettingsCard title="HTML Widget Integration Code">
+                <p className="text-xs text-slate-500 mb-4">
+                  Copy the code below and paste it into the HTML of your website where you want the booking widget to appear.
+                </p>
+
+                <div className="bg-slate-900 rounded-xl p-4 font-mono text-xs text-slate-300 relative shadow-inner overflow-x-auto whitespace-pre leading-relaxed select-all">
+                  {`<iframe
+  src="${window.location.origin}/widget/${user?.id || 'YOUR_SHOP_ID'}"
+  width="100%"
+  height="700"
+  style="border: none; border-radius: 16px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);"
+></iframe>`}
+                </div>
+
+                <div className="flex justify-end gap-3 mt-4">
+                  <a
+                    href={`/widget/${user?.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-outline border border-slate-200 hover:bg-slate-50 px-4 text-xs font-semibold h-10 flex items-center justify-center"
+                  >
+                    Launch Live Widget
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const embedCode = `<iframe src="${window.location.origin}/widget/${user?.id || ''}" width="100%" height="700" style="border:none;border-radius:16px;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);"></iframe>`;
+                      navigator.clipboard.writeText(embedCode);
+                      showToast('success', 'Widget HTML embed code copied to clipboard!');
+                    }}
+                    className="btn btn-primary px-4 text-xs font-bold h-10"
+                  >
+                    Copy Embed Code
+                  </button>
+                </div>
+              </SettingsCard>
+            </form>
+
+            {/* Live Interactive Branding Preview */}
+            <div className="space-y-5">
+              <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50 flex flex-col items-center">
+                <h3 className="text-sm font-bold text-slate-800 self-start mb-3">Live Style Preview</h3>
+                
+                {/* Mock widget container */}
+                <div
+                  style={{
+                    '--mock-primary': watch('widgetPrimaryColor') || '#0284c7',
+                    '--mock-accent': watch('widgetAccentColor') || '#0f172a',
+                    fontFamily: watch('widgetFont') || 'Inter'
+                  } as React.CSSProperties}
+                  className="w-full max-w-sm bg-white rounded-2xl shadow-lg border border-slate-200/60 overflow-hidden text-slate-700 animate-fadeIn"
+                >
+                  {/* Header Mock */}
+                  <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
+                    <div className="flex items-center gap-2">
+                      {watch('widgetShowLogo') && logoPreview ? (
+                        <img src={logoPreview} alt="" className="h-6 object-contain" />
+                      ) : (
+                        <Smartphone className="w-5 h-5 text-[var(--mock-primary)]" />
+                      )}
+                      <span className="text-xs font-bold text-[var(--mock-accent)]">
+                        {watch('shopName') || 'My Repair Shop'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded-full text-slate-400">
+                      Step 1 of 5
+                    </span>
+                  </div>
+
+                  {/* Body Mock */}
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Preview Device</div>
+                      <div className="text-sm font-bold text-[var(--mock-accent)] mt-0.5">iPhone 14 Pro</div>
+                    </div>
+                    
+                    <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase">Estimated Repair Cost</div>
+                        <div className="text-lg font-black text-slate-900">$149.00</div>
+                      </div>
+                      <span className="text-[10px] text-emerald-600 bg-emerald-50 font-extrabold px-2 py-0.5 rounded-full">
+                        In Stock
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="w-full py-2.5 rounded-xl text-xs font-bold text-white shadow-sm text-center transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: 'var(--mock-primary)' }}
+                    >
+                      Book Repair Appointment
+                    </button>
+                  </div>
+                </div>
+                
+                <p className="text-[11px] text-slate-400 mt-4 text-center">
+                  This preview renders in real-time as you tweak theme configurations.
+                </p>
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
     </div>

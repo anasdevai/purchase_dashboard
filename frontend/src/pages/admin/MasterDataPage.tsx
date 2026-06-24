@@ -6,10 +6,11 @@ import {
   Edit2,
   Smartphone,
   Wrench,
-  X,
+  X
 } from 'lucide-react';
 import { useAppConfirm } from '../../components/common/ConfirmDialogProvider';
 import * as api from '../../api/masterData';
+import { useLanguage } from '../../i18n/LanguageProvider';
 import type {
   Brand,
   DeviceType,
@@ -36,6 +37,9 @@ type TabName = 'brands' | 'deviceTypes' | 'models' | 'repairTypes' | 'priceLists
 
 export function MasterDataPage() {
   const { confirm, showToast } = useAppConfirm();
+  const { language } = useLanguage();
+  const isDe = language === 'de';
+
   const [activeTab, setActiveTab] = useState<TabName>('brands');
 
   // Master lists
@@ -91,6 +95,79 @@ export function MasterDataPage() {
   const [priceListDur, setPriceListDur] = useState<number | ''>('');
   const [priceListActive, setPriceListActive] = useState(true);
 
+  const t = {
+    title: isDe ? 'Geräte & Reparaturen' : 'Master Data',
+    subtitle: isDe
+      ? 'Zentrale Verwaltung von Marken, Gerätetypen, Modellen, Reparaturarten und der globalen Preisliste.'
+      : 'Centralized maintenance of brands, device types, models, repair types, and standard pricing catalog.',
+    createNew: isDe ? 'Neu anlegen' : 'Create New',
+    tabBrands: isDe ? 'Marken' : 'Brands',
+    tabDeviceTypes: isDe ? 'Gerätetypen' : 'Device Types',
+    tabModels: isDe ? 'Modelle' : 'Models',
+    tabRepairTypes: isDe ? 'Reparaturarten' : 'Repair Types',
+    tabPriceLists: isDe ? 'Preislisten' : 'Price Lists',
+    searchPlaceholder: isDe ? 'Suchen...' : 'Search...',
+    allBrands: isDe ? 'Alle Marken' : 'All Brands',
+    allTypes: isDe ? 'Alle Gerätetypen' : 'All Types',
+    allCategories: isDe ? 'Alle Kategorien' : 'All Categories',
+    
+    // Brands list columns
+    thBrandName: isDe ? 'Markenname' : 'Brand Name',
+    thStatus: isDe ? 'Status' : 'Status',
+    thActions: isDe ? 'Aktionen' : 'Actions',
+    
+    // Device Types list columns
+    thType: isDe ? 'Typ' : 'Device Type',
+    thBrand: isDe ? 'Marke' : 'Brand',
+    
+    // Models list columns
+    thModel: isDe ? 'Modellname' : 'Model',
+    thGeneration: isDe ? 'Generation' : 'Generation',
+    thTechSpecs: isDe ? 'Datenblatt' : 'Tech Specs',
+    
+    // Repair Types list columns
+    thRepairType: isDe ? 'Reparaturart' : 'Repair Type',
+    thCategory: isDe ? 'Kategorie' : 'Category',
+    thStdPrice: isDe ? 'Richtpreis' : 'Std Price',
+    thDuration: isDe ? 'Dauer' : 'Duration',
+    thDifficulty: isDe ? 'Schwierigkeit' : 'Difficulty',
+    
+    // Price list columns
+    thDeviceModel: isDe ? 'Gerät & Modell' : 'Device & Model',
+    thPrice: isDe ? 'Preis' : 'Price',
+    thSpecificDuration: isDe ? 'Spezifische Dauer' : 'Duration Override',
+    
+    // Modals
+    editEntry: isDe ? 'Eintrag bearbeiten' : 'Edit Entry',
+    createEntry: isDe ? 'Neuen Eintrag anlegen' : 'Create Entry',
+    brandNameLabel: isDe ? 'Markenname' : 'Brand Name',
+    logoUrlLabel: isDe ? 'Logo Bild-URL' : 'Logo Image URL',
+    showActive: isDe ? 'Aktiv in Listen anzeigen' : 'Show Active',
+    deviceTypeLabel: isDe ? 'Gerätetyp' : 'Device Type Name',
+    linkedBrandLabel: isDe ? 'Zugeordnete Marke' : 'Linked Brand',
+    selectBrand: isDe ? 'Marke auswählen' : 'Select Brand',
+    modelNameLabel: isDe ? 'Modellname' : 'Model Name',
+    selectType: isDe ? 'Typ auswählen' : 'Select Type',
+    generationLabel: isDe ? 'Generation (M1, A16...)' : 'Generation (M1, A16...)',
+    releaseYearLabel: isDe ? 'Erscheinungsjahr' : 'Release Year',
+    storageLabel: isDe ? 'Speichervarianten' : 'Storage Options',
+    colorLabel: isDe ? 'Farben' : 'Color Options',
+    repairNameLabel: isDe ? 'Reparaturart Name' : 'Repair Name',
+    difficultyLabel: isDe ? 'Schwierigkeit' : 'Difficulty',
+    notSet: isDe ? 'Nicht zugewiesen' : 'Not Set',
+    selectModel: isDe ? 'Modell auswählen' : 'Select Model',
+    selectRepair: isDe ? 'Reparaturart auswählen' : 'Select Repair',
+    priceForModelLabel: isDe ? 'Preis für dieses Modell' : 'Price for this Model',
+    specificDurationLabel: isDe ? 'Spezifische Dauer (Min)' : 'Specific Duration (Min)',
+    durationOverridePlaceholder: isDe ? 'Standard Dauer überschreiben...' : 'Override default duration...',
+    cancelBtn: isDe ? 'Abbrechen' : 'Cancel',
+    saveBtn: isDe ? 'Speichern' : 'Save',
+    activeText: isDe ? 'Aktiv' : 'Active',
+    inactiveText: isDe ? 'Inaktiv' : 'Inactive',
+    addBtn: isDe ? 'Hinzufügen' : 'Add',
+    standard: isDe ? 'Standard' : 'Standard',
+  }
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -125,7 +202,7 @@ export function MasterDataPage() {
       }
     } catch (err) {
       console.error('Failed to load master data:', err);
-      showToast('error', 'Fehler beim Laden der Stammdaten / Failed to load master data.');
+      showToast('error', isDe ? 'Fehler beim Laden der Stammdaten.' : 'Failed to load master data.');
     } finally {
       setLoading(false);
     }
@@ -225,30 +302,30 @@ export function MasterDataPage() {
     e.preventDefault();
     try {
       if (activeTab === 'brands') {
-        if (!brandName.trim()) return showToast('error', 'Brand Name is required');
+        if (!brandName.trim()) return showToast('error', isDe ? 'Markenname ist erforderlich' : 'Brand Name is required');
         const payload = { name: brandName.trim(), logoUrl: brandLogo.trim() || null, isActive: brandActive };
         if (editingId) {
           await api.updateBrand(editingId, payload);
-          showToast('success', 'Brand updated successfully');
+          showToast('success', isDe ? 'Marke erfolgreich aktualisiert' : 'Brand updated successfully');
         } else {
           await api.createBrand(payload);
-          showToast('success', 'Brand created successfully');
+          showToast('success', isDe ? 'Marke erfolgreich erstellt' : 'Brand created successfully');
         }
       } else if (activeTab === 'deviceTypes') {
         if (!deviceTypeName.trim() || !deviceTypeBrandId) {
-          return showToast('error', 'Name and Brand selection are required');
+          return showToast('error', isDe ? 'Name und Marke sind erforderlich' : 'Name and Brand selection are required');
         }
         const payload = { name: deviceTypeName.trim(), brandId: deviceTypeBrandId, isActive: deviceTypeActive };
         if (editingId) {
           await api.updateDeviceType(editingId, payload);
-          showToast('success', 'Device type updated successfully');
+          showToast('success', isDe ? 'Gerätetyp erfolgreich aktualisiert' : 'Device type updated successfully');
         } else {
           await api.createDeviceType(payload);
-          showToast('success', 'Device type created successfully');
+          showToast('success', isDe ? 'Gerätetyp erfolgreich erstellt' : 'Device type created successfully');
         }
       } else if (activeTab === 'models') {
         if (!modelName.trim() || !modelBrandId || !modelDeviceTypeId) {
-          return showToast('error', 'Name, Brand, and Device Type selections are required');
+          return showToast('error', isDe ? 'Name, Marke und Gerätetyp sind erforderlich' : 'Name, Brand, and Device Type selections are required');
         }
         const payload = {
           name: modelName.trim(),
@@ -262,14 +339,14 @@ export function MasterDataPage() {
         };
         if (editingId) {
           await api.updateModel(editingId, payload);
-          showToast('success', 'Model updated successfully');
+          showToast('success', isDe ? 'Modell erfolgreich aktualisiert' : 'Model updated successfully');
         } else {
           await api.createModel(payload);
-          showToast('success', 'Model created successfully');
+          showToast('success', isDe ? 'Modell erfolgreich erstellt' : 'Model created successfully');
         }
       } else if (activeTab === 'repairTypes') {
         if (!repairTypeName.trim() || !repairTypeCat) {
-          return showToast('error', 'Repair Type Name and Category are required');
+          return showToast('error', isDe ? 'Reparaturart-Name und Kategorie sind erforderlich' : 'Repair Type Name and Category are required');
         }
         const payload = {
           name: repairTypeName.trim(),
@@ -281,14 +358,14 @@ export function MasterDataPage() {
         };
         if (editingId) {
           await api.updateRepairType(editingId, payload);
-          showToast('success', 'Repair type updated successfully');
+          showToast('success', isDe ? 'Reparaturart erfolgreich aktualisiert' : 'Repair type updated successfully');
         } else {
           await api.createRepairType(payload);
-          showToast('success', 'Repair type created successfully');
+          showToast('success', isDe ? 'Reparaturart erfolgreich erstellt' : 'Repair type created successfully');
         }
       } else if (activeTab === 'priceLists') {
         if (!priceListModelId || !priceListRepairId || priceListVal === '') {
-          return showToast('error', 'Model, Repair Type, and Price are required');
+          return showToast('error', isDe ? 'Modell, Reparaturart und Preis sind erforderlich' : 'Model, Repair Type, and Price are required');
         }
         const payload = {
           modelId: priceListModelId,
@@ -299,10 +376,10 @@ export function MasterDataPage() {
         };
         if (editingId) {
           await api.updatePriceList(editingId, payload);
-          showToast('success', 'Price mapping updated successfully');
+          showToast('success', isDe ? 'Preiszuordnung erfolgreich aktualisiert' : 'Price mapping updated successfully');
         } else {
           await api.createPriceList(payload);
-          showToast('success', 'Price mapping created successfully');
+          showToast('success', isDe ? 'Preiszuordnung erfolgreich erstellt' : 'Price mapping created successfully');
         }
       }
 
@@ -310,16 +387,18 @@ export function MasterDataPage() {
       loadData();
     } catch (err: any) {
       console.error(err);
-      showToast('error', err.message || 'Error occurred while saving');
+      showToast('error', err.message || (isDe ? 'Fehler beim Speichern' : 'Error occurred while saving'));
     }
   };
 
   const handleDelete = (id: string, name: string) => {
     confirm({
-      title: 'Item löschen? / Delete Item?',
-      message: `Möchten Sie "${name}" wirklich unwiderruflich löschen? / Are you sure you want to permanently delete "${name}"?`,
-      confirmLabel: 'Löschen / Delete',
-      cancelLabel: 'Abbrechen / Cancel',
+      title: isDe ? 'Element löschen?' : 'Delete Item?',
+      message: isDe
+        ? `Sind Sie sicher, dass Sie "${name}" dauerhaft löschen möchten? Dies kann nicht rückgängig gemacht werden.`
+        : `Are you sure you want to permanently delete "${name}"? This action cannot be undone.`,
+      confirmLabel: isDe ? 'Löschen' : 'Delete',
+      cancelLabel: isDe ? 'Abbrechen' : 'Cancel',
       variant: 'danger',
       onConfirm: async () => {
         try {
@@ -329,11 +408,11 @@ export function MasterDataPage() {
           else if (activeTab === 'repairTypes') await api.deleteRepairType(id);
           else if (activeTab === 'priceLists') await api.deletePriceList(id);
 
-          showToast('success', 'Gelöscht! / Successfully deleted.');
+          showToast('success', isDe ? 'Erfolgreich gelöscht.' : 'Successfully deleted.');
           loadData();
         } catch (err: any) {
           console.error(err);
-          showToast('error', err.message || 'Failed to delete item');
+          showToast('error', err.message || (isDe ? 'Fehler beim Löschen' : 'Failed to delete item'));
         }
       }
     });
@@ -353,7 +432,6 @@ export function MasterDataPage() {
     }
   };
 
-  // Rendering Helper Methods
   const getTabClass = (tab: TabName) => {
     return `pb-4 px-1 text-sm font-semibold border-b-2 transition-all capitalize ${
       activeTab === tab
@@ -363,13 +441,13 @@ export function MasterDataPage() {
   };
 
   return (
-    <div className="min-h-screen px-8 py-8 space-y-6">
+    <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Geräte & Reparaturen / Master Data</h1>
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{t.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Zentrale Verwaltung von Marken, Gerätetypen, Modellen, Reparaturarten und der globalen Preisliste.
+            {t.subtitle}
           </p>
         </div>
         <button
@@ -377,18 +455,18 @@ export function MasterDataPage() {
           className="btn btn-primary h-11 px-4 text-sm font-semibold"
         >
           <Plus className="h-4 w-4" />
-          <span>Neu anlegen / Create New</span>
+          <span>{t.createNew}</span>
         </button>
       </div>
 
       {/* Tabs navigation */}
       <div className="border-b border-slate-200">
         <nav className="-mb-px flex space-x-6">
-          <button onClick={() => setActiveTab('brands')} className={getTabClass('brands')}>Marken / Brands</button>
-          <button onClick={() => setActiveTab('deviceTypes')} className={getTabClass('deviceTypes')}>Gerätetypen / Device Types</button>
-          <button onClick={() => setActiveTab('models')} className={getTabClass('models')}>Modelle / Models</button>
-          <button onClick={() => setActiveTab('repairTypes')} className={getTabClass('repairTypes')}>Reparaturarten / Repair Types</button>
-          <button onClick={() => setActiveTab('priceLists')} className={getTabClass('priceLists')}>Preislisten / Price Lists</button>
+          <button onClick={() => setActiveTab('brands')} className={getTabClass('brands')}>{t.tabBrands}</button>
+          <button onClick={() => setActiveTab('deviceTypes')} className={getTabClass('deviceTypes')}>{t.tabDeviceTypes}</button>
+          <button onClick={() => setActiveTab('models')} className={getTabClass('models')}>{t.tabModels}</button>
+          <button onClick={() => setActiveTab('repairTypes')} className={getTabClass('repairTypes')}>{t.tabRepairTypes}</button>
+          <button onClick={() => setActiveTab('priceLists')} className={getTabClass('priceLists')}>{t.tabPriceLists}</button>
         </nav>
       </div>
 
@@ -398,7 +476,7 @@ export function MasterDataPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Suchen... / Search..."
+            placeholder={t.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input h-10 pl-10"
@@ -412,7 +490,7 @@ export function MasterDataPage() {
             onChange={(e) => setFilterBrandId(e.target.value)}
             className="input h-10 w-full md:w-48 bg-white"
           >
-            <option value="">Alle Marken / All Brands</option>
+            <option value="">{t.allBrands}</option>
             {brands.map(b => (
               <option key={b.id} value={b.id}>{b.name}</option>
             ))}
@@ -426,7 +504,7 @@ export function MasterDataPage() {
             onChange={(e) => setFilterDeviceTypeId(e.target.value)}
             className="input h-10 w-full md:w-48 bg-white"
           >
-            <option value="">Alle Gerätetypen / All Types</option>
+            <option value="">{t.allTypes}</option>
             {deviceTypes
               .filter(t => !filterBrandId || t.brandId === filterBrandId)
               .map(t => (
@@ -442,7 +520,7 @@ export function MasterDataPage() {
             onChange={(e) => setFilterCategory(e.target.value)}
             className="input h-10 w-full md:w-48 bg-white"
           >
-            <option value="">Alle Kategorien / All Categories</option>
+            <option value="">{t.allCategories}</option>
             <option value="Display">Display</option>
             <option value="Battery">Battery</option>
             <option value="WaterDamage">WaterDamage</option>
@@ -468,9 +546,9 @@ export function MasterDataPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    <th className="px-6 py-4">Markenname / Brand Name</th>
-                    <th className="px-6 py-4">Status / Active</th>
-                    <th className="px-6 py-4 text-right">Aktionen / Actions</th>
+                    <th className="px-6 py-4">{t.thBrandName}</th>
+                    <th className="px-6 py-4">{t.thStatus}</th>
+                    <th className="px-6 py-4 text-right">{t.thActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -490,13 +568,13 @@ export function MasterDataPage() {
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${b.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                            {b.isActive ? 'Active' : 'Inactive'}
+                            {b.isActive ? t.activeText : t.inactiveText}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openEditModal(b)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => handleDelete(b.id, b.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => openEditModal(b)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title={isDe ? 'Bearbeiten' : 'Edit'}><Edit2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => handleDelete(b.id, b.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title={isDe ? 'Löschen' : 'Delete'}><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </td>
                       </tr>
@@ -509,32 +587,32 @@ export function MasterDataPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    <th className="px-6 py-4">Typ / Device Type</th>
-                    <th className="px-6 py-4">Marke / Brand</th>
-                    <th className="px-6 py-4">Status / Active</th>
-                    <th className="px-6 py-4 text-right">Aktionen / Actions</th>
+                    <th className="px-6 py-4">{t.thType}</th>
+                    <th className="px-6 py-4">{t.thBrand}</th>
+                    <th className="px-6 py-4">{t.thStatus}</th>
+                    <th className="px-6 py-4 text-right">{t.thActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {deviceTypes
                     .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
                     .filter(t => !filterBrandId || t.brandId === filterBrandId)
-                    .map(t => (
-                      <tr key={t.id} className="hover:bg-slate-50/50 transition">
+                    .map(tData => (
+                      <tr key={tData.id} className="hover:bg-slate-50/50 transition">
                         <td className="px-6 py-4 font-bold text-slate-800 flex items-center gap-2">
                           <Smartphone className="h-4 w-4 text-slate-400" />
-                          {t.name}
+                          {tData.name}
                         </td>
-                        <td className="px-6 py-4 text-slate-600 font-medium">{t.brand?.name}</td>
+                        <td className="px-6 py-4 text-slate-600 font-medium">{tData.brand?.name}</td>
                         <td className="px-6 py-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${t.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                            {t.isActive ? 'Active' : 'Inactive'}
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${tData.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                            {tData.isActive ? t.activeText : t.inactiveText}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openEditModal(t)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => handleDelete(t.id, t.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => openEditModal(tData)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title={isDe ? 'Bearbeiten' : 'Edit'}><Edit2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => handleDelete(tData.id, tData.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title={isDe ? 'Löschen' : 'Delete'}><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </td>
                       </tr>
@@ -547,13 +625,13 @@ export function MasterDataPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    <th className="px-6 py-4">Modellname / Model</th>
-                    <th className="px-6 py-4">Marke / Brand</th>
-                    <th className="px-6 py-4">Typ / Type</th>
-                    <th className="px-6 py-4">Generation</th>
-                    <th className="px-6 py-4">Datenblatt / Tech Specs</th>
-                    <th className="px-6 py-4">Status / Active</th>
-                    <th className="px-6 py-4 text-right">Aktionen / Actions</th>
+                    <th className="px-6 py-4">{t.thModel}</th>
+                    <th className="px-6 py-4">{t.thBrand}</th>
+                    <th className="px-6 py-4">{t.thType}</th>
+                    <th className="px-6 py-4">{t.thGeneration}</th>
+                    <th className="px-6 py-4">{t.thTechSpecs}</th>
+                    <th className="px-6 py-4">{t.thStatus}</th>
+                    <th className="px-6 py-4 text-right">{t.thActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -570,32 +648,32 @@ export function MasterDataPage() {
                         <td className="px-6 py-4 text-xs space-y-1">
                           {m.storageOptions?.length > 0 && (
                             <div>
-                              <span className="font-semibold text-slate-400 mr-1 uppercase">Disk:</span>
+                              <span className="font-semibold text-slate-400 mr-1 uppercase">{isDe ? 'Speicher:' : 'Disk:'}</span>
                               <span className="text-slate-600">{m.storageOptions.join(', ')}</span>
                             </div>
                           )}
                           {m.colorOptions?.length > 0 && (
                             <div>
-                              <span className="font-semibold text-slate-400 mr-1 uppercase">Color:</span>
+                              <span className="font-semibold text-slate-400 mr-1 uppercase">{isDe ? 'Farbe:' : 'Color:'}</span>
                               <span className="text-slate-600">{m.colorOptions.join(', ')}</span>
                             </div>
                           )}
                           {m.releaseYear && (
                             <div>
-                              <span className="font-semibold text-slate-400 mr-1 uppercase">Year:</span>
+                              <span className="font-semibold text-slate-400 mr-1 uppercase">{isDe ? 'Jahr:' : 'Year:'}</span>
                               <span className="text-slate-600">{m.releaseYear}</span>
                             </div>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${m.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                            {m.isActive ? 'Active' : 'Inactive'}
+                            {m.isActive ? t.activeText : t.inactiveText}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openEditModal(m)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-                            <button onClick={() => handleDelete(m.id, m.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => openEditModal(m)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title={isDe ? 'Bearbeiten' : 'Edit'}><Edit2 className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => handleDelete(m.id, m.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title={isDe ? 'Löschen' : 'Delete'}><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </td>
                       </tr>
@@ -608,13 +686,13 @@ export function MasterDataPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    <th className="px-6 py-4">Reparaturart / Repair Type</th>
-                    <th className="px-6 py-4">Kategorie / Category</th>
-                    <th className="px-6 py-4">Richtpreis / Std Price</th>
-                    <th className="px-6 py-4">Dauer / Duration</th>
-                    <th className="px-6 py-4">Schwierigkeit / Difficulty</th>
-                    <th className="px-6 py-4">Status / Active</th>
-                    <th className="px-6 py-4 text-right">Aktionen / Actions</th>
+                    <th className="px-6 py-4">{t.thRepairType}</th>
+                    <th className="px-6 py-4">{t.thCategory}</th>
+                    <th className="px-6 py-4">{t.thStdPrice}</th>
+                    <th className="px-6 py-4">{t.thDuration}</th>
+                    <th className="px-6 py-4">{t.thDifficulty}</th>
+                    <th className="px-6 py-4">{t.thStatus}</th>
+                    <th className="px-6 py-4 text-right">{t.thActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -660,13 +738,13 @@ export function MasterDataPage() {
                             </td>
                             <td className="px-6 py-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${r.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                                {r.isActive ? 'Active' : 'Inactive'}
+                                {r.isActive ? t.activeText : t.inactiveText}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
-                                <button onClick={() => openEditModal(r)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => handleDelete(r.id, r.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => openEditModal(r)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title={isDe ? 'Bearbeiten' : 'Edit'}><Edit2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => handleDelete(r.id, r.name)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title={isDe ? 'Löschen' : 'Delete'}><Trash2 className="h-3.5 w-3.5" /></button>
                               </div>
                             </td>
                           </tr>
@@ -682,12 +760,12 @@ export function MasterDataPage() {
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    <th className="px-6 py-4">Gerät & Modell / Device & Model</th>
-                    <th className="px-6 py-4">Reparaturart / Repair Type</th>
-                    <th className="px-6 py-4">Preis / Price</th>
-                    <th className="px-6 py-4">Spezifische Dauer / Duration</th>
-                    <th className="px-6 py-4">Status / Active</th>
-                    <th className="px-6 py-4 text-right">Aktionen / Actions</th>
+                    <th className="px-6 py-4">{t.thDeviceModel}</th>
+                    <th className="px-6 py-4">{t.thRepairType}</th>
+                    <th className="px-6 py-4">{t.thPrice}</th>
+                    <th className="px-6 py-4">{t.thSpecificDuration}</th>
+                    <th className="px-6 py-4">{t.thStatus}</th>
+                    <th className="px-6 py-4 text-right">{t.thActions}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -727,17 +805,17 @@ export function MasterDataPage() {
                             </td>
                             <td className="px-6 py-4 font-extrabold text-slate-900 text-base">{Number(p.price).toFixed(2)} €</td>
                             <td className="px-6 py-4 text-slate-600 font-medium">
-                              {p.duration ? `${p.duration} Min` : <span className="text-slate-400 italic">Standard</span>}
+                              {p.duration ? `${p.duration} Min` : <span className="text-slate-400 italic">{t.standard}</span>}
                             </td>
                             <td className="px-6 py-4">
                               <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${p.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
-                                {p.isActive ? 'Active' : 'Inactive'}
+                                {p.isActive ? t.activeText : t.inactiveText}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
-                                <button onClick={() => openEditModal(p)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-                                <button onClick={() => handleDelete(p.id, `${p.model?.name} - ${p.repairType?.name}`)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => openEditModal(p)} className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50" title={isDe ? 'Bearbeiten' : 'Edit'}><Edit2 className="h-3.5 w-3.5" /></button>
+                                <button onClick={() => handleDelete(p.id, `${p.model?.name} - ${p.repairType?.name}`)} className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50" title={isDe ? 'Löschen' : 'Delete'}><Trash2 className="h-3.5 w-3.5" /></button>
                               </div>
                             </td>
                           </tr>
@@ -758,7 +836,7 @@ export function MasterDataPage() {
           <div className="card w-full max-w-lg shadow-2xl relative bg-white border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                {editingId ? 'Eintrag bearbeiten / Edit Entry' : 'Neuen Eintrag anlegen / Create Entry'}
+                {editingId ? t.editEntry : t.createEntry}
               </h3>
               <button
                 type="button"
@@ -773,7 +851,7 @@ export function MasterDataPage() {
               {activeTab === 'brands' && (
                 <>
                   <div>
-                    <label className="label">Markenname / Brand Name <span className="text-red-500">*</span></label>
+                    <label className="label">{t.brandNameLabel} <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       className="input mt-1.5 h-11 text-sm font-medium"
@@ -784,7 +862,7 @@ export function MasterDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="label">Logo Bild-URL / Logo Image URL</label>
+                    <label className="label">{t.logoUrlLabel}</label>
                     <input
                       type="url"
                       className="input mt-1.5 h-11 text-sm"
@@ -802,7 +880,7 @@ export function MasterDataPage() {
                       className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
                     />
                     <label htmlFor="brandActive" className="text-xs font-semibold text-slate-700 select-none cursor-pointer">
-                      Aktiv in Listen anzeigen / Show Active
+                      {t.showActive}
                     </label>
                   </div>
                 </>
@@ -811,7 +889,7 @@ export function MasterDataPage() {
               {activeTab === 'deviceTypes' && (
                 <>
                   <div>
-                    <label className="label">Gerätetyp / Device Type Name <span className="text-red-500">*</span></label>
+                    <label className="label">{t.deviceTypeLabel} <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       className="input mt-1.5 h-11 text-sm font-medium"
@@ -822,14 +900,14 @@ export function MasterDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="label">Zugeordnete Marke / Linked Brand <span className="text-red-500">*</span></label>
+                    <label className="label">{t.linkedBrandLabel} <span className="text-red-500">*</span></label>
                     <select
                       value={deviceTypeBrandId}
                       onChange={(e) => setDeviceTypeBrandId(e.target.value)}
                       className="input mt-1.5 h-11 text-sm bg-white"
                       required
                     >
-                      <option value="">Marke auswählen / Select Brand</option>
+                      <option value="">{t.selectBrand}</option>
                       {brands.map(b => (
                         <option key={b.id} value={b.id}>{b.name}</option>
                       ))}
@@ -844,7 +922,7 @@ export function MasterDataPage() {
                       className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
                     />
                     <label htmlFor="deviceTypeActive" className="text-xs font-semibold text-slate-700 select-none cursor-pointer">
-                      Aktiv in Listen anzeigen / Show Active
+                      {t.showActive}
                     </label>
                   </div>
                 </>
@@ -853,7 +931,7 @@ export function MasterDataPage() {
               {activeTab === 'models' && (
                 <>
                   <div>
-                    <label className="label">Modellname / Model Name <span className="text-red-500">*</span></label>
+                    <label className="label">{t.modelNameLabel} <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       className="input mt-1.5 h-11 text-sm font-medium"
@@ -863,42 +941,42 @@ export function MasterDataPage() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="label">Marke / Brand <span className="text-red-500">*</span></label>
+                      <label className="label">{t.thBrand} <span className="text-red-500">*</span></label>
                       <select
                         value={modelBrandId}
                         onChange={(e) => setModelBrandId(e.target.value)}
                         className="input mt-1.5 h-11 text-sm bg-white"
                         required
                       >
-                        <option value="">Marke / Brand</option>
+                        <option value="">{t.thBrand}</option>
                         {brands.map(b => (
                           <option key={b.id} value={b.id}>{b.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="label">Gerätetyp / Device Type <span className="text-red-500">*</span></label>
+                      <label className="label">{t.thType} <span className="text-red-500">*</span></label>
                       <select
                         value={modelDeviceTypeId}
                         onChange={(e) => setModelDeviceTypeId(e.target.value)}
                         className="input mt-1.5 h-11 text-sm bg-white"
                         required
                       >
-                        <option value="">Typ / Type</option>
+                        <option value="">{t.selectType}</option>
                         {deviceTypes
-                          .filter(t => !modelBrandId || t.brandId === modelBrandId)
-                          .map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
+                          .filter(tData => !modelBrandId || tData.brandId === modelBrandId)
+                          .map(tData => (
+                            <option key={tData.id} value={tData.id}>{tData.name}</option>
                           ))}
                       </select>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="label">Generation (M1, A16...)</label>
+                      <label className="label">{t.generationLabel}</label>
                       <input
                         type="text"
                         className="input mt-1.5 h-11 text-sm"
@@ -908,7 +986,7 @@ export function MasterDataPage() {
                       />
                     </div>
                     <div>
-                      <label className="label">Erscheinungsjahr / Year</label>
+                      <label className="label">{t.releaseYearLabel}</label>
                       <input
                         type="number"
                         className="input mt-1.5 h-11 text-sm"
@@ -921,7 +999,7 @@ export function MasterDataPage() {
 
                   {/* Storage Options Tag List */}
                   <div>
-                    <label className="label">Speichervarianten / Storage Options</label>
+                    <label className="label">{t.storageLabel}</label>
                     <div className="flex gap-2 mt-1.5">
                       <input
                         type="text"
@@ -936,7 +1014,7 @@ export function MasterDataPage() {
                         onClick={handleAddStorageTag}
                         className="btn btn-outline border-slate-200 h-10 px-3 hover:bg-slate-50"
                       >
-                        Add
+                        {t.addBtn}
                       </button>
                     </div>
                     {modelStorage.length > 0 && (
@@ -944,7 +1022,7 @@ export function MasterDataPage() {
                         {modelStorage.map(tag => (
                           <span key={tag} className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md border border-slate-200">
                             {tag}
-                            <button type="button" onClick={() => setModelStorage(modelStorage.filter(t => t !== tag))} className="text-slate-400 hover:text-slate-600"><X className="h-3 w-3" /></button>
+                            <button type="button" onClick={() => setModelStorage(modelStorage.filter(tData => tData !== tag))} className="text-slate-400 hover:text-slate-600"><X className="h-3 w-3" /></button>
                           </span>
                         ))}
                       </div>
@@ -953,7 +1031,7 @@ export function MasterDataPage() {
 
                   {/* Colors Option Tag List */}
                   <div>
-                    <label className="label">Farben / Color Options</label>
+                    <label className="label">{t.colorLabel}</label>
                     <div className="flex gap-2 mt-1.5">
                       <input
                         type="text"
@@ -968,7 +1046,7 @@ export function MasterDataPage() {
                         onClick={handleAddColorTag}
                         className="btn btn-outline border-slate-200 h-10 px-3 hover:bg-slate-50"
                       >
-                        Add
+                        {t.addBtn}
                       </button>
                     </div>
                     {modelColors.length > 0 && (
@@ -976,7 +1054,7 @@ export function MasterDataPage() {
                         {modelColors.map(tag => (
                           <span key={tag} className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 text-xs font-semibold px-2.5 py-1 rounded-md border border-slate-200">
                             {tag}
-                            <button type="button" onClick={() => setModelColors(modelColors.filter(t => t !== tag))} className="text-slate-400 hover:text-slate-600"><X className="h-3 w-3" /></button>
+                            <button type="button" onClick={() => setModelColors(modelColors.filter(tData => tData !== tag))} className="text-slate-400 hover:text-slate-600"><X className="h-3 w-3" /></button>
                           </span>
                         ))}
                       </div>
@@ -992,7 +1070,7 @@ export function MasterDataPage() {
                       className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
                     />
                     <label htmlFor="modelActive" className="text-xs font-semibold text-slate-700 select-none cursor-pointer">
-                      Aktiv in Listen anzeigen / Show Active
+                      {t.showActive}
                     </label>
                   </div>
                 </>
@@ -1001,7 +1079,7 @@ export function MasterDataPage() {
               {activeTab === 'repairTypes' && (
                 <>
                   <div>
-                    <label className="label">Reparaturart Name / Repair Name <span className="text-red-500">*</span></label>
+                    <label className="label">{t.repairNameLabel} <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       className="input mt-1.5 h-11 text-sm font-medium"
@@ -1012,7 +1090,7 @@ export function MasterDataPage() {
                     />
                   </div>
                   <div>
-                    <label className="label">Kategorie / Category <span className="text-red-500">*</span></label>
+                    <label className="label">{t.thCategory} <span className="text-red-500">*</span></label>
                     <select
                       value={repairTypeCat}
                       onChange={(e) => setRepairTypeCat(e.target.value as any)}
@@ -1020,19 +1098,19 @@ export function MasterDataPage() {
                       required
                     >
                       <option value="Display">Display</option>
-                      <option value="Battery">Battery (Akku)</option>
-                      <option value="WaterDamage">WaterDamage (Wasserschaden)</option>
+                      <option value="Battery">{isDe ? 'Akku (Battery)' : 'Battery'}</option>
+                      <option value="WaterDamage">{isDe ? 'Wasserschaden (Water Damage)' : 'Water Damage'}</option>
                       <option value="Software">Software</option>
                       <option value="LogicBoard">LogicBoard</option>
-                      <option value="Camera">Camera (Kamera)</option>
-                      <option value="ChargingPort">ChargingPort (Ladeanschluss)</option>
-                      <option value="Keyboard">Keyboard (Tastatur)</option>
-                      <option value="Other">Other (Sonstiges)</option>
+                      <option value="Camera">{isDe ? 'Kamera (Camera)' : 'Camera'}</option>
+                      <option value="ChargingPort">{isDe ? 'Ladeanschluss (Charging Port)' : 'Charging Port'}</option>
+                      <option value="Keyboard">{isDe ? 'Tastatur (Keyboard)' : 'Keyboard'}</option>
+                      <option value="Other">{isDe ? 'Sonstiges (Other)' : 'Other'}</option>
                     </select>
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="col-span-2">
-                      <label className="label">Standardpreis / Standard Price (€)</label>
+                      <label className="label">{t.thStdPrice} (€)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -1043,7 +1121,7 @@ export function MasterDataPage() {
                       />
                     </div>
                     <div>
-                      <label className="label">Dauer / Duration (Min)</label>
+                      <label className="label">{t.thDuration} (Min)</label>
                       <input
                         type="number"
                         className="input mt-1.5 h-11 text-sm"
@@ -1055,17 +1133,17 @@ export function MasterDataPage() {
                   </div>
 
                   <div>
-                    <label className="label">Schwierigkeit / Difficulty</label>
+                    <label className="label">{t.difficultyLabel}</label>
                     <select
                       value={repairTypeDiff}
                       onChange={(e) => setRepairTypeDiff(e.target.value as any)}
                       className="input mt-1.5 h-11 text-sm bg-white"
                     >
-                      <option value="">Nicht zugewiesen / Not Set</option>
-                      <option value="Easy">Easy (Einfach)</option>
-                      <option value="Medium">Medium (Mittel)</option>
-                      <option value="Difficult">Difficult (Schwer)</option>
-                      <option value="Expert">Expert (Profi)</option>
+                      <option value="">{t.notSet}</option>
+                      <option value="Easy">{isDe ? 'Einfach (Easy)' : 'Easy'}</option>
+                      <option value="Medium">{isDe ? 'Mittel (Medium)' : 'Medium'}</option>
+                      <option value="Difficult">{isDe ? 'Schwer (Difficult)' : 'Difficult'}</option>
+                      <option value="Expert">{isDe ? 'Profi (Expert)' : 'Expert'}</option>
                     </select>
                   </div>
 
@@ -1078,7 +1156,7 @@ export function MasterDataPage() {
                       className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
                     />
                     <label htmlFor="repairTypeActive" className="text-xs font-semibold text-slate-700 select-none cursor-pointer">
-                      Aktiv in Listen anzeigen / Show Active
+                      {t.showActive}
                     </label>
                   </div>
                 </>
@@ -1087,36 +1165,36 @@ export function MasterDataPage() {
               {activeTab === 'priceLists' && (
                 <>
                   <div>
-                    <label className="label">Gerät & Modell / Model <span className="text-red-500">*</span></label>
+                    <label className="label">{t.thDeviceModel} <span className="text-red-500">*</span></label>
                     <select
                       value={priceListModelId}
                       onChange={(e) => setPriceListModelId(e.target.value)}
                       className="input mt-1.5 h-11 text-sm bg-white"
                       required
                     >
-                      <option value="">Modell auswählen / Select Model</option>
+                      <option value="">{t.selectModel}</option>
                       {models.map(m => (
                         <option key={m.id} value={m.id}>{m.brand?.name} {m.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="label">Reparaturart / Repair Type <span className="text-red-500">*</span></label>
+                    <label className="label">{t.thRepairType} <span className="text-red-500">*</span></label>
                     <select
                       value={priceListRepairId}
                       onChange={(e) => setPriceListRepairId(e.target.value)}
                       className="input mt-1.5 h-11 text-sm bg-white"
                       required
                     >
-                      <option value="">Reparaturart auswählen / Select Repair</option>
+                      <option value="">{t.selectRepair}</option>
                       {repairTypes.map(r => (
                         <option key={r.id} value={r.id}>{r.name} ({r.category})</option>
                       ))}
                     </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="label">Preis für dieses Modell / Price (€) <span className="text-red-500">*</span></label>
+                      <label className="label">{t.priceForModelLabel} <span className="text-red-500">*</span></label>
                       <input
                         type="number"
                         step="0.01"
@@ -1128,11 +1206,11 @@ export function MasterDataPage() {
                       />
                     </div>
                     <div>
-                      <label className="label">Spezifische Dauer / Duration (Min)</label>
+                      <label className="label">{t.specificDurationLabel}</label>
                       <input
                         type="number"
                         className="input mt-1.5 h-11 text-sm"
-                        placeholder="Standard Dauer überschreiben..."
+                        placeholder={t.durationOverridePlaceholder}
                         value={priceListDur}
                         onChange={(e) => setPriceListDur(e.target.value === '' ? '' : Number(e.target.value))}
                       />
@@ -1148,7 +1226,7 @@ export function MasterDataPage() {
                       className="h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
                     />
                     <label htmlFor="priceListActive" className="text-xs font-semibold text-slate-700 select-none cursor-pointer">
-                      Aktiv in Listen anzeigen / Show Active
+                      {t.showActive}
                     </label>
                   </div>
                 </>
@@ -1161,13 +1239,13 @@ export function MasterDataPage() {
                   onClick={() => setIsModalOpen(false)}
                   className="btn btn-outline border-slate-200 h-11 px-5"
                 >
-                  Abbrechen / Cancel
+                  {t.cancelBtn}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary h-11 px-6 font-semibold"
                 >
-                  Speichern / Save
+                  {t.saveBtn}
                 </button>
               </div>
             </form>

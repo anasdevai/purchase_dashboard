@@ -29,8 +29,7 @@ type ViewMode = "day" | "week" | "month" | "list";
 export function CalendarPage() {
   const { t, language } = useLanguage();
   const { confirm, showToast } = useAppConfirm();
-  const cal = t.calendar;
-  const locale = language === "de" ? "de-DE" : "en-US";
+  const isDe = language === "de";
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,25 +77,27 @@ export function CalendarPage() {
       window.location.href = url;
     } catch (err) {
       logApiError("fetch google auth url", err);
-      showToast("error", cal.googleConnectFailed);
+      showToast("error", isDe ? "Google OAuth URL konnte nicht geladen werden." : "Failed to load Google OAuth URL.");
     }
   };
 
   const handleDisconnectGoogle = () => {
     confirm({
-      title: cal.disconnectTitle,
-      message: cal.disconnectMessage,
-      confirmLabel: cal.disconnect,
-      cancelLabel: t.common.cancel,
+      title: isDe ? "Google Kalender trennen?" : "Disconnect Google Calendar?",
+      message: isDe
+        ? "Möchten Sie die Verbindung zu Ihrem Google Kalender wirklich trennen? Termine werden dann nicht mehr synchronisiert."
+        : "Are you sure you want to disconnect your Google Calendar? Appointments will no longer be synchronized.",
+      confirmLabel: isDe ? "Trennen" : "Disconnect",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "danger",
       onConfirm: async () => {
         try {
           await disconnectGoogleCalendar();
           setGoogleConnected(false);
-          showToast("success", cal.disconnected);
+          showToast("success", isDe ? "Google Kalender getrennt." : "Google Calendar disconnected.");
         } catch (err) {
           logApiError("disconnect google", err);
-          showToast("error", cal.disconnectFailed);
+          showToast("error", isDe ? "Trennen fehlgeschlagen." : "Failed to disconnect Google Calendar.");
         }
       },
     });
@@ -108,7 +109,7 @@ export function CalendarPage() {
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("google_connected") === "true") {
-      showToast("success", cal.connectedSuccess);
+      showToast("success", isDe ? "Google Kalender erfolgreich verknüpft!" : "Google Calendar successfully connected!");
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
@@ -160,11 +161,11 @@ export function CalendarPage() {
       const newEnd = new Date(newStart.getTime() + durationMs);
 
       await moveAppointment(apptId, newStart.toISOString(), newEnd.toISOString());
-      showToast("success", cal.rescheduled);
+      showToast("success", isDe ? "Termin verschoben." : "Appointment rescheduled successfully.");
       loadAppointments();
     } catch (err) {
       logApiError("move appointment", err);
-      showToast("error", cal.rescheduleFailed);
+      showToast("error", isDe ? "Verschieben fehlgeschlagen." : "Failed to reschedule appointment.");
     }
   };
 
@@ -179,28 +180,30 @@ export function CalendarPage() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      showToast("success", cal.exported);
+      showToast("success", isDe ? "Erfolgreich exportiert." : "Exported successfully.");
     } catch (err) {
       logApiError("export appointments", err);
-      showToast("error", cal.exportFailed);
+      showToast("error", isDe ? "Export fehlgeschlagen." : "Export failed.");
     }
   };
 
   const handleDelete = (appt: Appointment) => {
     confirm({
-      title: cal.deleteTitle,
-      message: cal.deleteMessage,
-      confirmLabel: cal.delete,
-      cancelLabel: t.common.cancel,
+      title: isDe ? "Termin löschen?" : "Delete appointment?",
+      message: isDe
+        ? `Möchten Sie den Termin "${appt.title}" wirklich dauerhaft löschen?`
+        : `Are you sure you want to permanently delete the appointment "${appt.title}"?`,
+      confirmLabel: isDe ? "Löschen" : "Delete",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "danger",
       onConfirm: async () => {
         try {
           await deleteAppointment(appt.id);
-          showToast("success", cal.deleted);
+          showToast("success", isDe ? "Termin gelöscht." : "Appointment deleted.");
           loadAppointments();
         } catch (err) {
           logApiError("delete appointment", err);
-          showToast("error", cal.deleteFailed);
+          showToast("error", isDe ? "Löschen fehlgeschlagen." : "Failed to delete appointment.");
         }
       },
     });
@@ -295,9 +298,9 @@ export function CalendarPage() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
 
-    const weekdayHeaders = Array.from({ length: 7 }, (_, i) =>
-      new Date(2024, 0, 1 + i).toLocaleDateString(locale, { weekday: "short" })
-    );
+    const weekdayHeaders = isDe
+      ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
     return (
       <div className="card overflow-hidden border border-slate-200/80">
@@ -360,12 +363,12 @@ export function CalendarPage() {
                       className={`text-[10px] px-2 py-1 rounded border font-semibold cursor-grab active:cursor-grabbing truncate transition shadow-sm ${getStatusColor(
                         appt.status
                       )}`}
-                      title={`${appt.title} (${new Date(appt.startTime).toLocaleTimeString(locale, {
+                      title={`${appt.title} (${new Date(appt.startTime).toLocaleTimeString("de-DE", {
                         hour: "2-digit",
                         minute: "2-digit"
                       })})`}
                     >
-                      {new Date(appt.startTime).toLocaleTimeString(locale, {
+                      {new Date(appt.startTime).toLocaleTimeString("de-DE", {
                         hour: "2-digit",
                         minute: "2-digit"
                       })}{" "}
@@ -390,13 +393,13 @@ export function CalendarPage() {
         <div className="min-w-[800px]">
           {/* Header row */}
           <div className="grid grid-cols-8 border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wide">
-            <div className="py-3 px-4 border-r border-slate-200 text-center">{cal.time}</div>
+            <div className="py-3 px-4 border-r border-slate-200 text-center">{isDe ? "Uhrzeit" : "Time"}</div>
             {days.map((d) => {
               const isToday = new Date().toDateString() === d.toDateString();
               return (
                 <div key={d.toString()} className="py-3 text-center flex flex-col items-center justify-center">
                   <span>
-                    {d.toLocaleDateString(locale, { weekday: "short" })}
+                    {d.toLocaleDateString(isDe ? "de-DE" : "en-US", { weekday: "short" })}
                   </span>
                   <span className={`mt-0.5 inline-flex items-center justify-center text-xs font-bold w-5 h-5 rounded-full ${isToday ? "bg-primary text-white" : "text-slate-700"}`}>
                     {d.getDate()}
@@ -501,7 +504,7 @@ export function CalendarPage() {
                       )}`}
                     >
                       <span className="font-bold mr-1">
-                        {new Date(appt.startTime).toLocaleTimeString(locale, {
+                        {new Date(appt.startTime).toLocaleTimeString("de-DE", {
                           hour: "2-digit",
                           minute: "2-digit"
                         })}
@@ -515,7 +518,7 @@ export function CalendarPage() {
                       className="opacity-0 hover:opacity-100 text-xs text-slate-400 flex items-center gap-1 hover:text-primary transition"
                     >
                       <Plus className="h-3 w-3" />
-                      {cal.scheduleSlot}
+                      {isDe ? "Termin eintragen" : "Schedule slot"}
                     </button>
                   )}
                 </div>
@@ -528,12 +531,12 @@ export function CalendarPage() {
         <div className="space-y-4">
           <div className="card p-5 border border-slate-200/80">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">
-              {cal.daySummary}
+              {isDe ? "Tagesübersicht" : "Day Summary"}
             </h3>
             <div className="space-y-3">
               {dayAppointments.length === 0 ? (
                 <p className="text-sm text-slate-500 italic">
-                  {cal.noAppointmentsDay}
+                  {isDe ? "Keine Termine für diesen Tag." : "No appointments for this day."}
                 </p>
               ) : (
                 dayAppointments.map((appt) => (
@@ -550,7 +553,7 @@ export function CalendarPage() {
                         minute: "2-digit"
                       })}{" "}
                       -{" "}
-                      {new Date(appt.endTime).toLocaleTimeString(locale, {
+                      {new Date(appt.endTime).toLocaleTimeString("de-DE", {
                         hour: "2-digit",
                         minute: "2-digit"
                       })}
@@ -576,21 +579,21 @@ export function CalendarPage() {
       <div className="card border border-slate-200/80 overflow-hidden">
         {filteredAppointments.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
-            {cal.noAppointments}
+            {isDe ? "Keine Termine gefunden." : "No appointments found."}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <th className="px-6 py-4">{cal.title}</th>
-                  <th className="px-6 py-4">{cal.customer}</th>
-                  <th className="px-6 py-4">{cal.startTime}</th>
-                  <th className="px-6 py-4">{cal.endTime}</th>
-                  <th className="px-6 py-4">{cal.duration}</th>
-                  <th className="px-6 py-4">{t.table.status}</th>
-                  <th className="px-6 py-4">{cal.source}</th>
-                  <th className="px-6 py-4 text-right">{cal.actions}</th>
+                  <th className="px-6 py-4">{isDe ? "Titel" : "Title"}</th>
+                  <th className="px-6 py-4">{isDe ? "Kunde" : "Customer"}</th>
+                  <th className="px-6 py-4">{isDe ? "Startzeit" : "Start Time"}</th>
+                  <th className="px-6 py-4">{isDe ? "Endzeit" : "End Time"}</th>
+                  <th className="px-6 py-4">{isDe ? "Dauer" : "Duration"}</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">{isDe ? "Quelle" : "Source"}</th>
+                  <th className="px-6 py-4 text-right">{isDe ? "Aktionen" : "Actions"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -608,13 +611,13 @@ export function CalendarPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-600">
-                      {new Date(appt.startTime).toLocaleString(locale)}
+                      {new Date(appt.startTime).toLocaleString(isDe ? "de-DE" : "en-US")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-600">
-                      {new Date(appt.endTime).toLocaleString(locale)}
+                      {new Date(appt.endTime).toLocaleString(isDe ? "de-DE" : "en-US")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-slate-500 font-medium">
-                      {appt.duration}{cal.minutesShort}
+                      {appt.duration} Min
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(appt.status)}`}>
@@ -631,14 +634,14 @@ export function CalendarPage() {
                           onClick={() => openEditModal(appt.id)}
                           className="btn btn-outline border-slate-200 hover:bg-slate-50 text-slate-700 px-2 py-1"
                         >
-                          {cal.edit}
+                          {isDe ? "Bearbeiten" : "Edit"}
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(appt)}
                           className="btn btn-outline border-red-200 text-red-600 hover:bg-red-50 px-2 py-1"
                         >
-                          {cal.delete}
+                          {isDe ? "Löschen" : "Delete"}
                         </button>
                       </div>
                     </td>
@@ -654,7 +657,7 @@ export function CalendarPage() {
 
   const getHeaderDateString = () => {
     if (viewMode === "day") {
-      return currentDate.toLocaleDateString(locale, {
+      return currentDate.toLocaleDateString(isDe ? "de-DE" : "en-US", {
         weekday: "long",
         day: "numeric",
         month: "long",
@@ -663,11 +666,11 @@ export function CalendarPage() {
     }
     if (viewMode === "week") {
       const days = getWeekDays(currentDate);
-      const start = days[0].toLocaleDateString(locale, { day: "numeric", month: "short" });
-      const end = days[6].toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
+      const start = days[0].toLocaleDateString(isDe ? "de-DE" : "en-US", { day: "numeric", month: "short" });
+      const end = days[6].toLocaleDateString(isDe ? "de-DE" : "en-US", { day: "numeric", month: "short", year: "numeric" });
       return `${start} – ${end}`;
     }
-    return currentDate.toLocaleDateString(locale, {
+    return currentDate.toLocaleDateString(isDe ? "de-DE" : "en-US", {
       month: "long",
       year: "numeric"
     });
@@ -680,10 +683,12 @@ export function CalendarPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-            {cal.pageTitle}
+            {isDe ? "Kalender & Termine" : "Calendar & Appointments"}
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-500">
-            {cal.pageDescription}
+            {isDe
+              ? "Planen Sie Kundentermine und Abholungen aus Reparaturen."
+              : "Manage customer booking schedules and pickup tasks."}
           </p>
         </div>
 
@@ -694,24 +699,24 @@ export function CalendarPage() {
             className="btn btn-primary h-11 px-4 text-sm font-semibold"
           >
             <Plus className="h-4 w-4" />
-            {cal.newAppointment}
+            {isDe ? "Termin anlegen" : "New Appointment"}
           </button>
           {googleConnected ? (
             <button
               type="button"
               onClick={handleDisconnectGoogle}
               className="btn bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-slate-700 h-11 px-4 text-sm font-semibold flex items-center gap-2"
-              title={cal.disconnectGoogleTooltip}
+              title={isDe ? "Google Kalender trennen" : "Disconnect Google Calendar"}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>{cal.googleConnectedLabel}</span>
+              <span>{isDe ? "Google Calendar verbunden" : "Google Calendar Connected"}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={handleConnectGoogle}
               className="btn btn-outline border-slate-200 hover:bg-slate-50 text-slate-700 h-11 px-4 text-sm font-semibold flex items-center gap-2"
-              title={cal.connectGoogleLabel}
+              title={isDe ? "Google Kalender verbinden" : "Connect Google Calendar"}
             >
               <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -719,26 +724,26 @@ export function CalendarPage() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
               </svg>
-              <span>{cal.connectGoogleLabel}</span>
+              <span>{isDe ? "Google Kalender verknüpfen" : "Connect Google Calendar"}</span>
             </button>
           )}
           <button
             type="button"
             onClick={() => handleExport("csv")}
             className="btn btn-outline h-11 px-3 border-slate-200 hover:bg-slate-50"
-            title={cal.exportCsv}
+            title="CSV Export"
           >
             <Download className="h-4 w-4" />
-            {cal.exportCsv}
+            CSV
           </button>
           <button
             type="button"
             onClick={() => handleExport("ical")}
             className="btn btn-outline h-11 px-3 border-slate-200 hover:bg-slate-50"
-            title={cal.exportIcal}
+            title="iCal Export"
           >
             <FileText className="h-4 w-4" />
-            {cal.exportIcal}
+            iCal
           </button>
         </div>
       </div>
@@ -758,7 +763,7 @@ export function CalendarPage() {
             onClick={handleToday}
             className="btn btn-outline px-4 py-1.5 text-xs border-slate-200 text-slate-700 hover:bg-slate-50 font-bold"
           >
-            {cal.today}
+            {isDe ? "Heute" : "Today"}
           </button>
           <button
             onClick={handleNextDate}
@@ -783,9 +788,9 @@ export function CalendarPage() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              {mode === "day" ? cal.day :
-               mode === "week" ? cal.week :
-               mode === "month" ? cal.month : cal.list}
+              {mode === "day" ? (isDe ? "Tag" : "Day") :
+               mode === "week" ? (isDe ? "Woche" : "Week") :
+               mode === "month" ? (isDe ? "Monat" : "Month") : (isDe ? "Liste" : "List")}
             </button>
           ))}
         </div>
@@ -800,7 +805,7 @@ export function CalendarPage() {
           <input
             type="text"
             className="input pl-10 h-10 w-full text-sm"
-            placeholder={cal.searchPlaceholder}
+            placeholder={isDe ? "Suchen nach Titel, Kunde, Notiz..." : "Search title, customer, notes..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -813,12 +818,12 @@ export function CalendarPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all">{cal.allStatuses}</option>
-            <option value="Booked">{cal.statusBooked}</option>
-            <option value="Confirmed">{cal.statusConfirmed}</option>
-            <option value="Arrived">{cal.statusArrived}</option>
-            <option value="Cancelled">{cal.statusCancelled}</option>
-            <option value="Voided">{cal.statusVoided}</option>
+            <option value="all">{isDe ? "Alle Statusse" : "All Statuses"}</option>
+            <option value="Booked">{isDe ? "Gebucht" : "Booked"}</option>
+            <option value="Confirmed">{isDe ? "Bestätigt" : "Confirmed"}</option>
+            <option value="Arrived">{isDe ? "Eingetroffen" : "Arrived"}</option>
+            <option value="Cancelled">{isDe ? "Storniert" : "Cancelled"}</option>
+            <option value="Voided">{isDe ? "Ungültig" : "Voided"}</option>
           </select>
         </div>
 
@@ -829,10 +834,10 @@ export function CalendarPage() {
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
           >
-            <option value="all">{cal.allSources}</option>
-            <option value="Manual">{cal.sourceManual}</option>
-            <option value="Order">{cal.sourceOrder}</option>
-            <option value="Website">{cal.sourceWebsite}</option>
+            <option value="all">{isDe ? "Alle Quellen" : "All Sources"}</option>
+            <option value="Manual">{isDe ? "Manuell" : "Manual"}</option>
+            <option value="Order">{isDe ? "Aus Auftrag" : "From Order"}</option>
+            <option value="Website">Website</option>
           </select>
         </div>
       </div>

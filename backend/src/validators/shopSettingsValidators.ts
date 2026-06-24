@@ -32,6 +32,13 @@ export const shopSettingsSchema = z
     logoDataUrl: z.preprocess(
       (value) => (value === "" || value === undefined || value === null ? undefined : value),
       z.string().max(3_000_000).optional()
+    ),
+    widgetPrimaryColor: optionalText(50).default("#0284c7"),
+    widgetAccentColor: optionalText(50).default("#0f172a"),
+    widgetFont: optionalText(100).default("Inter"),
+    widgetShowLogo: z.preprocess(
+      (value) => (value === "" || value === undefined || value === null ? true : value === "true" || value === true),
+      z.boolean().optional().default(true)
     )
   })
   .superRefine((data, ctx) => {

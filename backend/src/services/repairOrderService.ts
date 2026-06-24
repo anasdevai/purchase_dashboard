@@ -11,7 +11,6 @@ import {
   searchRepairOrdersSchema
 } from "../validators/repairOrderValidators.js";
 import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js";
-import { assertRepairCompanyAccess } from "./repairCompanyService.js";
 import * as emailService from "./emailService.js";
 import { findOrCreateCustomerForRepair } from "./customerService.js";
 import { createPickupAppointmentFromOrder } from "./appointmentService.js";
@@ -21,20 +20,17 @@ const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const includeRepairOrder = {
-  invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } },
-  repairCompany: { select: { id: true, name: true, contactInfo: true, notes: true } },
-  history: { orderBy: { createdAt: "asc" as const } },
-  assignedEmployee: { select: { id: true, name: true, email: true } },
-  customer: true
-};
-
 export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, isAdmin = false) => {
   const repairOrder = await prisma.repairOrder.findFirst({
     where: UUID_RE.test(idOrNumber)
       ? (isAdmin ? { id: idOrNumber } : { id: idOrNumber, userId })
       : (isAdmin ? { repairOrderNumber: idOrNumber } : { repairOrderNumber: idOrNumber, userId }),
-    include: includeRepairOrder
+    include: {
+      invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } },
+      history: { orderBy: { createdAt: "asc" } },
+      assignedEmployee: { select: { id: true, name: true, email: true } },
+      customer: true
+    }
   });
 
   if (!repairOrder) {
@@ -47,7 +43,6 @@ export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, 
 export const createRepairOrder = async (userId: string, input: Record<string, unknown>) => {
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
-  await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
 
   const customer = await findOrCreateCustomerForRepair(
     userId,
@@ -71,7 +66,7 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
       });
 
       await ensureDirectory(getRepairOrderStorageDir(userId, repairOrder.repairOrderNumber));
-      return getRepairOrderOrThrow(repairOrder.id, userId);
+      return repairOrder;
     } catch (error) {
       if (attempt === 2) throw error;
     }
@@ -80,14 +75,7 @@ export const createRepairOrder = async (userId: string, input: Record<string, un
   throw new HttpError(500, "Unable to generate repair order number");
 };
 
-async function triggerStatusChangeEmails(current: {
-  userId: string;
-  id: string;
-  customerEmail: string | null;
-  repairOrderNumber: string;
-  customerName: string;
-  status: string;
-}, toStatus: string) {
+async function triggerStatusChangeEmails(current: any, toStatus: string) {
   try {
     if (toStatus === "Finished" && current.customerEmail) {
       await emailService.sendRepairFinishedEmail(
@@ -100,7 +88,7 @@ async function triggerStatusChangeEmails(current: {
       const shopSettings = await getShopSettingsForUser(current.userId);
       const shopAddress = shopSettings.shopAddress || null;
       const openingHours = "Mo-Fr: 09:00 - 18:00, Sa: 09:00 - 13:00";
-
+      
       if (current.customerEmail) {
         await emailService.sendReadyForPickupEmail(
           current.userId,
@@ -112,10 +100,11 @@ async function triggerStatusChangeEmails(current: {
         );
       }
 
+      // Automatically create a pickup appointment for tomorrow at 10 AM
       const tomorrowAtTen = new Date();
       tomorrowAtTen.setDate(tomorrowAtTen.getDate() + 1);
       tomorrowAtTen.setHours(10, 0, 0, 0);
-
+      
       await createPickupAppointmentFromOrder(
         current.userId,
         current.id,
@@ -139,17 +128,10 @@ async function triggerStatusChangeEmails(current: {
   }
 }
 
-export const updateRepairOrder = async (
-  id: string,
-  userId: string,
-  input: Record<string, unknown>,
-  employeeName: string,
-  isAdmin = false
-) => {
+export const updateRepairOrder = async (id: string, userId: string, input: Record<string, unknown>, employeeName: string, isAdmin = false) => {
   const current = await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
-  await assertRepairCompanyAccess(orderData.repairCompanyId, userId);
 
   const customer = await findOrCreateCustomerForRepair(
     userId,
@@ -179,6 +161,7 @@ export const updateRepairOrder = async (
       }
     });
 
+    // Trigger auto-notifications
     void triggerStatusChangeEmails(current, orderData.status);
   }
 
@@ -212,6 +195,7 @@ export const updateRepairOrderStatus = async (
       }
     });
 
+    // Trigger auto-notifications
     void triggerStatusChangeEmails(current, parsed.status);
   }
 
@@ -284,21 +268,31 @@ export const searchRepairOrders = async (userId: string, query: Record<string, u
   if (parsed.phone) where.customerPhone = { contains: parsed.phone, mode: "insensitive" };
   if (parsed.model) where.model = { contains: parsed.model, mode: "insensitive" };
   if (parsed.imeiOrSerial) where.imeiOrSerial = { contains: parsed.imeiOrSerial, mode: "insensitive" };
+  if (parsed.status) where.status = parsed.status;
 
-  if (parsed.filter === "active") {
-    where.status = { notIn: ["Completed", "Cancelled"] };
-  } else if (parsed.filter) {
-    where.status = parsed.filter;
-  } else if (parsed.status) {
-    where.status = parsed.status;
-  }
+  const page = parsed.page ?? 1;
+  const limit = parsed.limit ?? 15;
+  const skip = (page - 1) * limit;
 
-  return prisma.repairOrder.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: includeRepairOrder
-  });
+  const [repairOrders, total] = await Promise.all([
+    prisma.repairOrder.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit
+    }),
+    prisma.repairOrder.count({ where })
+  ]);
+
+  return {
+    repairOrders,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
 };
 
 export const getRepairOrderStats = async (userId: string) => {

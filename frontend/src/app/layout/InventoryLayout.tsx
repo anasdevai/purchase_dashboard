@@ -10,52 +10,90 @@ import clsx from "clsx";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export function InventoryLayout() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const location = useLocation();
-  const layout = t.inventory.layout;
 
+  // Define tab navigation items
   const navItems = [
-    { to: "/inventory/parts", label: layout.spareParts, icon: Package },
-    { to: "/inventory/suppliers", label: layout.suppliers, icon: Truck },
-    { to: "/inventory/orders", label: layout.orders, icon: ClipboardList },
-    { to: "/inventory/receipts", label: layout.receipts, icon: Download },
-    { to: "/inventory/adjustments", label: layout.adjustments, icon: History },
+    {
+      to: "/inventory/parts",
+      label: isDe ? "Ersatzteile" : "Spare Parts",
+      icon: Package,
+    },
+    {
+      to: "/inventory/suppliers",
+      label: isDe ? "Lieferanten" : "Suppliers",
+      icon: Truck,
+    },
+    {
+      to: "/inventory/orders",
+      label: isDe ? "Bestellungen" : "Purchase Orders",
+      icon: ClipboardList,
+    },
+    {
+      to: "/inventory/receipts",
+      label: isDe ? "Wareneingänge" : "Goods Receipts",
+      icon: Download,
+    },
+    {
+      to: "/inventory/adjustments",
+      label: isDe ? "Bestandshistorie" : "Stock Adjustments",
+      icon: History,
+    },
   ];
 
+  // Helper for active link styles
   const getLinkClass = (isActive: boolean) =>
     clsx(
       "flex items-center gap-2 py-3.5 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap",
       isActive
         ? "border-primary text-primary font-bold bg-slate-50/50"
-        : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+        : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
     );
 
+  // If path is exactly /inventory, redirect to parts
   if (location.pathname === "/inventory") {
     return <Navigate to="/inventory/parts" replace />;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{layout.title}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-600">{layout.subtitle}</p>
+      {/* Header Banner */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold text-slate-900">
+          {isDe ? "Lagerverwaltung" : "Inventory Management"}
+        </h1>
+        <p className="text-sm text-slate-500 max-w-3xl">
+          {isDe
+            ? "Pflegen Sie Ersatzteilbestände, Lieferantendaten, automatisierte Bestellungen und prüfen Sie Wareneingänge auf Abweichungen."
+            : "Centralized maintenance of spare parts, stock adjustments, suppliers, automatic and manual replenishment orders, and goods receipt tracking."}
+        </p>
       </div>
 
-      <div className="border-b border-slate-200 overflow-x-auto">
-        <nav className="flex min-w-max gap-1">
+      {/* Tabs navigation */}
+      <div className="border-b border-slate-200 bg-white rounded-lg shadow-sm overflow-x-auto">
+        <nav className="flex px-4 scrollbar-hide">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => getLinkClass(isActive)}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => getLinkClass(isActive)}
+              >
                 <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                <span>{item.label}</span>
               </NavLink>
             );
           })}
         </nav>
       </div>
 
-      <Outlet />
+      {/* Sub-page viewport */}
+      <div className="min-h-[500px]">
+        <Outlet />
+      </div>
     </div>
   );
 }

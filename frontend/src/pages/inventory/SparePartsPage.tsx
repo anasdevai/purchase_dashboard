@@ -29,10 +29,8 @@ const SPARE_PART_CATEGORIES = [
 ];
 
 export default function SparePartsPage() {
-  const { t, interpolate, language } = useLanguage();
-  const sp = t.inventory.spareParts;
-  const ic = t.inventory.common;
-  const dateLocale = language === "de" ? "de-DE" : "en-US";
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
 
   const [parts, setParts] = useState<SparePart[]>([]);
@@ -76,7 +74,7 @@ export default function SparePartsPage() {
       setSuppliers(suppliersList.filter((s) => s.isActive));
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || ic.loadFailed);
+      showToast("error", err.message || "Failed to load spare parts");
     } finally {
       setLoading(false);
     }
@@ -127,8 +125,15 @@ export default function SparePartsPage() {
 
   const handleSavePart = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!itemNumber.trim() || !name.trim() || purchasePrice === "" || salePrice === "") {
-      showToast("error", "Please fill in all required fields");
+    if (
+      !itemNumber.trim() ||
+      !name.trim() ||
+      !compatibility.trim() ||
+      !supplierId ||
+      purchasePrice === "" ||
+      salePrice === ""
+    ) {
+      showToast("error", "Please fill in all required fields (Item Number, Category, Name, Compatibility, Supplier, Purchase Price, Sale Price)");
       return;
     }
 
@@ -136,10 +141,10 @@ export default function SparePartsPage() {
       itemNumber: itemNumber.trim(),
       name: name.trim(),
       category,
-      compatibility: compatibility.trim() || null,
+      compatibility: compatibility.trim(),
       stock: Number(stock),
       minimumStock: Number(minimumStock),
-      supplierId: supplierId || null,
+      supplierId: supplierId,
       purchasePrice: Number(purchasePrice),
       salePrice: Number(salePrice),
       storageLocation: storageLocation.trim() || null,
@@ -149,16 +154,16 @@ export default function SparePartsPage() {
     try {
       if (editingId) {
         await api.updateSparePart(editingId, payload);
-        showToast("success", sp.updatedSuccess);
+        showToast("success", "Spare part updated successfully");
       } else {
         await api.createSparePart(payload);
-        showToast("success", sp.createdSuccess);
+        showToast("success", "Spare part created successfully");
       }
       setIsEditModalOpen(false);
       loadData();
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || ic.saveError);
+      showToast("error", err.message || "Error occurred while saving");
     }
   };
 
@@ -185,19 +190,22 @@ export default function SparePartsPage() {
 
   const handleDeletePart = (id: string, name: string) => {
     confirm({
-      title: sp.deleteTitle,
-      message: interpolate(sp.deleteMessageNamed, { name }),
-      confirmLabel: ic.delete,
-      cancelLabel: ic.cancel,
+      title: isDe ? "Teil löschen?" : "Delete Spare Part?",
+      message:
+        isDe
+          ? `Möchten Sie das Ersatzteil "${name}" wirklich unwiderruflich löschen?`
+          : `Are you sure you want to permanently delete spare part "${name}"?`,
+      confirmLabel: isDe ? "Löschen" : "Delete",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "danger",
       onConfirm: async () => {
         try {
           await api.deleteSparePart(id);
-          showToast("success", sp.deletedSuccess);
+          showToast("success", "Spare part deleted successfully");
           loadData();
         } catch (err: any) {
           console.error(err);
-          showToast("error", err.message || sp.deleteFailed);
+          showToast("error", err.message || "Failed to delete spare part");
         }
       },
     });
@@ -206,7 +214,7 @@ export default function SparePartsPage() {
   // Metrics
   const totalItems = parts.length;
   const lowStockItems = parts.filter((p) => p.stock < p.minimumStock);
-  const totalValue = parts.reduce((sum, p) => sum + p.stock * p.purchasePrice, 0);
+  const totalValue = parts.reduce((sum, p) => sum + p.stock * Number(p.purchasePrice), 0);
 
   // Filtering
   const filteredParts = parts
@@ -226,7 +234,9 @@ export default function SparePartsPage() {
         {/* Total Spare Parts Card */}
         <div className="card p-5 bg-white border border-slate-100 shadow-sm rounded-xl flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{sp.statTotal}</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {isDe ? "Ersatzteile Gesamt" : "Total Spare Parts"}
+            </p>
             <p className="text-2xl font-black text-slate-800 mt-1">{totalItems}</p>
           </div>
           <div className="h-12 w-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center font-bold">
@@ -237,9 +247,11 @@ export default function SparePartsPage() {
         {/* Total Stock Value Card */}
         <div className="card p-5 bg-white border border-slate-100 shadow-sm rounded-xl flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{sp.statValue}</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {isDe ? "Gesamtwert (Netto)" : "Total Stock Value (Net)"}
+            </p>
             <p className="text-2xl font-black text-slate-800 mt-1">
-              {totalValue.toLocaleString(dateLocale, { style: "currency", currency: "EUR" })}
+              {totalValue.toLocaleString("de-DE", { style: "currency", currency: "EUR" })}
             </p>
           </div>
           <div className="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -250,7 +262,9 @@ export default function SparePartsPage() {
         {/* Low Stock Alert Card */}
         <div className="card p-5 bg-white border border-slate-100 shadow-sm rounded-xl flex items-center justify-between">
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{sp.statLowStock}</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              {isDe ? "Niedriger Bestand" : "Low Stock Alerts"}
+            </p>
             <p className="text-2xl font-black text-red-600 mt-1">{lowStockItems.length}</p>
           </div>
           <div
@@ -271,7 +285,11 @@ export default function SparePartsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder={sp.searchPlaceholder}
+            placeholder={
+              isDe
+                ? "Suchen nach Ersatzteil..."
+                : "Search parts by name, SKU, compatibility..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input h-10 pl-10 w-full"
@@ -283,7 +301,9 @@ export default function SparePartsPage() {
           onChange={(e) => setFilterCategory(e.target.value)}
           className="input h-10 w-full md:w-48 bg-white"
         >
-          <option value="">{sp.allCategories}</option>
+          <option value="">
+            {isDe ? "Alle Kategorien" : "All Categories"}
+          </option>
           {SPARE_PART_CATEGORIES.map((cat) => (
             <option key={cat} value={cat}>
               {cat}
@@ -300,7 +320,9 @@ export default function SparePartsPage() {
           }`}
         >
           <AlertTriangle className="h-4 w-4" />
-          <span>{sp.lowStockOnly}</span>
+          <span>
+            {isDe ? "Nur Warnungen" : "Low Stock Only"}
+          </span>
         </button>
 
         <button
@@ -308,7 +330,7 @@ export default function SparePartsPage() {
           className="btn btn-primary h-10 px-4 text-sm font-semibold flex items-center gap-2 w-full md:w-auto shrink-0"
         >
           <Plus className="h-4 w-4" />
-          <span>{sp.addPart}</span>
+          <span>{isDe ? "Teil anlegen" : "Add Part"}</span>
         </button>
       </div>
 
@@ -321,8 +343,12 @@ export default function SparePartsPage() {
         ) : filteredParts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <FolderOpen className="h-12 w-12 text-slate-300 mb-3" />
-            <p className="font-semibold text-lg">{sp.emptyTitle}</p>
-            <p className="text-sm">{sp.emptyHint}</p>
+            <p className="font-semibold text-lg">
+              {isDe ? "Keine Ersatzteile gefunden" : "No Spare Parts Found"}
+            </p>
+            <p className="text-sm">
+              {isDe ? "Legen Sie ein neues Ersatzteil an." : "Create a spare part to begin tracking."}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -330,12 +356,22 @@ export default function SparePartsPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
                   <th className="px-6 py-4">Item SKU / Name</th>
-                  <th className="px-6 py-4">{sp.category}</th>
-                  <th className="px-6 py-4">{sp.colCompatibility}</th>
-                  <th className="px-6 py-4">{sp.colStock}</th>
-                  <th className="px-6 py-4">{sp.colPrices}</th>
-                  <th className="px-6 py-4">{sp.colLocation}</th>
-                  <th className="px-6 py-4 text-right">{ic.actions}</th>
+                  <th className="px-6 py-4">Category</th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Kompatibilität" : "Compatibility"}
+                  </th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Bestand / Min" : "Stock / Min"}
+                  </th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Preise (Einkauf / Verkauf)" : "Prices (Purchase / Sale)"}
+                  </th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Lagerort" : "Storage Location"}
+                  </th>
+                  <th className="px-6 py-4 text-right">
+                    {isDe ? "Aktionen" : "Actions"}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -387,12 +423,16 @@ export default function SparePartsPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-xs font-semibold text-slate-500">
-                          {sp.netPurchase}{" "}
-                          <span className="font-bold text-slate-700">{p.purchasePrice.toFixed(2)} €</span>
+                          {isDe ? "EK (Netto):" : "Net Purchase:"}{" "}
+                          <span className="font-bold text-slate-700">
+                            {Number(p.purchasePrice).toFixed(2)} €
+                          </span>
                         </div>
                         <div className="text-xs font-semibold text-slate-500">
-                          {sp.grossSale}{" "}
-                          <span className="font-bold text-primary">{p.salePrice.toFixed(2)} €</span>
+                          {isDe ? "VK (Brutto):" : "Gross Sale:"}{" "}
+                          <span className="font-bold text-primary">
+                            {Number(p.salePrice).toFixed(2)} €
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-slate-600">
@@ -410,21 +450,25 @@ export default function SparePartsPage() {
                           <button
                             onClick={() => openAdjustModal(p)}
                             className="btn btn-outline border-amber-200 text-amber-700 p-1.5 h-8 w-8 hover:bg-amber-50"
-                            title={sp.adjustStock}
+                            title={
+                              isDe
+                                ? "Bestand korrigieren"
+                                : "Adjust Stock"
+                            }
                           >
                             <Sliders className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => openEditModal(p)}
                             className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50"
-                            title={ic.edit}
+                            title="Edit"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeletePart(p.id, p.name)}
                             className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50"
-                            title={ic.delete}
+                            title="Delete"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -445,7 +489,13 @@ export default function SparePartsPage() {
           <div className="card w-full max-w-lg shadow-2xl relative bg-white border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                {editingId ? sp.modalEdit : sp.modalAdd}
+                {editingId
+                  ? isDe
+                    ? "Ersatzteil bearbeiten"
+                    : "Edit Spare Part"
+                  : isDe
+                  ? "Neues Ersatzteil anlegen"
+                  : "Create Spare Part"}
               </h3>
               <button
                 type="button"
@@ -457,10 +507,10 @@ export default function SparePartsPage() {
             </div>
 
             <form onSubmit={handleSavePart} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {sp.itemNumber} <span className="text-red-500">*</span>
+                    SKU / Item Number <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -473,7 +523,7 @@ export default function SparePartsPage() {
                 </div>
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {sp.category} <span className="text-red-500">*</span>
+                    Category <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={category}
@@ -491,7 +541,7 @@ export default function SparePartsPage() {
 
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {sp.partName} <span className="text-red-500">*</span>
+                  {isDe ? "Bezeichnung" : "Part Name"} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -504,20 +554,23 @@ export default function SparePartsPage() {
               </div>
 
               <div>
-                <label className="label font-semibold text-slate-700">{sp.compatibleModels}</label>
+                <label className="label font-semibold text-slate-700">
+                  {isDe ? "Kompatible Modelle" : "Compatible Models"} <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="text"
                   className="input mt-1.5 h-11 text-sm"
                   placeholder="e.g. iPhone 14, iPhone 14 Pro"
                   value={compatibility}
                   onChange={(e) => setCompatibility(e.target.value)}
+                  required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {sp.initialStock} <span className="text-red-500">*</span>
+                    {isDe ? "Aktueller Bestand" : "Initial Stock"} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -536,7 +589,7 @@ export default function SparePartsPage() {
                 </div>
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {sp.minimumStock} <span className="text-red-500">*</span>
+                    {isDe ? "Mindestbestand" : "Minimum Stock"} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -550,13 +603,16 @@ export default function SparePartsPage() {
               </div>
 
               <div>
-                <label className="label font-semibold text-slate-700">{sp.defaultSupplier}</label>
+                <label className="label font-semibold text-slate-700">
+                  {isDe ? "Standard-Lieferant" : "Default Supplier"} <span className="text-red-500">*</span>
+                </label>
                 <select
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value)}
                   className="input mt-1.5 h-11 text-sm bg-white"
+                  required
                 >
-                  <option value="">-- Select Supplier --</option>
+                  <option value="">{isDe ? "-- Lieferant wählen --" : "-- Select Supplier --"}</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.companyName}
@@ -565,10 +621,10 @@ export default function SparePartsPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {sp.purchasePrice} <span className="text-red-500">*</span>
+                    {isDe ? "Einkaufspreis (Netto, €)" : "Purchase Price (Net, €)"} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -585,7 +641,7 @@ export default function SparePartsPage() {
                 </div>
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {sp.salePrice} <span className="text-red-500">*</span>
+                    {isDe ? "Verkaufspreis (Brutto, €)" : "Sale Price (Gross, €)"} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -602,9 +658,11 @@ export default function SparePartsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label font-semibold text-slate-700">{sp.storageLocation}</label>
+                  <label className="label font-semibold text-slate-700">
+                    {isDe ? "Lagerort / Regalfach" : "Storage Location"}
+                  </label>
                   <input
                     type="text"
                     className="input mt-1.5 h-11 text-sm"
@@ -622,7 +680,7 @@ export default function SparePartsPage() {
                     className="h-4.5 w-4.5 rounded border-slate-300 text-primary focus:ring-primary"
                   />
                   <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 cursor-pointer">
-                    {sp.activeCheckbox}
+                    Active
                   </label>
                 </div>
               </div>
@@ -633,10 +691,13 @@ export default function SparePartsPage() {
                   onClick={() => setIsEditModalOpen(false)}
                   className="btn btn-outline border-slate-200 text-slate-600 h-10 px-4 text-sm font-semibold"
                 >
-                  {ic.cancel}
+                  Cancel
                 </button>
-                <button type="submit" className="btn btn-primary h-10 px-4 text-sm font-semibold">
-                  {ic.save}
+                <button
+                  type="submit"
+                  className="btn btn-primary h-10 px-4 text-sm font-semibold"
+                >
+                  Save
                 </button>
               </div>
             </form>
@@ -649,7 +710,9 @@ export default function SparePartsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="card w-full max-w-md shadow-2xl relative bg-white border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">{sp.adjustTitle}</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                {isDe ? "Bestand korrigieren" : "Adjust Stock Level"}
+              </h3>
               <button
                 type="button"
                 onClick={() => setIsAdjustModalOpen(false)}
@@ -679,7 +742,10 @@ export default function SparePartsPage() {
 
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {sp.adjustHint} <span className="text-red-500">*</span>
+                  {isDe
+                    ? "Differenz (z.B. -2 bei Verlust, +5 bei Nachbuchung)"
+                    : "Quantity Difference (e.g. -2 for damage, +5 for audit count)"}{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -695,7 +761,8 @@ export default function SparePartsPage() {
 
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {sp.adjustReason} <span className="text-red-500">*</span>
+                  {isDe ? "Grund für die Korrektur" : "Reason for Adjustment"}{" "}
+                  <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={adjustReason}
@@ -719,14 +786,14 @@ export default function SparePartsPage() {
                   onClick={() => setIsAdjustModalOpen(false)}
                   className="btn btn-outline border-slate-200 text-slate-600 h-10 px-4 text-sm font-semibold"
                 >
-                  {ic.cancel}
+                  Cancel
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary h-10 px-4 text-sm font-semibold"
                   disabled={qtyDiff === "" || qtyDiff === 0 || !adjustReason}
                 >
-                  {sp.bookAdjustment}
+                  {isDe ? "Buchen" : "Book Adjustment"}
                 </button>
               </div>
             </form>

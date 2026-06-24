@@ -1,4 +1,5 @@
 import os from "node:os";
+import { env } from "../config/env.js";
 
 /**
  * Discovers the host computer's primary LAN IPv4 address.
@@ -12,6 +13,7 @@ export const getLocalIpAddress = (): string => {
     const iface = interfaces[name];
     if (!iface) continue;
 
+    // Skip virtualized / loopback interface names
     const lowerName = name.toLowerCase();
     if (
       lowerName.includes("virtual") ||
@@ -29,6 +31,7 @@ export const getLocalIpAddress = (): string => {
         continue;
       }
 
+      // Skip Oracle VirtualBox MAC prefix (starts with 0a:00:27 or 08:00:27)
       const mac = config.mac ? config.mac.toLowerCase() : "";
       if (mac.startsWith("0a:00:27") || mac.startsWith("08:00:27")) {
         continue;
@@ -38,19 +41,12 @@ export const getLocalIpAddress = (): string => {
     }
   }
 
+  // Return the first valid candidate LAN IP
   if (candidates.length > 0) {
-    const tailscale = candidates.find((ip) => {
-      const [first, second] = ip.split(".").map(Number);
-      return first === 100 && second >= 64 && second <= 127;
-    });
-    if (tailscale) return tailscale;
-
-    const privateLan = candidates.find((ip) => ip.startsWith("192.168.") || ip.startsWith("10."));
-    if (privateLan) return privateLan;
-
     return candidates[0];
   }
 
+  // Fallback to first non-internal IPv4 if no candidate matches
   for (const name of Object.keys(interfaces)) {
     const iface = interfaces[name];
     if (!iface) continue;
@@ -65,30 +61,26 @@ export const getLocalIpAddress = (): string => {
 };
 
 /**
- * Builds the QR Code signature URL for mobile browsers.
- * Replaces localhost with the host's LAN IP when needed.
+ * Dynamically builds the QR Code signature URL for mobile browsers.
+ * Replaces 'localhost', '127.0.0.1', or '::1' in the origin with the host's LAN IP.
  */
-const isLoopbackHost = (hostname: string) =>
-  hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-
 export const getSignatureUrl = (origin: string | undefined, token: string): string => {
   const lanIp = getLocalIpAddress();
-  const fallback = `http://${lanIp}:5173/signature/${token}`;
-
-  if (!origin) {
-    return fallback;
-  }
+  const baseOrigin = origin || env.FRONTEND_URL;
 
   try {
-    const url = new URL(origin);
-    if (isLoopbackHost(url.hostname)) {
+    const url = new URL(baseOrigin);
+    if (
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "::1"
+    ) {
       url.hostname = lanIp;
     }
+    // Remove trailing slash if present, set path
     url.pathname = `/signature/${token}`;
-    url.search = "";
-    url.hash = "";
     return url.toString();
   } catch {
-    return fallback;
+    return `http://${lanIp}:5173/signature/${token}`;
   }
 };

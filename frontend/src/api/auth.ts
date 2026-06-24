@@ -30,7 +30,13 @@ export async function fetchCurrentUser() {
   return response.user
 }
 
-export function logout() {
-  clearToken()
+export async function logout() {
+  try {
+    await apiRequest('/api/auth/logout', { method: 'POST' })
+  } catch (error) {
+    console.error('Failed to log out on backend:', error)
+  } finally {
+    clearToken()
+  }
 }
 

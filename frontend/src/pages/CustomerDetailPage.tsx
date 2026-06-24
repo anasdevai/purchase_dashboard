@@ -22,6 +22,85 @@ import type { Customer, CustomerHistory } from "../types/customer";
 import { CustomerFormModal } from "../components/customers/CustomerFormModal";
 import { getFriendlyErrorMessage, logApiError } from "../utils/apiErrors";
 
+const localizations = {
+  de: {
+    backToList: "Zurück zur Liste",
+    loading: "Kundenprofil wird geladen...",
+    editBtn: "Kunde bearbeiten",
+    deleteBtn: "Kunde löschen (GDPR)",
+    customerNumber: "Kunden-Nr.",
+    salutation: "Anrede",
+    dob: "Geburtsdatum",
+    address: "Adresse",
+    phone: "Telefon",
+    email: "E-Mail",
+    company: "Firma",
+    vatId: "USt-IdNr.",
+    newsletter: "Newsletter",
+    newsletterSubbed: "Abonniert",
+    newsletterOptOut: "Nicht abonniert",
+    dateAdded: "Registriert am",
+    tabTimeline: "Chronik",
+    tabDevices: "Geräte",
+    tabNotes: "Notizen",
+    notesTitle: "Interne Notizen",
+    notesPlaceholder: "Notiz hinzufügen...",
+    notesSaveBtn: "Notizen speichern",
+    notesSavedSuccess: "Notizen erfolgreich aktualisiert.",
+    notesSaveFailed: "Fehler beim Speichern der Notizen.",
+    noTimeline: "Keine Aktivitäten in der Historie vorhanden.",
+    noDevices: "Keine verknüpften Geräte gefunden.",
+    typeContract: "Kaufvertrag",
+    typeRepairOrder: "Reparaturauftrag",
+    typeQuotation: "Angebot",
+    typeInvoice: "Rechnung",
+    status: "Status",
+    amount: "Betrag",
+    viewBtn: "Anzeigen",
+    deleteConfirmTitle: "Kunden-Account löschen?",
+    deleteConfirmMessage: "Sind Sie sicher, dass Sie den Kunden {name} DSGVO-konform anonymisieren/löschen möchten? Alle personenbezogenen Daten werden unwiderruflich gelöscht.",
+    deletedSuccess: "Kunde erfolgreich gelöscht.",
+  },
+  en: {
+    backToList: "Back to List",
+    loading: "Loading customer profile...",
+    editBtn: "Edit Customer",
+    deleteBtn: "Delete Customer (GDPR)",
+    customerNumber: "Customer ID",
+    salutation: "Salutation",
+    dob: "Date of Birth",
+    address: "Address",
+    phone: "Phone",
+    email: "Email",
+    company: "Company",
+    vatId: "VAT ID",
+    newsletter: "Newsletter",
+    newsletterSubbed: "Subscribed",
+    newsletterOptOut: "Opt-out",
+    dateAdded: "Registered",
+    tabTimeline: "Timeline",
+    tabDevices: "Devices",
+    tabNotes: "Notes",
+    notesTitle: "Internal Customer Notes",
+    notesPlaceholder: "Add notes...",
+    notesSaveBtn: "Save Notes",
+    notesSavedSuccess: "Notes successfully updated.",
+    notesSaveFailed: "Failed to save notes.",
+    noTimeline: "No timeline activities found.",
+    noDevices: "No linked devices found.",
+    typeContract: "Purchase Contract",
+    typeRepairOrder: "Repair Order",
+    typeQuotation: "Quotation",
+    typeInvoice: "Invoice",
+    status: "Status",
+    amount: "Amount",
+    viewBtn: "View",
+    deleteConfirmTitle: "Delete customer account?",
+    deleteConfirmMessage: "Are you sure you want to delete the customer {name} in compliance with GDPR? All personal identification details will be permanently wiped.",
+    deletedSuccess: "Customer successfully deleted.",
+  }
+};
+
 interface TimelineItem {
   id: string;
   type: "contract" | "repairOrder" | "quotation" | "invoice";
@@ -35,9 +114,10 @@ interface TimelineItem {
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
-  const { t, interpolate, formatDate, formatMoney } = useLanguage();
+  const { t, language, formatDate, formatMoney } = useLanguage();
   const { confirm, showToast } = useAppConfirm();
-  const loc = t.customerDetail;
+  const isDe = language === "de";
+  const loc = isDe ? localizations.de : localizations.en;
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [history, setHistory] = useState<CustomerHistory | null>(null);
@@ -71,9 +151,9 @@ export function CustomerDetailPage() {
     if (!customer) return;
     confirm({
       title: loc.deleteConfirmTitle,
-      message: interpolate(loc.deleteConfirmMessage, { name: customer.name }),
-      confirmLabel: t.calendar.delete,
-      cancelLabel: t.common.cancel,
+      message: loc.deleteConfirmMessage.replace("{name}", customer.name),
+      confirmLabel: isDe ? "Löschen" : "Delete",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "danger",
       onConfirm: async () => {
         try {
@@ -308,7 +388,7 @@ export function CustomerDetailPage() {
             <div className="card-header bg-slate-50/50 py-4 px-6 border-b border-slate-200">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                 <User className="h-4 w-4 text-slate-500" />
-                {loc.profileOverview}
+                {isDe ? "Profil Übersicht" : "Profile Overview"}
               </h2>
             </div>
             <div className="card-body p-6 space-y-4 text-sm">
@@ -499,11 +579,11 @@ export function CustomerDetailPage() {
                       <table className="w-full text-left text-sm border-collapse">
                         <thead>
                           <tr className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                            <th className="px-4 py-3">{loc.device}</th>
+                            <th className="px-4 py-3">{isDe ? "Gerät" : "Device"}</th>
                             <th className="px-4 py-3">IMEI / SN</th>
-                            <th className="px-4 py-3">{loc.type}</th>
-                            <th className="px-4 py-3">{loc.source}</th>
-                            <th className="px-4 py-3">{loc.date}</th>
+                            <th className="px-4 py-3">{isDe ? "Typ" : "Type"}</th>
+                            <th className="px-4 py-3">{isDe ? "Quelle" : "Source"}</th>
+                            <th className="px-4 py-3">{isDe ? "Datum" : "Date"}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -551,7 +631,7 @@ export function CustomerDetailPage() {
                       onClick={handleSaveNotes}
                       className="btn btn-primary h-10 px-4 text-sm font-semibold"
                     >
-                      {savingNotes ? loc.saving : loc.notesSaveBtn}
+                      {savingNotes ? (isDe ? "Wird gespeichert..." : "Saving...") : loc.notesSaveBtn}
                     </button>
                   </div>
                 </div>

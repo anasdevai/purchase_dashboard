@@ -13,13 +13,14 @@ import {
   Users,
   Calendar,
   Package,
+  Inbox,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../auth/AuthContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { useLayout } from './LayoutContext'
-import { fetchDashboard } from '../../api/contracts'
+import { fetchRepairOrders } from '../../api/repairOrders'
 
 const LOGO_SRC = '/assets/sclera-logo.png'
 
@@ -84,22 +85,22 @@ function SidebarNavLink(props: {
 
 function SidebarNav(props: { onNavigate?: () => void }) {
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
-  const { t } = useLanguage()
+  const { logout, user } = useAuth()
+  const { t, language } = useLanguage()
   const { onNavigate } = props
 
-  const [readyForPickupCount, setReadyForPickupCount] = useState(0)
+  const [sparePartArrivedCount, setSparePartArrivedCount] = useState(0)
 
   useEffect(() => {
     if (!user) return
     let alive = true
 
     const fetchCount = () => {
-      void fetchDashboard()
-        .then((summary) => {
-          if (alive) setReadyForPickupCount(summary.readyForPickupCount)
+      void fetchRepairOrders('', 'SparePartArrived')
+        .then((orders) => {
+          if (alive) setSparePartArrivedCount(orders.length)
         })
-        .catch((err) => console.error('Failed to fetch ready-for-pickup count', err))
+        .catch((err) => console.error('Failed to fetch SparePartArrived count', err))
     }
 
     fetchCount()
@@ -117,14 +118,20 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       items: [
         { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
         {
+          to: '/repair-requests',
+          label: language === 'de' ? 'Online-Anfragen' : 'Website Requests',
+          icon: Inbox,
+          testId: 'nav-repair-requests',
+        },
+        {
           to: '/customers',
-          label: t.nav.customers,
+          label: language === 'de' ? 'Kunden' : 'Customers',
           icon: Users,
           testId: 'nav-customers',
         },
         {
           to: '/calendar',
-          label: t.nav.calendar,
+          label: language === 'de' ? 'Kalender' : 'Calendar',
           icon: Calendar,
           testId: 'nav-calendar',
         },
@@ -209,11 +216,11 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       ],
     },
     {
-      title: t.nav.inventorySection,
+      title: language === 'de' ? 'Lagerverwaltung' : 'Inventory',
       items: [
         {
           to: '/inventory',
-          label: t.nav.inventory,
+          label: language === 'de' ? 'Lager' : 'Inventory',
           icon: Package,
           testId: 'nav-inventory',
         },
@@ -222,11 +229,11 @@ function SidebarNav(props: { onNavigate?: () => void }) {
     ...(user?.role === 'admin'
       ? [
           {
-            title: t.nav.adminPanel,
+            title: 'Admin Panel',
             items: [
               {
                 to: '/admin/dashboard',
-                label: t.nav.adminDashboard,
+                label: 'Admin Dashboard',
                 icon: Shield,
                 testId: 'nav-admin-dashboard',
               },
@@ -246,7 +253,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         },
         {
           to: '/email-logs',
-          label: t.nav.emailLogs,
+          label: language === 'de' ? 'E-Mail-Protokolle' : 'Email Logs',
           icon: Mail,
           testId: 'nav-email-logs',
           end: true,
@@ -282,7 +289,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
                 <SidebarNavLink
                   key={item.to}
                   item={item}
-                  badgeCount={item.to === '/repair-orders' ? readyForPickupCount : undefined}
+                  badgeCount={item.to === '/repair-orders' ? sparePartArrivedCount : undefined}
                   onNavigate={onNavigate}
                 />
               ))}
@@ -330,7 +337,7 @@ export function Sidebar() {
       <aside
         data-testid="sidebar"
         className={clsx(
-          'app-viewport fixed left-0 top-0 z-50 flex h-screen w-sidebar max-w-[min(260px,85vw)] flex-col bg-sidebar pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] text-white transition-transform duration-300 ease-in-out md:pb-0 lg:z-30 lg:max-w-none lg:translate-x-0',
+          'fixed left-0 top-0 z-50 flex h-screen pb-10 md:pb-0  w-sidebar max-w-[min(260px,85vw)] flex-col bg-sidebar text-white transition-transform duration-300 ease-in-out lg:z-30 lg:max-w-none lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}
       >

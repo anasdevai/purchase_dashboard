@@ -19,9 +19,8 @@ import type { Supplier } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function SuppliersPage() {
-  const { t, interpolate } = useLanguage();
-  const sup = t.inventory.suppliers;
-  const ic = t.inventory.common;
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,7 +47,7 @@ export default function SuppliersPage() {
       setSuppliers(list);
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || ic.loadFailed);
+      showToast("error", err.message || "Failed to load suppliers");
     } finally {
       setLoading(false);
     }
@@ -87,7 +86,7 @@ export default function SuppliersPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName.trim() || !email.trim()) {
-      showToast("error", ic.requiredCompanyEmail);
+      showToast("error", "Company Name and Email are required");
       return;
     }
 
@@ -105,34 +104,37 @@ export default function SuppliersPage() {
     try {
       if (editingId) {
         await api.updateSupplier(editingId, payload);
-        showToast("success", sup.updatedSuccess);
+        showToast("success", "Supplier updated successfully");
       } else {
         await api.createSupplier(payload);
-        showToast("success", sup.createdSuccess);
+        showToast("success", "Supplier created successfully");
       }
       setIsModalOpen(false);
       loadSuppliers();
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || ic.saveError);
+      showToast("error", err.message || "Error occurred while saving");
     }
   };
 
   const handleDelete = (id: string, name: string) => {
     confirm({
-      title: sup.deleteTitle,
-      message: interpolate(sup.deleteMessageNamed, { name }),
-      confirmLabel: ic.delete,
-      cancelLabel: ic.cancel,
+      title: isDe ? "Lieferant löschen?" : "Delete Supplier?",
+      message:
+        isDe
+          ? `Möchten Sie den Lieferanten "${name}" wirklich löschen?`
+          : `Are you sure you want to permanently delete supplier "${name}"?`,
+      confirmLabel: isDe ? "Löschen" : "Delete",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "danger",
       onConfirm: async () => {
         try {
           await api.deleteSupplier(id);
-          showToast("success", sup.deletedSuccess);
+          showToast("success", "Supplier deleted successfully");
           loadSuppliers();
         } catch (err: any) {
           console.error(err);
-          showToast("error", err.message || sup.deleteFailed);
+          showToast("error", err.message || "Failed to delete supplier");
         }
       },
     });
@@ -153,7 +155,11 @@ export default function SuppliersPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder={sup.searchPlaceholder}
+            placeholder={
+              isDe
+                ? "Suchen nach Lieferant..."
+                : "Search suppliers by company or contact..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input h-10 pl-10 w-full"
@@ -164,7 +170,9 @@ export default function SuppliersPage() {
           className="btn btn-primary h-10 px-4 text-sm font-semibold flex items-center gap-2 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
-          <span>{sup.addSupplier}</span>
+          <span>
+            {isDe ? "Lieferant hinzufügen" : "Add Supplier"}
+          </span>
         </button>
       </div>
 
@@ -177,20 +185,32 @@ export default function SuppliersPage() {
         ) : filteredSuppliers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <Truck className="h-12 w-12 text-slate-300 mb-3" />
-            <p className="font-semibold text-lg">{sup.emptyTitle}</p>
-            <p className="text-sm">{sup.emptyHint}</p>
+            <p className="font-semibold text-lg">
+              {isDe ? "Keine Lieferanten gefunden" : "No Suppliers Found"}
+            </p>
+            <p className="text-sm">
+              {isDe ? "Fügen Sie einen neuen Lieferanten hinzu." : "Add a supplier to get started."}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                  <th className="px-6 py-4">{sup.colCompany}</th>
-                  <th className="px-6 py-4">{ic.email}</th>
-                  <th className="px-6 py-4">{sup.colPhone}</th>
-                  <th className="px-6 py-4">{sup.colDelivery}</th>
-                  <th className="px-6 py-4">{ic.status}</th>
-                  <th className="px-6 py-4 text-right">{ic.actions}</th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Firma / Kontakt" : "Company / Contact"}
+                  </th>
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Telefon" : "Phone"}
+                  </th>
+                  <th className="px-6 py-4">
+                    {isDe ? "Lieferzeit / Konditionen" : "Delivery / Terms"}
+                  </th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">
+                    {isDe ? "Aktionen" : "Actions"}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -241,9 +261,7 @@ export default function SuppliersPage() {
                         {s.deliveryTime && (
                           <div className="text-xs flex items-center gap-1">
                             <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span>
-                              {s.deliveryTime} {ic.days}
-                            </span>
+                            <span>{s.deliveryTime} {isDe ? "Tage" : "days"}</span>
                           </div>
                         )}
                         {s.paymentTerms && (
@@ -265,7 +283,7 @@ export default function SuppliersPage() {
                             : "bg-slate-50 text-slate-600 border-slate-200"
                         }`}
                       >
-                        {s.isActive ? ic.active : ic.inactive}
+                        {s.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -273,14 +291,14 @@ export default function SuppliersPage() {
                         <button
                           onClick={() => openEditModal(s)}
                           className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50"
-                          title={ic.edit}
+                          title="Edit"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(s.id, s.companyName)}
                           className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50"
-                          title={ic.delete}
+                          title="Delete"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -300,7 +318,13 @@ export default function SuppliersPage() {
           <div className="card w-full max-w-lg shadow-2xl relative bg-white border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                {editingId ? sup.modalEdit : sup.modalAdd}
+                {editingId
+                  ? isDe
+                    ? "Lieferant bearbeiten"
+                    : "Edit Supplier"
+                  : isDe
+                  ? "Lieferant hinzufügen"
+                  : "Add Supplier"}
               </h3>
               <button
                 type="button"
@@ -314,7 +338,7 @@ export default function SuppliersPage() {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {sup.companyName} <span className="text-red-500">*</span>
+                  {isDe ? "Firmenname" : "Company Name"} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -326,9 +350,11 @@ export default function SuppliersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label font-semibold text-slate-700">{sup.contactPerson}</label>
+                  <label className="label font-semibold text-slate-700">
+                    {isDe ? "Ansprechpartner" : "Contact Person"}
+                  </label>
                   <input
                     type="text"
                     className="input mt-1.5 h-11 text-sm"
@@ -338,7 +364,9 @@ export default function SuppliersPage() {
                   />
                 </div>
                 <div>
-                  <label className="label font-semibold text-slate-700">{sup.phone}</label>
+                  <label className="label font-semibold text-slate-700">
+                    {isDe ? "Telefonnummer" : "Phone Number"}
+                  </label>
                   <input
                     type="tel"
                     className="input mt-1.5 h-11 text-sm"
@@ -351,7 +379,7 @@ export default function SuppliersPage() {
 
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {sup.email} <span className="text-red-500">*</span>
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -364,7 +392,7 @@ export default function SuppliersPage() {
               </div>
 
               <div>
-                <label className="label font-semibold text-slate-700">{sup.website}</label>
+                <label className="label font-semibold text-slate-700">Webseite</label>
                 <input
                   type="text"
                   className="input mt-1.5 h-11 text-sm"
@@ -374,9 +402,11 @@ export default function SuppliersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="label font-semibold text-slate-700">{sup.deliveryTime}</label>
+                  <label className="label font-semibold text-slate-700">
+                    {isDe ? "Lieferzeit (Tage)" : "Delivery Time (Days)"}
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -389,7 +419,9 @@ export default function SuppliersPage() {
                   />
                 </div>
                 <div>
-                  <label className="label font-semibold text-slate-700">{sup.paymentTerms}</label>
+                  <label className="label font-semibold text-slate-700">
+                    {isDe ? "Zahlungskonditionen" : "Payment Terms"}
+                  </label>
                   <input
                     type="text"
                     className="input mt-1.5 h-11 text-sm"
@@ -409,7 +441,9 @@ export default function SuppliersPage() {
                   className="h-4.5 w-4.5 rounded border-slate-300 text-primary focus:ring-primary"
                 />
                 <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 cursor-pointer">
-                  {sup.activeCheckbox}
+                  {isDe
+                    ? "Lieferant aktiv (wird in Auswahllisten angezeigt)"
+                    : "Active (visible in selection dropdowns)"}
                 </label>
               </div>
 
@@ -419,10 +453,13 @@ export default function SuppliersPage() {
                   onClick={() => setIsModalOpen(false)}
                   className="btn btn-outline border-slate-200 text-slate-600 h-10 px-4 text-sm font-semibold"
                 >
-                  {ic.cancel}
+                  {isDe ? "Abbrechen" : "Cancel"}
                 </button>
-                <button type="submit" className="btn btn-primary h-10 px-4 text-sm font-semibold">
-                  {ic.save}
+                <button
+                  type="submit"
+                  className="btn btn-primary h-10 px-4 text-sm font-semibold"
+                >
+                  {isDe ? "Speichern" : "Save"}
                 </button>
               </div>
             </form>

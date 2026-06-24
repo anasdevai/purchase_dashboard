@@ -7,7 +7,7 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function StockAdjustmentsPage() {
   const { t, language } = useLanguage();
-  const loc = t.inventory.stockAdjustments;
+  const isDe = language === "de";
   const { showToast } = useAppConfirm();
   const [history, setHistory] = useState<StockAdjustment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -18,10 +18,9 @@ export default function StockAdjustmentsPage() {
     try {
       const list = await api.fetchStockAdjustments();
       setHistory(list);
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error(err);
-      const message = err instanceof Error ? err.message : t.inventory.common.loadFailed;
-      showToast("error", message);
+      showToast("error", err.message || "Failed to load stock adjustment logs");
     } finally {
       setLoading(false);
     }
@@ -42,16 +41,19 @@ export default function StockAdjustmentsPage() {
     );
   });
 
-  const dateLocale = language === "de" ? "de-DE" : "en-US";
-
   return (
     <div className="space-y-6">
+      {/* Search and Filters */}
       <div className="card p-4 flex items-center bg-white shadow-sm w-full max-w-md">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder={loc.searchPlaceholder}
+            placeholder={
+              isDe
+                ? "Suchen nach Teil oder Grund..."
+                : "Search logs by part, SKU, or reason..."
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input h-10 pl-10 w-full"
@@ -59,6 +61,7 @@ export default function StockAdjustmentsPage() {
         </div>
       </div>
 
+      {/* Adjustments Table */}
       <div className="card overflow-hidden bg-white shadow-sm">
         {loading ? (
           <div className="flex h-64 items-center justify-center">
@@ -67,18 +70,18 @@ export default function StockAdjustmentsPage() {
         ) : filteredHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <History className="h-12 w-12 text-slate-300 mb-3" />
-            <p className="font-semibold text-lg">{loc.emptyTitle}</p>
-            <p className="text-sm">{loc.emptyHint}</p>
+            <p className="font-semibold text-lg">No Adjustments Found</p>
+            <p className="text-sm">Manual stock overrides and corrections will log here.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                  <th className="px-6 py-4">{loc.colDate}</th>
-                  <th className="px-6 py-4">{loc.colPart}</th>
-                  <th className="px-6 py-4 text-center">{loc.colQuantity}</th>
-                  <th className="px-6 py-4">{loc.colReason}</th>
+                  <th className="px-6 py-4">Date / Time</th>
+                  <th className="px-6 py-4">Spare Part</th>
+                  <th className="px-6 py-4 text-center">Correction Quantity</th>
+                  <th className="px-6 py-4">Reason</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -87,14 +90,14 @@ export default function StockAdjustmentsPage() {
                   return (
                     <tr key={log.id} className="hover:bg-slate-50/50 transition">
                       <td className="px-6 py-4 text-slate-600 font-medium">
-                        {new Date(log.createdAt).toLocaleString(dateLocale)}
+                        {new Date(log.createdAt).toLocaleString("de-DE")}
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-mono text-xs text-slate-400 font-bold">
-                          {log.sparePart?.itemNumber || loc.deletedSku}
+                          {log.sparePart?.itemNumber || "Deleted SKU"}
                         </div>
                         <div className="font-bold text-slate-800">
-                          {log.sparePart?.name || loc.deletedPart}
+                          {log.sparePart?.name || "Deleted Spare Part"}
                         </div>
                       </td>
                       <td className="px-6 py-4">
@@ -105,7 +108,7 @@ export default function StockAdjustmentsPage() {
                               <span>+{log.quantityDiff}</span>
                             </div>
                           ) : (
-                            <div className="flex items-center text-red-600 bg-red-50 border border-red-100 px-2.5 py-0.5 rounded-full font-extrabold text-xs">
+                            <div className="flex items-center text-red-600 bg-red-50 border border-red-150 px-2.5 py-0.5 rounded-full font-extrabold text-xs">
                               <ArrowDownRight className="h-3.5 w-3.5" />
                               <span>{log.quantityDiff}</span>
                             </div>
