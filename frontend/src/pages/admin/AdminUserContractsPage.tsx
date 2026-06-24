@@ -31,7 +31,7 @@ function contractStatusClass(status: string) {
 export function AdminUserContractsPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { formatMoney, formatDate } = useLanguage()
+  const { t, formatMoney, formatDate, interpolate } = useLanguage()
 
   const [user, setUser] = useState<AdminUser | null>(null)
   const [contracts, setContracts] = useState<any[]>([])
@@ -54,7 +54,7 @@ export function AdminUserContractsPage() {
         setError(null)
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load data')
+        setError(err.message || t.admin.loadDataFailed)
       })
       .finally(() => {
         setLoading(false)
@@ -72,14 +72,14 @@ export function AdminUserContractsPage() {
     <div className="space-y-6">
       <button type="button" onClick={() => navigate(`/admin/users/${userId}`)} className={adminBackLinkClass}>
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        <span>Back to User Profile</span>
+        <span>{t.admin.backToUserProfile}</span>
       </button>
 
       <div>
-        <h1 className={adminPageTitleClass}>{user ? `${user.name}'s Contracts` : 'Contracts'}</h1>
-        <p className={adminPageSubtitleClass}>
-          Viewing all device purchase contracts created by {user?.name || 'this user'}.
-        </p>
+        <h1 className={adminPageTitleClass}>
+          {user ? interpolate(t.admin.userContractsTitle, { name: user.name }) : t.admin.contracts}
+        </h1>
+        <p className={adminPageSubtitleClass}>{t.admin.userContractsSubtitle}</p>
       </div>
 
       {loading ? (
@@ -117,7 +117,7 @@ export function AdminUserContractsPage() {
                     <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>{c.contractNumber}</td>
                     <td className="px-4 py-4 sm:px-6">
                       <p className={adminTableCellPrimaryClass}>{c.customerName}</p>
-                      <p className={adminTableCellSecondaryClass}>{c.customerEmail || 'No email'}</p>
+                      <p className={adminTableCellSecondaryClass}>{c.customerEmail || t.admin.noEmail}</p>
                     </td>
                     <td className="px-4 py-4 sm:px-6">
                       <p className={adminTableCellPrimaryClass}>{c.device}</p>
@@ -141,7 +141,7 @@ export function AdminUserContractsPage() {
                             type="button"
                             onClick={() => handleDownload(c.id)}
                             className={adminIconButtonClass}
-                            title="Download PDF"
+                            title={t.admin.downloadPdf}
                           >
                             <Download className="h-4 w-4" />
                           </button>
@@ -150,7 +150,7 @@ export function AdminUserContractsPage() {
                           type="button"
                           onClick={() => navigate(`/contracts/${c.id}`)}
                           className={adminIconButtonClass}
-                          title="View Details"
+                          title={t.admin.viewDetails}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </button>

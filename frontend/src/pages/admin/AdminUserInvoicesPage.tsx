@@ -31,7 +31,7 @@ function invoiceStatusClass(status: string) {
 export function AdminUserInvoicesPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { formatMoney, formatDate } = useLanguage()
+  const { t, formatMoney, formatDate, interpolate } = useLanguage()
 
   const [user, setUser] = useState<AdminUser | null>(null)
   const [invoices, setInvoices] = useState<any[]>([])
@@ -54,7 +54,7 @@ export function AdminUserInvoicesPage() {
         setError(null)
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load data')
+        setError(err.message || t.admin.loadDataFailed)
       })
       .finally(() => {
         setLoading(false)
@@ -72,14 +72,14 @@ export function AdminUserInvoicesPage() {
     <div className="space-y-6">
       <button type="button" onClick={() => navigate(`/admin/users/${userId}`)} className={adminBackLinkClass}>
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        <span>Back to User Profile</span>
+        <span>{t.admin.backToUserProfile}</span>
       </button>
 
       <div>
-        <h1 className={adminPageTitleClass}>{user ? `${user.name}'s Invoices` : 'Invoices'}</h1>
-        <p className={adminPageSubtitleClass}>
-          Viewing all sales invoices created by {user?.name || 'this user'}.
-        </p>
+        <h1 className={adminPageTitleClass}>
+          {user ? interpolate(t.admin.userInvoicesTitle, { name: user.name }) : t.admin.invoices}
+        </h1>
+        <p className={adminPageSubtitleClass}>{t.admin.userInvoicesSubtitle}</p>
       </div>
 
       {loading ? (
@@ -117,7 +117,7 @@ export function AdminUserInvoicesPage() {
                     <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>{inv.invoiceNumber}</td>
                     <td className="px-4 py-4 sm:px-6">
                       <p className={adminTableCellPrimaryClass}>{inv.customerName}</p>
-                      <p className={adminTableCellSecondaryClass}>{inv.customerEmail || 'No email'}</p>
+                      <p className={adminTableCellSecondaryClass}>{inv.customerEmail || t.admin.noEmail}</p>
                     </td>
                     <td className={`px-4 py-4 sm:px-6 text-sm text-slate-600`}>{inv.paymentMethod}</td>
                     <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>
@@ -140,7 +140,7 @@ export function AdminUserInvoicesPage() {
                             type="button"
                             onClick={() => handleDownload(inv.id)}
                             className={adminIconButtonClass}
-                            title="Download PDF"
+                            title={t.admin.downloadPdf}
                           >
                             <Download className="h-4 w-4" />
                           </button>
@@ -149,7 +149,7 @@ export function AdminUserInvoicesPage() {
                           type="button"
                           onClick={() => navigate(`/invoices/${inv.id}`)}
                           className={adminIconButtonClass}
-                          title="View Details"
+                          title={t.admin.viewDetails}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </button>

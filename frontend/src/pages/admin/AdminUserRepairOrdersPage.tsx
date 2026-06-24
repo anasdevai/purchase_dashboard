@@ -31,7 +31,7 @@ function repairStatusClass(status: string) {
 export function AdminUserRepairOrdersPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
-  const { formatMoney, formatDate } = useLanguage()
+  const { t, formatMoney, formatDate, interpolate } = useLanguage()
 
   const [user, setUser] = useState<AdminUser | null>(null)
   const [repairOrders, setRepairOrders] = useState<any[]>([])
@@ -54,7 +54,7 @@ export function AdminUserRepairOrdersPage() {
         setError(null)
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load data')
+        setError(err.message || t.admin.loadDataFailed)
       })
       .finally(() => {
         setLoading(false)
@@ -65,14 +65,14 @@ export function AdminUserRepairOrdersPage() {
     <div className="space-y-6">
       <button type="button" onClick={() => navigate(`/admin/users/${userId}`)} className={adminBackLinkClass}>
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        <span>Back to User Profile</span>
+        <span>{t.admin.backToUserProfile}</span>
       </button>
 
       <div>
-        <h1 className={adminPageTitleClass}>{user ? `${user.name}'s Repair Orders` : 'Repair Orders'}</h1>
-        <p className={adminPageSubtitleClass}>
-          Viewing all repair tickets and orders created by {user?.name || 'this user'}.
-        </p>
+        <h1 className={adminPageTitleClass}>
+          {user ? interpolate(t.admin.userRepairOrdersTitle, { name: user.name }) : t.admin.repairOrders}
+        </h1>
+        <p className={adminPageSubtitleClass}>{t.admin.userRepairOrdersSubtitle}</p>
       </div>
 
       {loading ? (
@@ -111,7 +111,7 @@ export function AdminUserRepairOrdersPage() {
                     <td className={`px-4 py-4 sm:px-6 ${adminTableCellPrimaryClass}`}>{ro.orderNumber}</td>
                     <td className="px-4 py-4 sm:px-6">
                       <p className={adminTableCellPrimaryClass}>{ro.customerName}</p>
-                      <p className={adminTableCellSecondaryClass}>{ro.customerPhone || 'No phone'}</p>
+                      <p className={adminTableCellSecondaryClass}>{ro.customerPhone || t.admin.noPhone}</p>
                     </td>
                     <td className={`px-4 py-4 sm:px-6 text-sm font-medium text-slate-800`}>{ro.deviceModel}</td>
                     <td
@@ -139,7 +139,7 @@ export function AdminUserRepairOrdersPage() {
                           type="button"
                           onClick={() => navigate(`/repair-orders/${ro.id}`)}
                           className={adminIconButtonClass}
-                          title="View Details"
+                          title={t.admin.viewDetails}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </button>

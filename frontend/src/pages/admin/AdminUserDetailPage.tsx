@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { fetchUser, updateUser, deleteUser, type AdminUser } from '../../api/admin'
 import { useAuth } from '../../auth/AuthContext'
+import { useLanguage } from '../../i18n/LanguageProvider'
 import {
   adminAlertClass,
   adminBackLinkClass,
@@ -28,6 +29,8 @@ export function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
   const { user: currentUser } = useAuth()
+  const { t, language, interpolate } = useLanguage()
+  const locale = language === 'de' ? 'de-DE' : 'en-US'
 
   const [user, setUser] = useState<AdminUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,7 +63,7 @@ export function AdminUserDetailPage() {
         setError(null)
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load user details')
+        setError(err.message || t.admin.loadDataFailed)
       })
       .finally(() => {
         setLoading(false)
@@ -84,10 +87,10 @@ export function AdminUserDetailPage() {
       setUser(res.user)
       setPassword('')
       setEditing(false)
-      setMessage({ type: 'success', text: 'User updated successfully!' })
+      setMessage({ type: 'success', text: t.admin.userUpdated })
       setTimeout(() => setMessage(null), 3000)
     } catch (err: unknown) {
-      const text = err instanceof Error ? err.message : 'Failed to update user'
+      const text = err instanceof Error ? err.message : t.admin.userUpdateFailed
       setMessage({ type: 'error', text })
     } finally {
       setSaving(false)
@@ -104,7 +107,7 @@ export function AdminUserDetailPage() {
       setDeleteModalOpen(false)
       navigate('/admin/users')
     } catch (err: unknown) {
-      const text = err instanceof Error ? err.message : 'Failed to delete user'
+      const text = err instanceof Error ? err.message : t.admin.userDeleteFailed
       setMessage({ type: 'error', text })
       setDeleting(false)
       setDeleteModalOpen(false)
@@ -125,7 +128,7 @@ export function AdminUserDetailPage() {
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className={adminLoadingSpinnerClass} />
-          <p className={adminLoadingTextClass}>Loading user details...</p>
+          <p className={adminLoadingTextClass}>{t.admin.loadingUsers}</p>
         </div>
       </div>
     )
@@ -136,9 +139,9 @@ export function AdminUserDetailPage() {
       <div className="flex min-h-[50vh] items-center justify-center px-4 text-center">
         <div>
           <UserX className="mx-auto h-8 w-8 text-red-500" />
-          <p className="mt-3 text-sm font-medium text-red-700">{error || 'User not found'}</p>
+          <p className="mt-3 text-sm font-medium text-red-700">{error || t.admin.userNotFound}</p>
           <button type="button" onClick={() => navigate('/admin/users')} className="btn btn-secondary mt-4 h-9 text-xs">
-            Back to Users
+            {t.admin.backToUsers}
           </button>
         </div>
       </div>
@@ -148,8 +151,8 @@ export function AdminUserDetailPage() {
   const analyticsLinks = [
     {
       to: `/admin/users/${user.id}/contracts`,
-      label: 'Contracts',
-      subtitle: 'Purchase agreements',
+      label: t.admin.contractsCard,
+      subtitle: t.admin.contractsCardSubtitle,
       count: user._count?.contracts ?? 0,
       icon: FileText,
       iconClass: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',
@@ -157,8 +160,8 @@ export function AdminUserDetailPage() {
     },
     {
       to: `/admin/users/${user.id}/invoices`,
-      label: 'Invoices',
-      subtitle: 'Billing history',
+      label: t.admin.invoicesCard,
+      subtitle: t.admin.invoicesCardSubtitle,
       count: user._count?.invoices ?? 0,
       icon: Receipt,
       iconClass: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100',
@@ -166,8 +169,8 @@ export function AdminUserDetailPage() {
     },
     {
       to: `/admin/users/${user.id}/repair-orders`,
-      label: 'Repair Orders',
-      subtitle: 'Device repairs',
+      label: t.admin.repairOrdersCard,
+      subtitle: t.admin.repairOrdersCardSubtitle,
       count: user._count?.repairOrders ?? 0,
       icon: Wrench,
       iconClass: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',
@@ -179,7 +182,7 @@ export function AdminUserDetailPage() {
     <div className="space-y-6">
       <button type="button" onClick={() => navigate('/admin/users')} className={adminBackLinkClass}>
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-        <span>Back to Users</span>
+        <span>{t.admin.backToUsers}</span>
       </button>
 
       <div>
@@ -205,10 +208,10 @@ export function AdminUserDetailPage() {
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 <span className={user.role === 'admin' ? adminStatusBadge.admin : adminStatusBadge.staff}>
                   {user.role === 'admin' ? <Shield className="h-3 w-3" /> : null}
-                  {user.role}
+                  {user.role === 'admin' ? t.admin.roleAdmin : t.admin.roleStaff}
                 </span>
                 <span className={user.isActive ? adminStatusBadge.active : adminStatusBadge.inactive}>
-                  {user.isActive ? 'Active' : 'Inactive'}
+                  {user.isActive ? t.admin.active : t.admin.inactive}
                 </span>
               </div>
             </div>
@@ -217,10 +220,10 @@ export function AdminUserDetailPage() {
               <div className="flex items-center justify-between text-xs">
                 <span className="flex items-center gap-2 text-slate-500">
                   <Calendar className="h-4 w-4 text-slate-400" />
-                  Joined
+                  {t.admin.joined}
                 </span>
                 <span className="font-semibold text-slate-800">
-                  {new Date(user.createdAt).toLocaleDateString()}
+                  {new Date(user.createdAt).toLocaleDateString(locale)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 text-xs">
@@ -236,7 +239,7 @@ export function AdminUserDetailPage() {
 
             <div className="mt-6 space-y-2">
               <button type="button" onClick={() => setEditing(!editing)} className="btn btn-secondary w-full">
-                {editing ? 'Cancel Editing' : 'Edit Account'}
+                {editing ? t.admin.cancelEditing : t.admin.editAccount}
               </button>
               {!isSelf ? (
                 <button
@@ -287,7 +290,7 @@ export function AdminUserDetailPage() {
               <h3 className="mb-6 text-base font-bold text-slate-900">Modify Account Settings</h3>
               <form onSubmit={handleUpdate} className="space-y-5">
                 <div>
-                  <label className="label">Display Name</label>
+                  <label className="label">{t.admin.displayName}</label>
                   <input
                     type="text"
                     required
@@ -298,7 +301,7 @@ export function AdminUserDetailPage() {
                 </div>
 
                 <div>
-                  <label className="label">Email Address</label>
+                  <label className="label">{t.admin.emailAddress}</label>
                   <input
                     type="email"
                     required
@@ -309,12 +312,12 @@ export function AdminUserDetailPage() {
                 </div>
 
                 <div>
-                  <label className="label">Change Password</label>
+                  <label className="label">{t.admin.changePassword}</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                     <input
                       type="password"
-                      placeholder="Leave blank to keep current password"
+                      placeholder={t.admin.passwordPlaceholder}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="input h-11 pl-10"
@@ -323,7 +326,7 @@ export function AdminUserDetailPage() {
                 </div>
 
                 <div>
-                  <label className="label">Account Status</label>
+                  <label className="label">{t.admin.accountStatus}</label>
                   {isSelf ? (
                     <p className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                       You cannot deactivate your own administrative account.
@@ -340,7 +343,7 @@ export function AdminUserDetailPage() {
                         }`}
                       >
                         <UserCheck className="h-4 w-4" />
-                        Active
+                        {t.admin.active}
                       </button>
                       <button
                         type="button"
@@ -352,14 +355,14 @@ export function AdminUserDetailPage() {
                         }`}
                       >
                         <UserX className="h-4 w-4" />
-                        Inactive
+                        {t.admin.inactive}
                       </button>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="label">Account Role</label>
+                  <label className="label">{t.admin.accountRole}</label>
                   {isSelf ? (
                     <p className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
                       You cannot demote or change your own administrative role.
@@ -375,7 +378,7 @@ export function AdminUserDetailPage() {
                             : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        Staff
+                        {t.admin.roleStaffLabel}
                       </button>
                       <button
                         type="button"
@@ -387,7 +390,7 @@ export function AdminUserDetailPage() {
                         }`}
                       >
                         <Shield className="h-4 w-4" />
-                        Admin
+                        {t.admin.roleAdminLabel}
                       </button>
                     </div>
                   )}
@@ -395,7 +398,7 @@ export function AdminUserDetailPage() {
 
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                   <button type="submit" disabled={saving} className="btn btn-primary h-11 flex-1">
-                    {saving ? 'Saving Changes...' : 'Save User Settings'}
+                    {saving ? t.admin.savingChanges : t.admin.saveUserSettings}
                   </button>
                   <button
                     type="button"
@@ -405,7 +408,7 @@ export function AdminUserDetailPage() {
                     }}
                     className="btn btn-secondary h-11 px-6"
                   >
-                    Cancel
+                    {t.common.cancel}
                   </button>
                 </div>
               </form>
@@ -429,14 +432,13 @@ export function AdminUserDetailPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
               <AlertTriangle className="h-6 w-6" />
             </div>
-            <h3 className="text-base font-bold text-slate-900">Delete User Account</h3>
+            <h3 className="text-base font-bold text-slate-900">{t.admin.deleteUserTitle}</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
-              Are you sure you want to delete <span className="font-semibold text-slate-900">{user.name}</span>?
-              This action is permanent and will remove all associated contracts, invoices, and repair orders.
+              {interpolate(t.admin.deleteUserMessage, { name: user.name })}
             </p>
             <div className="mt-6 flex flex-col-reverse justify-end gap-3 sm:flex-row">
               <button type="button" onClick={() => setDeleteModalOpen(false)} className="btn btn-secondary h-10">
-                No, Keep Account
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -444,7 +446,7 @@ export function AdminUserDetailPage() {
                 disabled={deleting}
                 className="btn h-10 border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
               >
-                {deleting ? 'Deleting...' : 'Yes, Delete Account'}
+                {deleting ? 'Deleting...' : t.admin.deleteUserConfirm}
               </button>
             </div>
           </div>

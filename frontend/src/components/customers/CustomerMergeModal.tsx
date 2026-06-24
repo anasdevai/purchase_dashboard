@@ -6,47 +6,6 @@ import { searchCustomers, mergeCustomers } from "../../api/customers";
 import type { Customer } from "../../types/customer";
 import { getFriendlyErrorMessage, logApiError } from "../../utils/apiErrors";
 
-const localizations = {
-  de: {
-    title: "Kunden zusammenführen",
-    desc: "Verschmilzt zwei Kundenkontakte. Alle Verträge, Rechnungen, Reparaturaufträge und Angebote des Duplikats werden auf das Hauptkonto übertragen. Das Duplikat wird anschließend gelöscht.",
-    searchPrimaryLabel: "1. Haupt-Kunde (Behalten)",
-    searchDuplicateLabel: "2. Duplikat-Kunde (Löschen)",
-    searchPlaceholder: "Name, E-Mail oder Tel. suchen...",
-    searchBtn: "Suchen",
-    selectBtn: "Auswählen",
-    selectedLabel: "Ausgewählt:",
-    warningTitle: "Achtung: Dies kann nicht rückgängig gemacht werden!",
-    warningDesc: "Alle Vorgänge werden übertragen. Das Duplikat-Konto wird dauerhaft entfernt.",
-    mergeBtn: "Zusammenführen bestätigen",
-    merging: "Wird zusammengeführt...",
-    cancel: "Abbrechen",
-    noResults: "Keine Kunden gefunden.",
-    errSameCustomer: "Haupt-Kunde und Duplikat-Kunde dürfen nicht identisch sein.",
-    errSelection: "Bitte wählen Sie beide Kunden aus.",
-    success: "Kunden erfolgreich zusammengeführt.",
-  },
-  en: {
-    title: "Merge Duplicate Customers",
-    desc: "Merge two customer profiles. All contracts, invoices, repair orders, and quotations of the duplicate customer will be transferred to the primary customer. The duplicate profile will be deleted.",
-    searchPrimaryLabel: "1. Primary Customer (Keep)",
-    searchDuplicateLabel: "2. Duplicate Customer (Delete)",
-    searchPlaceholder: "Search by name, email, or phone...",
-    searchBtn: "Search",
-    selectBtn: "Select",
-    selectedLabel: "Selected:",
-    warningTitle: "Attention: This action is irreversible!",
-    warningDesc: "All transactions will be moved to the primary customer. The duplicate profile will be deleted.",
-    mergeBtn: "Confirm Merge",
-    merging: "Merging...",
-    cancel: "Cancel",
-    noResults: "No customers found.",
-    errSameCustomer: "Primary and duplicate customer cannot be the same.",
-    errSelection: "Please select both customers.",
-    success: "Customers merged successfully.",
-  }
-};
-
 export interface CustomerMergeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,8 +15,7 @@ export interface CustomerMergeModalProps {
 export function CustomerMergeModal({ isOpen, onClose, onMerge }: CustomerMergeModalProps) {
   const { t } = useLanguage();
   const { showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
-  const loc = isDe ? localizations.de : localizations.en;
+  const loc = t.customerMerge;
 
   const [merging, setMerging] = useState(false);
 
@@ -155,7 +113,7 @@ export function CustomerMergeModal({ isOpen, onClose, onMerge }: CustomerMergeMo
         {/* Scrollable Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <p className="text-sm text-slate-600 leading-relaxed bg-blue-50/50 border border-blue-100 rounded-lg p-4">
-            {loc.desc}
+            {loc.description}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -338,7 +296,7 @@ export function CustomerMergeModal({ isOpen, onClose, onMerge }: CustomerMergeMo
             disabled={merging || !primarySelected || !duplicateSelected}
             className="btn btn-primary h-11 px-5 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {merging ? loc.merging : loc.mergeBtn}
+            {merging ? loc.merging : loc.merge}
           </button>
         </div>
       </div>

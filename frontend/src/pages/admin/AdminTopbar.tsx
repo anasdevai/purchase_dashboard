@@ -1,6 +1,7 @@
 import { Menu, Shield } from 'lucide-react'
 import { useLayout } from '../../app/layout/LayoutContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
+import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
 
 export function AdminTopbar() {
   const { toggleSidebar } = useLayout()
@@ -23,9 +24,12 @@ export function AdminTopbar() {
             <Shield className="h-4 w-4 text-primary" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-900">Admin Panel</p>
-            <p className="truncate text-[10px] font-medium text-slate-500">Management Console</p>
+            <p className="truncate text-sm font-semibold text-slate-900">{t.admin.panelTitle}</p>
+            <p className="truncate text-[10px] font-medium text-slate-500">{t.admin.panelSubtitle}</p>
           </div>
+        </div>
+        <div className="ml-auto shrink-0">
+          <LanguageSwitcher />
         </div>
       </div>
     </header>

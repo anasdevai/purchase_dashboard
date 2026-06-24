@@ -13,9 +13,12 @@ import {
   Wrench,
 } from 'lucide-react'
 import { fetchUsers, type AdminUser, type Pagination, type ListUsersParams } from '../../api/admin'
+import { useLanguage } from '../../i18n/LanguageProvider'
 
 export function AdminUsersPage() {
   const navigate = useNavigate()
+  const { t, language } = useLanguage()
+  const locale = language === 'de' ? 'de-DE' : 'en-US'
   const [users, setUsers] = useState<AdminUser[]>([])
   const [pagination, setPagination] = useState<Pagination | null>(null)
   const [loading, setLoading] = useState(true)
@@ -44,7 +47,7 @@ export function AdminUsersPage() {
         setError(null)
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load users')
+        setError(err.message || t.admin.loadUsersFailed)
       })
       .finally(() => {
         setLoading(false)
@@ -73,17 +76,15 @@ export function AdminUsersPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">Manage Users</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Search, filter, and manage roles or statuses for all staff and admin accounts.
-          </p>
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">{t.admin.manageUsersTitle}</h1>
+          <p className="mt-1 text-sm text-slate-500">{t.admin.manageUsersSubtitle}</p>
         </div>
         <button
           onClick={() => navigate('/admin/users/new')}
           className="btn btn-primary h-11 px-4 text-sm font-semibold"
         >
           <UserPlus className="h-4 w-4" />
-          <span>Add New User</span>
+          <span>{t.admin.addNewUser}</span>
         </button>
       </div>
 
@@ -91,14 +92,12 @@ export function AdminUsersPage() {
       <div className="card p-5">
         <form onSubmit={handleSearchSubmit} className="flex flex-col gap-4 lg:flex-row lg:items-end">
           <div className="flex-1">
-            <label className="label">
-              Search Users
-            </label>
+            <label className="label">{t.admin.searchUsers}</label>
             <div className="relative mt-1.5">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder={t.admin.searchUsersPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="input h-10 pl-10"
@@ -107,27 +106,23 @@ export function AdminUsersPage() {
           </div>
 
           <div className="w-full lg:w-48">
-            <label className="label">
-              Role
-            </label>
+            <label className="label">{t.admin.role}</label>
             <select
               value={role}
               onChange={(e) => {
-                setRole(e.target.value as any)
+                setRole(e.target.value as 'admin' | 'staff' | '')
                 setPage(1)
               }}
               className="input h-10"
             >
-              <option value="">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="staff">Staff</option>
+              <option value="">{t.admin.allRoles}</option>
+              <option value="admin">{t.admin.roleAdmin}</option>
+              <option value="staff">{t.admin.roleStaff}</option>
             </select>
           </div>
 
           <div className="w-full lg:w-48">
-            <label className="label">
-              Status
-            </label>
+            <label className="label">{t.admin.status}</label>
             <select
               value={isActive === '' ? '' : isActive ? 'true' : 'false'}
               onChange={(e) => {
@@ -137,25 +132,18 @@ export function AdminUsersPage() {
               }}
               className="input h-10"
             >
-              <option value="">All Statuses</option>
-              <option value="true">Active Only</option>
-              <option value="false">Inactive Only</option>
+              <option value="">{t.admin.allStatuses}</option>
+              <option value="true">{t.admin.activeOnly}</option>
+              <option value="false">{t.admin.inactiveOnly}</option>
             </select>
           </div>
 
           <div className="flex gap-2 w-full lg:w-auto">
-            <button
-              type="submit"
-              className="btn btn-primary h-10 px-5"
-            >
-              Search
+            <button type="submit" className="btn btn-primary h-10 px-5">
+              {t.admin.search}
             </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="btn btn-secondary h-10 px-4"
-            >
-              Reset
+            <button type="button" onClick={handleReset} className="btn btn-secondary h-10 px-4">
+              {t.admin.reset}
             </button>
           </div>
         </form>
@@ -167,7 +155,7 @@ export function AdminUsersPage() {
           <div className="flex h-[350px] items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-              <p className="text-xs font-medium text-slate-500">Loading users...</p>
+              <p className="text-xs font-medium text-slate-500">{t.admin.loadingUsers}</p>
             </div>
           </div>
         ) : error ? (
@@ -175,11 +163,8 @@ export function AdminUsersPage() {
             <div>
               <UserX className="mx-auto h-8 w-8 text-red-500" />
               <p className="mt-3 text-sm font-medium text-red-700">{error}</p>
-              <button
-                onClick={loadUsers}
-                className="btn btn-secondary mt-4 h-9 text-xs"
-              >
-                Try Again
+              <button onClick={loadUsers} className="btn btn-secondary mt-4 h-9 text-xs">
+                {t.admin.tryAgain}
               </button>
             </div>
           </div>
@@ -187,7 +172,7 @@ export function AdminUsersPage() {
           <div className="flex h-[350px] items-center justify-center text-center px-4">
             <div>
               <Users className="mx-auto h-8 w-8 text-slate-300" />
-              <p className="mt-3 text-sm font-medium text-slate-500">No users found matching filters.</p>
+              <p className="mt-3 text-sm font-medium text-slate-500">{t.admin.noUsersFound}</p>
             </div>
           </div>
         ) : (
@@ -196,13 +181,13 @@ export function AdminUsersPage() {
               <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50/50">
-                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">User Details</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Role</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
-                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Contracts</th>
-                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Invoices</th>
-                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">Repairs</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Joined Date</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.userDetails}</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.role}</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.status}</th>
+                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.contracts}</th>
+                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.invoices}</th>
+                    <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.repairs}</th>
+                    <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">{t.admin.joinedDate}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -234,7 +219,7 @@ export function AdminUsersPage() {
                           }`}
                         >
                           {u.role === 'admin' && <Shield className="h-3 w-3" />}
-                          {u.role}
+                          {u.role === 'admin' ? t.admin.roleAdmin : t.admin.roleStaff}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -246,7 +231,7 @@ export function AdminUsersPage() {
                           }`}
                         >
                           <span className={`h-1.5 w-1.5 rounded-full ${u.isActive ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                          {u.isActive ? 'Active' : 'Inactive'}
+                          {u.isActive ? t.admin.active : t.admin.inactive}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -268,7 +253,7 @@ export function AdminUsersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right text-xs text-slate-500">
-                        {new Date(u.createdAt).toLocaleDateString()}
+                        {new Date(u.createdAt).toLocaleDateString(locale)}
                       </td>
                     </tr>
                   ))}
@@ -280,9 +265,12 @@ export function AdminUsersPage() {
             {pagination && pagination.totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
                 <p className="text-xs text-slate-500">
-                  Showing page <span className="font-semibold text-slate-800">{pagination.page}</span> of{' '}
-                  <span className="font-semibold text-slate-800">{pagination.totalPages}</span> · Total{' '}
-                  <span className="font-semibold text-slate-800">{pagination.total}</span> users
+                  {t.admin.paginationPage}{' '}
+                  <span className="font-semibold text-slate-800">{pagination.page}</span>{' '}
+                  {t.admin.paginationOf}{' '}
+                  <span className="font-semibold text-slate-800">{pagination.totalPages}</span> ·{' '}
+                  <span className="font-semibold text-slate-800">{pagination.total}</span>{' '}
+                  {t.admin.paginationTotal}
                 </p>
                 <div className="flex gap-2">
                   <button

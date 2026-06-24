@@ -24,58 +24,11 @@ import { getFriendlyErrorMessage, logApiError } from "../utils/apiErrors";
 import { CustomerFormModal } from "../components/customers/CustomerFormModal";
 import { CustomerMergeModal } from "../components/customers/CustomerMergeModal";
 
-const localizations = {
-  de: {
-    title: "Kundenverwaltung",
-    description: "Zentrale Verwaltung aller Kunden und deren vollständige Historie.",
-    searchPlaceholder: "Suchen nach Kundennummer, Name, E-Mail, Telefon...",
-    createBtn: "Kunde anlegen",
-    mergeBtn: "Zusammenführen",
-    exportBtn: "CSV-Export",
-    pdfExportBtn: "PDF-Export",
-    tableId: "Kunden-Nr.",
-    tableName: "Kunde",
-    tableCompany: "Firma",
-    tableContact: "Kontakt",
-    tableDate: "Erstellt am",
-    tableActions: "Aktionen",
-    noCustomers: "Keine Kunden gefunden.",
-    editTooltip: "Kunde bearbeiten",
-    deleteTooltip: "Kunde löschen",
-    viewTooltip: "Details anzeigen",
-    deleteConfirmTitle: "Kunde löschen?",
-    deleteConfirmMessage: "Sind Sie sicher, dass Sie den Kunden {name} dauerhaft löschen möchten? Alle Transaktionsverknüpfungen werden gelöst.",
-    deleting: "Wird gelöscht...",
-  },
-  en: {
-    title: "Customer Management",
-    description: "Centralized customer profiles and their complete transaction histories.",
-    searchPlaceholder: "Search by customer number, name, email, phone...",
-    createBtn: "Create Customer",
-    mergeBtn: "Merge Duplicates",
-    exportBtn: "Export CSV",
-    pdfExportBtn: "Export PDF",
-    tableId: "Cust-ID",
-    tableName: "Customer",
-    tableCompany: "Company",
-    tableContact: "Contact",
-    tableDate: "Date Added",
-    tableActions: "Actions",
-    noCustomers: "No customers found.",
-    editTooltip: "Edit customer",
-    deleteTooltip: "Delete customer",
-    viewTooltip: "View details",
-    deleteConfirmTitle: "Delete customer?",
-    deleteConfirmMessage: "Are you sure you want to permanently delete the customer {name}? All transaction links will be unlinked.",
-    deleting: "Deleting...",
-  }
-};
-
 export function CustomersPage() {
-  const { t } = useLanguage();
+  const { t, interpolate, language } = useLanguage();
   const { confirm, showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
-  const loc = isDe ? localizations.de : localizations.en;
+  const loc = t.customers;
+  const locale = language === "de" ? "de-DE" : "en-US";
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -117,14 +70,14 @@ export function CustomersPage() {
   const handleDelete = (customer: Customer) => {
     confirm({
       title: loc.deleteConfirmTitle,
-      message: loc.deleteConfirmMessage.replace("{name}", customer.name),
-      confirmLabel: isDe ? "Löschen" : "Delete",
-      cancelLabel: isDe ? "Abbrechen" : "Cancel",
+      message: interpolate(loc.deleteConfirmMessage, { name: customer.name }),
+      confirmLabel: t.calendar.delete,
+      cancelLabel: t.common.cancel,
       variant: "danger",
       onConfirm: async () => {
         try {
           await deleteCustomer(customer.id);
-          showToast("success", isDe ? "Kunde gelöscht." : "Customer deleted.");
+          showToast("success", loc.deletedToast);
           loadCustomers(currentPage, searchQuery);
         } catch (err) {
           logApiError("delete customer", err);
@@ -145,10 +98,10 @@ export function CustomersPage() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      showToast("success", isDe ? "CSV erfolgreich exportiert." : "CSV exported successfully.");
+      showToast("success", loc.exportCsvSuccess);
     } catch (err) {
       logApiError("export customers", err);
-      showToast("error", isDe ? "Export fehlgeschlagen." : "Failed to export customer list.");
+      showToast("error", loc.exportCsvFailed);
     }
   };
 
@@ -163,10 +116,10 @@ export function CustomersPage() {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      showToast("success", isDe ? "PDF erfolgreich exportiert." : "PDF exported successfully.");
+      showToast("success", loc.exportPdfSuccess);
     } catch (err) {
       logApiError("export customers pdf", err);
-      showToast("error", isDe ? "PDF-Export fehlgeschlagen." : "Failed to export PDF.");
+      showToast("error", loc.exportPdfFailed);
     }
   };
 
@@ -192,7 +145,7 @@ export function CustomersPage() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString(isDe ? "de-DE" : "en-US", {
+    return date.toLocaleDateString(locale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -353,7 +306,7 @@ export function CustomersPage() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-slate-200 bg-white px-6 py-4">
             <div className="text-xs text-slate-500 font-medium">
-              {isDe ? "Seite" : "Page"} {currentPage} {isDe ? "von" : "of"} {totalPages}
+              {loc.page} {currentPage} {loc.of} {totalPages}
             </div>
             <div className="flex items-center gap-2">
               <button

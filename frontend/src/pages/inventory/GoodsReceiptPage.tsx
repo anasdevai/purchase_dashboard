@@ -20,7 +20,10 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 type SubTab = "book" | "history";
 
 export default function GoodsReceiptPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const gr = t.inventory.goodsReceipt;
+  const ic = t.inventory.common;
+  const dateLocale = language === "de" ? "de-DE" : "en-US";
   const { confirm, showToast } = useAppConfirm();
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("book");
@@ -52,7 +55,7 @@ export default function GoodsReceiptPage() {
       setPendingOrders(pending);
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || "Failed to load pending orders");
+      showToast("error", err.message || ic.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export default function GoodsReceiptPage() {
       setReceipts(list);
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || "Failed to load receipt history");
+      showToast("error", err.message || ic.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -136,13 +139,10 @@ export default function GoodsReceiptPage() {
     }
 
     confirm({
-      title: t.pages.settings === "Einstellungen" ? "Wareneingang buchen?" : "Confirm Goods Receipt?",
-      message:
-        t.pages.settings === "Einstellungen"
-          ? "Der Bestand der Teile wird erhöht und die Bestellung aktualisiert."
-          : "This will increment the stock of selected parts and reconcile the purchase order status.",
-      confirmLabel: t.pages.settings === "Einstellungen" ? "Buchen" : "Book Receipt",
-      cancelLabel: t.pages.settings === "Einstellungen" ? "Abbrechen" : "Cancel",
+      title: gr.confirmTitle,
+      message: gr.confirmMessage,
+      confirmLabel: gr.confirmBook,
+      cancelLabel: ic.cancel,
       variant: "primary",
       onConfirm: async () => {
         try {
@@ -153,7 +153,7 @@ export default function GoodsReceiptPage() {
           });
 
           setReconcileResult(res);
-          showToast("success", "Goods receipt booked successfully!");
+          showToast("success", gr.saved);
 
           // Reset forms
           setSelectedOrderId("");
@@ -163,7 +163,7 @@ export default function GoodsReceiptPage() {
           loadPendingOrders();
         } catch (err: any) {
           console.error(err);
-          showToast("error", err.message || "Failed to book goods receipt");
+          showToast("error", err.message || gr.saveFailed);
         }
       },
     });
@@ -200,7 +200,7 @@ export default function GoodsReceiptPage() {
           }`}
         >
           <PlusSquare className="h-4 w-4" />
-          <span>{t.pages.settings === "Einstellungen" ? "Einbuchen" : "Book Delivery"}</span>
+          <span>{gr.bookDelivery}</span>
         </button>
         <button
           onClick={() => setActiveSubTab("history")}
@@ -211,7 +211,7 @@ export default function GoodsReceiptPage() {
           }`}
         >
           <History className="h-4 w-4" />
-          <span>{t.pages.settings === "Einstellungen" ? "Protokolle" : "Receipts Log"}</span>
+          <span>{gr.receiptsLog}</span>
         </button>
       </div>
 
@@ -220,9 +220,7 @@ export default function GoodsReceiptPage() {
           {/* Form and Selection Panel */}
           <div className="card p-6 bg-white shadow-sm border border-slate-100 rounded-xl lg:col-span-2 space-y-6">
             <div>
-              <h2 className="text-base font-bold text-slate-800">
-                {t.pages.settings === "Einstellungen" ? "Wareneingang erfassen" : "Record Incoming Delivery"}
-              </h2>
+              <h2 className="text-base font-bold text-slate-800">{gr.recordTitle}</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Select an open purchase order and confirm the received quantities. Stock levels will update automatically.
               </p>
@@ -230,8 +228,7 @@ export default function GoodsReceiptPage() {
 
             <div>
               <label className="label font-bold text-slate-700">
-                {t.pages.settings === "Einstellungen" ? "Offene Bestellung wählen" : "Select Pending Purchase Order"}{" "}
-                <span className="text-red-500">*</span>
+                {gr.selectOrder} <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedOrderId}
@@ -265,8 +262,8 @@ export default function GoodsReceiptPage() {
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           <th className="px-4 py-3">SKU / Part Name</th>
-                          <th className="px-4 py-3 text-center">Ordered</th>
-                          <th className="px-4 py-3 text-center">Already Received</th>
+                          <th className="px-4 py-3 text-center">{gr.orderedQty}</th>
+                          <th className="px-4 py-3 text-center">{gr.receivedQty}</th>
                           <th className="px-4 py-3 text-center w-36">Qty Received Now</th>
                         </tr>
                       </thead>
@@ -321,9 +318,7 @@ export default function GoodsReceiptPage() {
                 </div>
 
                 <div>
-                  <label className="label font-bold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Bemerkungen / Empfangsnotiz" : "Delivery Notes / Remarks"}
-                  </label>
+                  <label className="label font-bold text-slate-700">{gr.notes}</label>
                   <textarea
                     rows={2}
                     placeholder="e.g. Package arrived intact. Stored in shelf A-3."
@@ -339,9 +334,7 @@ export default function GoodsReceiptPage() {
                     className="btn btn-primary h-11 px-5 font-semibold text-sm flex items-center gap-2"
                   >
                     <Download className="h-4 w-4" />
-                    <span>
-                      {t.pages.settings === "Einstellungen" ? "Wareneingang buchen" : "Book Goods Receipt"}
-                    </span>
+                    <span>{gr.bookReceipt}</span>
                   </button>
                 </div>
               </form>
@@ -362,20 +355,20 @@ export default function GoodsReceiptPage() {
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-semibold block">Supplier</span>
+                  <span className="text-xs text-slate-400 font-semibold block">{t.inventory.orders.colSupplier}</span>
                   <span className="font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
                     <User className="h-4 w-4 text-slate-400" />
                     {selectedOrder.supplier?.companyName}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-semibold block">Order Date</span>
+                  <span className="text-xs text-slate-400 font-semibold block">{gr.colDate}</span>
                   <span className="font-medium text-slate-700">
-                    {new Date(selectedOrder.orderDate || selectedOrder.createdAt).toLocaleDateString("de-DE")}
+                    {new Date(selectedOrder.orderDate || selectedOrder.createdAt).toLocaleDateString(dateLocale)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-xs text-slate-400 font-semibold block">Status</span>
+                  <span className="text-xs text-slate-400 font-semibold block">{ic.status}</span>
                   <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-150 mt-1">
                     {selectedOrder.status}
                   </span>
@@ -412,7 +405,7 @@ export default function GoodsReceiptPage() {
             ) : filteredReceipts.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-slate-500">
                 <FileText className="h-12 w-12 text-slate-300 mb-3" />
-                <p className="font-semibold text-lg">No Receipts Recorded</p>
+                <p className="font-semibold text-lg">{gr.emptyLog}</p>
                 <p className="text-sm">Historical deliveries will log here once checked in.</p>
               </div>
             ) : (
@@ -421,10 +414,10 @@ export default function GoodsReceiptPage() {
                   <thead>
                     <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
                       <th className="px-6 py-4 w-10"></th>
-                      <th className="px-6 py-4">Receipt Date</th>
-                      <th className="px-6 py-4">Order Number</th>
-                      <th className="px-6 py-4">Supplier</th>
-                      <th className="px-6 py-4">Notes / Remarks</th>
+                      <th className="px-6 py-4">{gr.colDate}</th>
+                      <th className="px-6 py-4">{gr.colOrder}</th>
+                      <th className="px-6 py-4">{t.inventory.orders.colSupplier}</th>
+                      <th className="px-6 py-4">{gr.notes}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -445,7 +438,7 @@ export default function GoodsReceiptPage() {
                             </button>
                           </td>
                           <td className="px-6 py-4 font-bold text-slate-800">
-                            {new Date(r.receivedDate).toLocaleString("de-DE")}
+                            {new Date(r.receivedDate).toLocaleString(dateLocale)}
                           </td>
                           <td className="px-6 py-4 font-mono font-bold text-indigo-700">
                             {r.order?.orderNumber}
@@ -515,8 +508,8 @@ export default function GoodsReceiptPage() {
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           <th className="px-4 py-2">Part</th>
-                          <th className="px-4 py-2 text-center">Ordered</th>
-                          <th className="px-4 py-2 text-center">Received</th>
+                          <th className="px-4 py-2 text-center">{gr.orderedQty}</th>
+                          <th className="px-4 py-2 text-center">{gr.receivedQty}</th>
                           <th className="px-4 py-2 text-center text-red-600">Missing</th>
                         </tr>
                       </thead>

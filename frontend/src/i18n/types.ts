@@ -1,5 +1,7 @@
 export type Language = 'de' | 'en'
 
+import type { ExtraTranslations } from './locales/extraTypes'
+
 export type OptionLabels = {
   Smartphone: string
   Tablet: string
@@ -133,6 +135,13 @@ export type TranslationSchema = {
     invoices: string
     settings: string
     logout: string
+    customers: string
+    calendar: string
+    inventory: string
+    inventorySection: string
+    emailLogs: string
+    adminPanel: string
+    adminDashboard: string
   }
   topbar: {
     notifications: string
@@ -1000,4 +1009,4 @@ export type TranslationSchema = {
     de: string
     en: string
   }
-}
+} & ExtraTranslations

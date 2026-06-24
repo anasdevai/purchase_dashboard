@@ -12,17 +12,19 @@ import clsx from 'clsx'
 import { useAuth } from '../../auth/AuthContext'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import { useLayout } from '../../app/layout/LayoutContext'
-
-const adminNavItems = [
-  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/users', label: 'Manage Users', icon: Users, end: true },
-  { to: '/admin/users/new', label: 'Add User', icon: UserPlus, end: true },
-]
+import { LanguageSwitcher } from '../../components/common/LanguageSwitcher'
 
 function AdminSidebarNav(props: { onNavigate?: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const { onNavigate } = props
+
+  const adminNavItems = [
+    { to: '/admin/dashboard', label: t.admin.dashboard, icon: LayoutDashboard, end: true },
+    { to: '/admin/users', label: t.admin.manageUsers, icon: Users, end: true },
+    { to: '/admin/users/new', label: t.admin.addUser, icon: UserPlus, end: true },
+  ]
 
   return (
     <>
@@ -32,15 +34,15 @@ function AdminSidebarNav(props: { onNavigate?: () => void }) {
             <Shield className="h-5 w-5 text-white" />
           </div>
           <div className="text-left leading-tight">
-            <h1 className="text-sm font-bold text-white tracking-tight">Admin Panel</h1>
-            <p className="text-[10px] text-white/50 font-medium">Management Console</p>
+            <h1 className="text-sm font-bold text-white tracking-tight">{t.admin.panelTitle}</h1>
+            <p className="text-[10px] text-white/50 font-medium">{t.admin.panelSubtitle}</p>
           </div>
         </div>
       </div>
 
       <nav className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wide text-white/45">
-          Navigation
+          {t.admin.navigation}
         </p>
         <ul className="space-y-0.5">
           {adminNavItems.map((item) => {
@@ -85,6 +87,10 @@ function AdminSidebarNav(props: { onNavigate?: () => void }) {
       </nav>
 
       <div className="shrink-0 border-t border-white/10 px-3 pb-4 pt-3 space-y-1">
+        <div className="px-3 py-2">
+          <LanguageSwitcher />
+        </div>
+
         <div className="flex items-center gap-3 rounded-lg px-3 py-2 bg-white/5 border border-white/5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-[11px] font-bold text-white shadow-inner">
             {user?.name?.charAt(0)?.toUpperCase() || 'A'}
@@ -104,7 +110,7 @@ function AdminSidebarNav(props: { onNavigate?: () => void }) {
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
         >
           <ArrowLeft className="h-5 w-5 shrink-0 text-white/70" />
-          <span>Back to App</span>
+          <span>{t.admin.backToApp}</span>
         </button>
 
         <button
@@ -117,7 +123,7 @@ function AdminSidebarNav(props: { onNavigate?: () => void }) {
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/90 transition hover:bg-red-500/20 hover:text-red-300"
         >
           <LogOut className="h-5 w-5 shrink-0 text-white/70" />
-          <span>Logout</span>
+          <span>{t.admin.logout}</span>
         </button>
       </div>
     </>

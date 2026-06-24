@@ -118,13 +118,13 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
         {
           to: '/customers',
-          label: t.pages.settings === 'Einstellungen' ? 'Kunden' : 'Customers',
+          label: t.nav.customers,
           icon: Users,
           testId: 'nav-customers',
         },
         {
           to: '/calendar',
-          label: t.pages.settings === 'Einstellungen' ? 'Kalender' : 'Calendar',
+          label: t.nav.calendar,
           icon: Calendar,
           testId: 'nav-calendar',
         },
@@ -209,11 +209,11 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       ],
     },
     {
-      title: t.pages.settings === 'Einstellungen' ? 'Lagerverwaltung' : 'Inventory',
+      title: t.nav.inventorySection,
       items: [
         {
           to: '/inventory',
-          label: t.pages.settings === 'Einstellungen' ? 'Lager' : 'Inventory',
+          label: t.nav.inventory,
           icon: Package,
           testId: 'nav-inventory',
         },
@@ -222,11 +222,11 @@ function SidebarNav(props: { onNavigate?: () => void }) {
     ...(user?.role === 'admin'
       ? [
           {
-            title: 'Admin Panel',
+            title: t.nav.adminPanel,
             items: [
               {
                 to: '/admin/dashboard',
-                label: 'Admin Dashboard',
+                label: t.nav.adminDashboard,
                 icon: Shield,
                 testId: 'nav-admin-dashboard',
               },
@@ -246,7 +246,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         },
         {
           to: '/email-logs',
-          label: t.pages.settings === 'Einstellungen' ? 'E-Mail-Protokolle' : 'Email Logs',
+          label: t.nav.emailLogs,
           icon: Mail,
           testId: 'nav-email-logs',
           end: true,

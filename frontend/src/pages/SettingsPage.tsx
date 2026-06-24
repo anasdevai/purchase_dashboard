@@ -158,7 +158,7 @@ function FieldLabel(props: { label: string; required?: boolean; optional?: boole
 
 export function SettingsPage() {
   const { user } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { showToast } = useAppConfirm()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | undefined>()
@@ -169,7 +169,7 @@ export function SettingsPage() {
 
   // Sub-tab state
   const [activeTab, setActiveTab] = useState<'shop' | 'email'>('shop')
-  const loc = t.pages.settings === 'Einstellungen' ? emailLocalizations.de : emailLocalizations.en
+  const loc = language === 'de' ? emailLocalizations.de : emailLocalizations.en
 
   // SMTP settings state
   const [smtpHost, setSmtpHost] = useState('')
@@ -1071,7 +1071,7 @@ export function SettingsPage() {
                     value={selectedTemplateName}
                     onChange={(e) => setSelectedTemplateName(e.target.value)}
                   >
-                    {Object.entries(templateDisplayNames[t.pages.settings === 'Einstellungen' ? 'de' : 'en']).map(([key, label]) => (
+                    {Object.entries(templateDisplayNames[language]).map(([key, label]) => (
                       <option key={key} value={key}>
                         {label}
                       </option>

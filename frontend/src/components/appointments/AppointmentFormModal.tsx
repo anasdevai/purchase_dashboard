@@ -26,7 +26,8 @@ export function AppointmentFormModal({
   onSave,
 }: AppointmentFormModalProps) {
   const { t } = useLanguage();
-  const isDe = t.pages.settings === "Einstellungen";
+  const loc = t.appointmentForm;
+  const cal = t.calendar;
 
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -95,7 +96,7 @@ export function AppointmentFormModal({
           })
           .catch((err) => {
             console.error(err);
-            setError(isDe ? "Termin konnte nicht geladen werden" : "Failed to load appointment details");
+            setError(loc.loadFailed);
           })
           .finally(() => setLoading(false));
       } else {
@@ -189,9 +190,9 @@ export function AppointmentFormModal({
     setSuccessMsg("");
     try {
       await sendAppointmentReminder(appointmentId);
-      setSuccessMsg(isDe ? "Erinnerung erfolgreich gesendet." : "Reminder sent successfully.");
+      setSuccessMsg(loc.reminderSent);
     } catch (err: any) {
-      setError(err.message || (isDe ? "Fehler beim Senden" : "Failed to send reminder"));
+      setError(err.message || loc.reminderFailed);
     } finally {
       setLoading(false);
     }
@@ -206,7 +207,7 @@ export function AppointmentFormModal({
     const end = new Date(endTime);
 
     if (end <= start) {
-      setError(isDe ? "Die Endzeit muss nach der Startzeit liegen" : "End time must be after start time");
+      setError(loc.endTimeAfterStart);
       return;
     }
 
@@ -233,7 +234,7 @@ export function AppointmentFormModal({
       }
       onSave();
     } catch (err: any) {
-      setError(err.message || (isDe ? "Fehler beim Speichern" : "Failed to save appointment"));
+      setError(err.message || loc.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -248,9 +249,7 @@ export function AppointmentFormModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <h2 className="text-lg font-bold text-slate-900">
-            {appointmentId
-              ? isDe ? "Termin bearbeiten" : "Edit Appointment"
-              : isDe ? "Neuer Termin" : "New Appointment"}
+            {appointmentId ? loc.titleEdit : loc.titleCreate}
           </h2>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 transition text-slate-400">
             <X className="h-5 w-5" />
@@ -274,7 +273,7 @@ export function AppointmentFormModal({
           {/* Title */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              {isDe ? "Titel (z.B. Displaytausch)" : "Title (e.g., Display Replacement)"} *
+              {loc.titleLabel} *
             </label>
             <input
               type="text"
@@ -288,13 +287,13 @@ export function AppointmentFormModal({
           {/* Customer Search Autocomplete */}
           <div className="relative">
             <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              {isDe ? "Kunde suchen" : "Search Customer"}
+              {loc.searchCustomer}
             </label>
             <div className="relative">
               <input
                 type="text"
                 className="input w-full pl-10"
-                placeholder={isDe ? "Name, Telefon, E-Mail..." : "Name, phone, email..."}
+                placeholder={loc.customerSearchPlaceholder}
                 value={customerSearch}
                 onChange={(e) => {
                   setCustomerSearch(e.target.value);
@@ -329,13 +328,13 @@ export function AppointmentFormModal({
           {/* Repair Order Search Autocomplete */}
           <div className="relative">
             <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              {isDe ? "Reparaturauftrag verknüpfen" : "Link Repair Order"}
+              {loc.linkRepairOrder}
             </label>
             <div className="relative">
               <input
                 type="text"
                 className="input w-full pl-10"
-                placeholder={isDe ? "Auftragsnummer suchen..." : "Search order number..."}
+                placeholder={loc.orderSearchPlaceholder}
                 value={orderSearch}
                 onChange={(e) => {
                   setOrderSearch(e.target.value);
@@ -371,7 +370,7 @@ export function AppointmentFormModal({
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="block text-[10px] font-semibold text-slate-700 uppercase mb-1">
-                {isDe ? "Geräte-Marke" : "Device Brand"}
+                {loc.deviceBrand}
               </label>
               <input
                 type="text"
@@ -382,7 +381,7 @@ export function AppointmentFormModal({
             </div>
             <div>
               <label className="block text-[10px] font-semibold text-slate-700 uppercase mb-1">
-                {isDe ? "Geräte-Modell" : "Device Model"}
+                {loc.deviceModel}
               </label>
               <input
                 type="text"
@@ -393,7 +392,7 @@ export function AppointmentFormModal({
             </div>
             <div>
               <label className="block text-[10px] font-semibold text-slate-700 uppercase mb-1">
-                {isDe ? "IMEI / Serial" : "IMEI / Serial"}
+                {loc.imeiSerial}
               </label>
               <input
                 type="text"
@@ -408,7 +407,7 @@ export function AppointmentFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                {isDe ? "Startzeit" : "Start Time"} *
+                {loc.startTime} *
               </label>
               <input
                 type="datetime-local"
@@ -420,7 +419,7 @@ export function AppointmentFormModal({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                {isDe ? "Endzeit" : "End Time"} *
+                {loc.endTime} *
               </label>
               <input
                 type="datetime-local"
@@ -436,32 +435,32 @@ export function AppointmentFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                Status *
+                {loc.status} *
               </label>
               <select
                 className="input w-full bg-white"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as AppointmentStatus)}
               >
-                <option value="Booked">{isDe ? "Gebucht" : "Booked"}</option>
-                <option value="Confirmed">{isDe ? "Bestätigt" : "Confirmed"}</option>
-                <option value="Arrived">{isDe ? "Eingetroffen" : "Arrived"}</option>
-                <option value="Cancelled">{isDe ? "Storniert" : "Cancelled"}</option>
-                <option value="Voided">{isDe ? "Ungültig" : "Voided"}</option>
+                <option value="Booked">{cal.statusBooked}</option>
+                <option value="Confirmed">{cal.statusConfirmed}</option>
+                <option value="Arrived">{cal.statusArrived}</option>
+                <option value="Cancelled">{cal.statusCancelled}</option>
+                <option value="Voided">{cal.statusVoided}</option>
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                Quelle *
+                {loc.source} *
               </label>
               <select
                 className="input w-full bg-white"
                 value={source}
                 onChange={(e) => setSource(e.target.value as AppointmentSource)}
               >
-                <option value="Manual">{isDe ? "Manuell" : "Manual"}</option>
-                <option value="Order">{isDe ? "Aus Auftrag" : "From Order"}</option>
-                <option value="Website">Website</option>
+                <option value="Manual">{cal.sourceManual}</option>
+                <option value="Order">{cal.sourceOrder}</option>
+                <option value="Website">{cal.sourceWebsite}</option>
               </select>
             </div>
           </div>
@@ -469,7 +468,7 @@ export function AppointmentFormModal({
           {/* Notes */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-              {isDe ? "Interne Notizen" : "Internal Notes"}
+              {loc.internalNotes}
             </label>
             <textarea
               className="input w-full h-20 py-2 resize-none"
@@ -489,7 +488,7 @@ export function AppointmentFormModal({
                   className="btn btn-outline text-slate-600 text-xs px-3 py-2 border-slate-200 hover:bg-slate-50 disabled:opacity-50"
                 >
                   <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
-                  {isDe ? "Kunde erinnern" : "Send Reminder"}
+                  {loc.sendReminder}
                 </button>
               )}
             </div>
@@ -500,14 +499,14 @@ export function AppointmentFormModal({
                 onClick={onClose}
                 className="btn btn-outline border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2"
               >
-                {isDe ? "Abbrechen" : "Cancel"}
+                {loc.cancel}
               </button>
               <button
                 type="submit"
                 disabled={loading}
                 className="btn btn-primary font-semibold px-5 py-2 disabled:opacity-50"
               >
-                {loading ? (isDe ? "Wird gespeichert..." : "Saving...") : (isDe ? "Speichern" : "Save")}
+                {loading ? loc.saving : loc.save}
               </button>
             </div>
           </div>

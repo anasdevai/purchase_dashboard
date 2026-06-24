@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserPlus, ArrowLeft, Shield, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { createUser } from '../../api/admin'
+import { useLanguage } from '../../i18n/LanguageProvider'
 
 export function AdminNewUserPage() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -27,8 +29,9 @@ export function AdminNewUserPage() {
       setTimeout(() => {
         navigate('/admin/users')
       }, 2000)
-    } catch (err: any) {
-      setError(err.message || 'Failed to create user')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t.admin.createUserFailed
+      setError(message)
       setLoading(false)
     }
   }
@@ -42,7 +45,7 @@ export function AdminNewUserPage() {
           className="group mb-6 flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-slate-800"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          <span>Back to Users</span>
+          <span>{t.admin.backToUsers}</span>
         </button>
 
         {/* Card */}
@@ -52,8 +55,8 @@ export function AdminNewUserPage() {
               <UserPlus className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Add New User</h2>
-              <p className="text-xs text-slate-500">Register a new team member or system administrator.</p>
+              <h2 className="text-lg font-bold text-slate-900">{t.admin.newUserTitle}</h2>
+              <p className="text-xs text-slate-500">{t.admin.newUserSubtitle}</p>
             </div>
           </div>
 
@@ -62,7 +65,7 @@ export function AdminNewUserPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-4 ring-emerald-50/50">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
-              <p className="mt-4 text-sm font-semibold text-emerald-700">User Created Successfully!</p>
+              <p className="mt-4 text-sm font-semibold text-emerald-700">{t.admin.userCreated}</p>
               <p className="mt-1 text-xs text-slate-400">Redirecting you back to the user list...</p>
             </div>
           ) : (
@@ -74,9 +77,7 @@ export function AdminNewUserPage() {
               )}
 
               <div>
-                <label className="label">
-                  Full Name
-                </label>
+                <label className="label">{t.admin.fullName}</label>
                 <input
                   type="text"
                   required
@@ -88,9 +89,7 @@ export function AdminNewUserPage() {
               </div>
 
               <div>
-                <label className="label">
-                  Email Address
-                </label>
+                <label className="label">{t.admin.emailAddress}</label>
                 <input
                   type="email"
                   required
@@ -102,9 +101,7 @@ export function AdminNewUserPage() {
               </div>
 
               <div>
-                <label className="label">
-                  Password
-                </label>
+                <label className="label">{t.admin.password}</label>
                 <div className="relative mt-1.5">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -126,9 +123,7 @@ export function AdminNewUserPage() {
               </div>
 
               <div>
-                <label className="label">
-                  User Role
-                </label>
+                <label className="label">{t.admin.accountRole}</label>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -139,7 +134,7 @@ export function AdminNewUserPage() {
                         : 'border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600'
                     }`}
                   >
-                    <span>Staff</span>
+                    <span>{t.admin.roleStaffLabel}</span>
                   </button>
                   <button
                     type="button"
@@ -151,7 +146,7 @@ export function AdminNewUserPage() {
                     }`}
                   >
                     <Shield className="h-4 w-4" />
-                    <span>Admin</span>
+                    <span>{t.admin.roleAdminLabel}</span>
                   </button>
                 </div>
               </div>
@@ -167,7 +162,7 @@ export function AdminNewUserPage() {
                   ) : (
                     <>
                       <UserPlus className="h-4 w-4" />
-                      <span>Create User Account</span>
+                      <span>{t.admin.createUser}</span>
                     </>
                   )}
                 </button>

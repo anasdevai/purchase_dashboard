@@ -6,63 +6,6 @@ import { createCustomer, updateCustomer, fetchCustomerDetail } from "../../api/c
 import type { CustomerPayload } from "../../types/customer";
 import { getFriendlyErrorMessage, logApiError } from "../../utils/apiErrors";
 
-const localizations = {
-  de: {
-    titleCreate: "Kunde anlegen",
-    titleEdit: "Kunde bearbeiten",
-    salutation: "Anrede",
-    salutationPlaceholder: "Bitte auswählen",
-    mr: "Herr",
-    ms: "Frau",
-    diverse: "Divers",
-    firstName: "Vorname",
-    lastName: "Nachname",
-    company: "Firma (optional)",
-    vatId: "USt-IdNr. (optional)",
-    street: "Straße & Hausnummer",
-    zipCode: "PLZ",
-    city: "Ort",
-    phone: "Telefonnummer",
-    email: "E-Mail-Adresse",
-    dateOfBirth: "Geburtsdatum (optional)",
-    newsletter: "Für Newsletter anmelden",
-    notes: "Interne Notizen (optional)",
-    cancel: "Abbrechen",
-    save: "Speichern",
-    saving: "Wird gespeichert...",
-    loading: "Kunden-Daten werden geladen...",
-    errEmail: "Bitte eine gültige E-Mail-Adresse eingeben.",
-    errRequired: "Dieses Feld ist erforderlich."
-  },
-  en: {
-    titleCreate: "Create Customer",
-    titleEdit: "Edit Customer",
-    salutation: "Salutation",
-    salutationPlaceholder: "Select salutation",
-    mr: "Mr.",
-    ms: "Ms.",
-    diverse: "Diverse",
-    firstName: "First Name",
-    lastName: "Last Name",
-    company: "Company (optional)",
-    vatId: "VAT ID (optional)",
-    street: "Street & House Number",
-    zipCode: "ZIP Code",
-    city: "City",
-    phone: "Phone Number",
-    email: "Email Address",
-    dateOfBirth: "Date of Birth (optional)",
-    newsletter: "Subscribe to newsletter",
-    notes: "Internal Notes (optional)",
-    cancel: "Cancel",
-    save: "Save Customer",
-    saving: "Saving...",
-    loading: "Loading customer data...",
-    errEmail: "Please enter a valid email address.",
-    errRequired: "This field is required."
-  }
-};
-
 export interface CustomerFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -71,10 +14,9 @@ export interface CustomerFormModalProps {
 }
 
 export function CustomerFormModal({ isOpen, onClose, onSave, customerId }: CustomerFormModalProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
-  const loc = isDe ? localizations.de : localizations.en;
+  const loc = t.customerForm;
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -196,10 +138,10 @@ export function CustomerFormModal({ isOpen, onClose, onSave, customerId }: Custo
     try {
       if (customerId) {
         await updateCustomer(customerId, payload);
-        showToast("success", isDe ? "Kunde erfolgreich aktualisiert." : "Customer updated successfully.");
+        showToast("success", language === "de" ? "Kunde erfolgreich aktualisiert." : "Customer updated successfully.");
       } else {
         await createCustomer(payload);
-        showToast("success", isDe ? "Kunde erfolgreich angelegt." : "Customer created successfully.");
+        showToast("success", language === "de" ? "Kunde erfolgreich angelegt." : "Customer created successfully.");
       }
       onSave();
     } catch (err) {

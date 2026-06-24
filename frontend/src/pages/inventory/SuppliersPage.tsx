@@ -19,7 +19,9 @@ import type { Supplier } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function SuppliersPage() {
-  const { t } = useLanguage();
+  const { t, interpolate } = useLanguage();
+  const sup = t.inventory.suppliers;
+  const ic = t.inventory.common;
   const { confirm, showToast } = useAppConfirm();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,7 +48,7 @@ export default function SuppliersPage() {
       setSuppliers(list);
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || "Failed to load suppliers");
+      showToast("error", err.message || ic.loadFailed);
     } finally {
       setLoading(false);
     }
@@ -85,7 +87,7 @@ export default function SuppliersPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName.trim() || !email.trim()) {
-      showToast("error", "Company Name and Email are required");
+      showToast("error", ic.requiredCompanyEmail);
       return;
     }
 
@@ -103,37 +105,34 @@ export default function SuppliersPage() {
     try {
       if (editingId) {
         await api.updateSupplier(editingId, payload);
-        showToast("success", "Supplier updated successfully");
+        showToast("success", sup.updatedSuccess);
       } else {
         await api.createSupplier(payload);
-        showToast("success", "Supplier created successfully");
+        showToast("success", sup.createdSuccess);
       }
       setIsModalOpen(false);
       loadSuppliers();
     } catch (err: any) {
       console.error(err);
-      showToast("error", err.message || "Error occurred while saving");
+      showToast("error", err.message || ic.saveError);
     }
   };
 
   const handleDelete = (id: string, name: string) => {
     confirm({
-      title: t.pages.settings === "Einstellungen" ? "Lieferant löschen?" : "Delete Supplier?",
-      message:
-        t.pages.settings === "Einstellungen"
-          ? `Möchten Sie den Lieferanten "${name}" wirklich löschen?`
-          : `Are you sure you want to permanently delete supplier "${name}"?`,
-      confirmLabel: t.pages.settings === "Einstellungen" ? "Löschen" : "Delete",
-      cancelLabel: t.pages.settings === "Einstellungen" ? "Abbrechen" : "Cancel",
+      title: sup.deleteTitle,
+      message: interpolate(sup.deleteMessageNamed, { name }),
+      confirmLabel: ic.delete,
+      cancelLabel: ic.cancel,
       variant: "danger",
       onConfirm: async () => {
         try {
           await api.deleteSupplier(id);
-          showToast("success", "Supplier deleted successfully");
+          showToast("success", sup.deletedSuccess);
           loadSuppliers();
         } catch (err: any) {
           console.error(err);
-          showToast("error", err.message || "Failed to delete supplier");
+          showToast("error", err.message || sup.deleteFailed);
         }
       },
     });
@@ -154,11 +153,7 @@ export default function SuppliersPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder={
-              t.pages.settings === "Einstellungen"
-                ? "Suchen nach Lieferant..."
-                : "Search suppliers by company or contact..."
-            }
+            placeholder={sup.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="input h-10 pl-10 w-full"
@@ -169,9 +164,7 @@ export default function SuppliersPage() {
           className="btn btn-primary h-10 px-4 text-sm font-semibold flex items-center gap-2 w-full sm:w-auto"
         >
           <Plus className="h-4 w-4" />
-          <span>
-            {t.pages.settings === "Einstellungen" ? "Lieferant hinzufügen" : "Add Supplier"}
-          </span>
+          <span>{sup.addSupplier}</span>
         </button>
       </div>
 
@@ -184,32 +177,20 @@ export default function SuppliersPage() {
         ) : filteredSuppliers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <Truck className="h-12 w-12 text-slate-300 mb-3" />
-            <p className="font-semibold text-lg">
-              {t.pages.settings === "Einstellungen" ? "Keine Lieferanten gefunden" : "No Suppliers Found"}
-            </p>
-            <p className="text-sm">
-              {t.pages.settings === "Einstellungen" ? "Fügen Sie einen neuen Lieferanten hinzu." : "Add a supplier to get started."}
-            </p>
+            <p className="font-semibold text-lg">{sup.emptyTitle}</p>
+            <p className="text-sm">{sup.emptyHint}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
-                  <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Firma / Kontakt" : "Company / Contact"}
-                  </th>
-                  <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Telefon" : "Phone"}
-                  </th>
-                  <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Lieferzeit / Konditionen" : "Delivery / Terms"}
-                  </th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">
-                    {t.pages.settings === "Einstellungen" ? "Aktionen" : "Actions"}
-                  </th>
+                  <th className="px-6 py-4">{sup.colCompany}</th>
+                  <th className="px-6 py-4">{ic.email}</th>
+                  <th className="px-6 py-4">{sup.colPhone}</th>
+                  <th className="px-6 py-4">{sup.colDelivery}</th>
+                  <th className="px-6 py-4">{ic.status}</th>
+                  <th className="px-6 py-4 text-right">{ic.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -260,7 +241,9 @@ export default function SuppliersPage() {
                         {s.deliveryTime && (
                           <div className="text-xs flex items-center gap-1">
                             <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span>{s.deliveryTime} {t.pages.settings === "Einstellungen" ? "Tage" : "days"}</span>
+                            <span>
+                              {s.deliveryTime} {ic.days}
+                            </span>
                           </div>
                         )}
                         {s.paymentTerms && (
@@ -282,7 +265,7 @@ export default function SuppliersPage() {
                             : "bg-slate-50 text-slate-600 border-slate-200"
                         }`}
                       >
-                        {s.isActive ? "Active" : "Inactive"}
+                        {s.isActive ? ic.active : ic.inactive}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -290,14 +273,14 @@ export default function SuppliersPage() {
                         <button
                           onClick={() => openEditModal(s)}
                           className="btn btn-outline border-slate-200 text-slate-600 p-1.5 h-8 w-8 hover:bg-slate-50"
-                          title="Edit"
+                          title={ic.edit}
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(s.id, s.companyName)}
                           className="btn btn-outline border-red-100 text-red-600 p-1.5 h-8 w-8 hover:bg-red-50"
-                          title="Delete"
+                          title={ic.delete}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -317,13 +300,7 @@ export default function SuppliersPage() {
           <div className="card w-full max-w-lg shadow-2xl relative bg-white border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                {editingId
-                  ? t.pages.settings === "Einstellungen"
-                    ? "Lieferant bearbeiten"
-                    : "Edit Supplier"
-                  : t.pages.settings === "Einstellungen"
-                  ? "Lieferant hinzufügen"
-                  : "Add Supplier"}
+                {editingId ? sup.modalEdit : sup.modalAdd}
               </h3>
               <button
                 type="button"
@@ -337,7 +314,7 @@ export default function SuppliersPage() {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {t.pages.settings === "Einstellungen" ? "Firmenname" : "Company Name"} <span className="text-red-500">*</span>
+                  {sup.companyName} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -351,9 +328,7 @@ export default function SuppliersPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Ansprechpartner" : "Contact Person"}
-                  </label>
+                  <label className="label font-semibold text-slate-700">{sup.contactPerson}</label>
                   <input
                     type="text"
                     className="input mt-1.5 h-11 text-sm"
@@ -363,9 +338,7 @@ export default function SuppliersPage() {
                   />
                 </div>
                 <div>
-                  <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Telefonnummer" : "Phone Number"}
-                  </label>
+                  <label className="label font-semibold text-slate-700">{sup.phone}</label>
                   <input
                     type="tel"
                     className="input mt-1.5 h-11 text-sm"
@@ -378,7 +351,7 @@ export default function SuppliersPage() {
 
               <div>
                 <label className="label font-semibold text-slate-700">
-                  Email <span className="text-red-500">*</span>
+                  {sup.email} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -391,7 +364,7 @@ export default function SuppliersPage() {
               </div>
 
               <div>
-                <label className="label font-semibold text-slate-700">Webseite</label>
+                <label className="label font-semibold text-slate-700">{sup.website}</label>
                 <input
                   type="text"
                   className="input mt-1.5 h-11 text-sm"
@@ -403,9 +376,7 @@ export default function SuppliersPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Lieferzeit (Tage)" : "Delivery Time (Days)"}
-                  </label>
+                  <label className="label font-semibold text-slate-700">{sup.deliveryTime}</label>
                   <input
                     type="number"
                     min="1"
@@ -418,9 +389,7 @@ export default function SuppliersPage() {
                   />
                 </div>
                 <div>
-                  <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Zahlungskonditionen" : "Payment Terms"}
-                  </label>
+                  <label className="label font-semibold text-slate-700">{sup.paymentTerms}</label>
                   <input
                     type="text"
                     className="input mt-1.5 h-11 text-sm"
@@ -440,9 +409,7 @@ export default function SuppliersPage() {
                   className="h-4.5 w-4.5 rounded border-slate-300 text-primary focus:ring-primary"
                 />
                 <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 cursor-pointer">
-                  {t.pages.settings === "Einstellungen"
-                    ? "Lieferant aktiv (wird in Auswahllisten angezeigt)"
-                    : "Active (visible in selection dropdowns)"}
+                  {sup.activeCheckbox}
                 </label>
               </div>
 
@@ -452,13 +419,10 @@ export default function SuppliersPage() {
                   onClick={() => setIsModalOpen(false)}
                   className="btn btn-outline border-slate-200 text-slate-600 h-10 px-4 text-sm font-semibold"
                 >
-                  {t.pages.settings === "Einstellungen" ? "Abbrechen" : "Cancel"}
+                  {ic.cancel}
                 </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary h-10 px-4 text-sm font-semibold"
-                >
-                  {t.pages.settings === "Einstellungen" ? "Speichern" : "Save"}
+                <button type="submit" className="btn btn-primary h-10 px-4 text-sm font-semibold">
+                  {ic.save}
                 </button>
               </div>
             </form>

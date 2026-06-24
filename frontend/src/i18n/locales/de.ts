@@ -1,4 +1,5 @@
 import type { TranslationSchema } from '../types'
+import { extraDe } from './extraDe'
 
 export const de: TranslationSchema = {
   app: {
@@ -67,7 +68,7 @@ export const de: TranslationSchema = {
       invoices: 'Rechnungen',
       settings: 'Einstellungen',
     },
-    dashboard: 'Armaturenbrett',
+    dashboard: 'Übersicht',
     newContract: 'Neuer Vertrag',
     contracts: 'Verträge',
     searchContracts: 'Suchverträge',
@@ -79,6 +80,13 @@ export const de: TranslationSchema = {
     invoices: 'Rechnungen suchen',
     settings: 'Shopdaten',
     logout: 'Abmelden',
+    customers: 'Kunden',
+    calendar: 'Kalender',
+    inventory: 'Lager',
+    inventorySection: 'Lagerverwaltung',
+    emailLogs: 'E-Mail-Protokolle',
+    adminPanel: 'Administration',
+    adminDashboard: 'Admin-Übersicht',
   },
   topbar: {
     notifications: 'Benachrichtigungen',
@@ -1010,6 +1018,7 @@ export const de: TranslationSchema = {
       selectEmployee: '-- Mitarbeiter auswählen --'
     }
   },
+  ...extraDe,
   language: {
     label: 'Sprache',
     de: 'Deutsch',

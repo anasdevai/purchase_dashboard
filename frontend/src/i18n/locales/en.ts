@@ -1,4 +1,5 @@
 import type { TranslationSchema } from '../types'
+import { extraEn } from './extraEn'
 
 export const en: TranslationSchema = {
   app: {
@@ -77,6 +78,13 @@ export const en: TranslationSchema = {
     invoices: 'Search Invoices',
     settings: 'Shop Details',
     logout: 'Logout',
+    customers: 'Customers',
+    calendar: 'Calendar',
+    inventory: 'Inventory',
+    inventorySection: 'Inventory',
+    emailLogs: 'Email Logs',
+    adminPanel: 'Admin Panel',
+    adminDashboard: 'Admin Dashboard',
   },
   topbar: {
     notifications: 'Notifications',
@@ -1004,6 +1012,7 @@ export const en: TranslationSchema = {
       selectEmployee: '-- Select Employee --'
     }
   },
+  ...extraEn,
   language: {
     label: 'Language',
     de: 'Deutsch',
