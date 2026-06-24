@@ -19,7 +19,7 @@ import type { Supplier } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function SuppliersPage() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);

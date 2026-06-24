@@ -29,7 +29,7 @@ const SPARE_PART_CATEGORIES = [
 ];
 
 export default function SparePartsPage() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
 

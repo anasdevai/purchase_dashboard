@@ -781,6 +781,7 @@ export type TranslationSchema = {
       WorkPending: string
       SentToRepairCompany: string
       AppointmentScheduled: string
+      SparePartArrived: string
       Completed: string
       Cancelled: string
     }

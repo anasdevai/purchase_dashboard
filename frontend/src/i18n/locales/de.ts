@@ -792,6 +792,7 @@ export const de: TranslationSchema = {
       WorkPending: 'Arbeit ausstehend',
       SentToRepairCompany: 'An Reparaturfirma gesendet',
       AppointmentScheduled: 'Termin geplant',
+      SparePartArrived: 'Ersatzteil eingetroffen',
       Completed: 'Abgeschlossen',
       Cancelled: 'Storniert',
     },

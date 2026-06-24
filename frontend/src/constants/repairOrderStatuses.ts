@@ -5,6 +5,7 @@ export const REPAIR_ORDER_STATUSES = [
   'WorkPending',
   'SentToRepairCompany',
   'AppointmentScheduled',
+  'SparePartArrived',
   'Completed',
   'Cancelled',
 ] as const satisfies readonly RepairOrderStatus[]
@@ -14,6 +15,7 @@ export const ACTIVE_REPAIR_ORDER_STATUSES = [
   'WorkPending',
   'SentToRepairCompany',
   'AppointmentScheduled',
+  'SparePartArrived',
 ] as const satisfies readonly RepairOrderStatus[]
 
 export type RepairOrderListFilter = 'active' | RepairOrderStatus

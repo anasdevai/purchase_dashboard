@@ -6,7 +6,7 @@ import type { StockAdjustment } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function StockAdjustmentsPage() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isDe = language === "de";
   const { showToast } = useAppConfirm();
   const [history, setHistory] = useState<StockAdjustment[]>([]);

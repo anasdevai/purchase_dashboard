@@ -2,33 +2,41 @@ import { getActiveTranslations } from '../i18n/active'
 import { ApiError, resolveApiErrorMessage } from '../utils/apiErrors'
 import { isAuthErrorCode } from '../utils/authErrorCodes'
 
-const API_PORT = '4000'
+const LOCAL_API_BASE = 'http://localhost:4000'
 
-function resolveApiBaseUrl() {
-  const fromEnv =
-    (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+/** API routes in this app are `/api/...`; base URL must be the origin only (no `/api` suffix). */
+function normalizeApiOrigin(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '')
+  if (trimmed.endsWith('/api')) {
+    return trimmed.slice(0, -4)
+  }
+  return trimmed
+}
 
-  // If a production API URL is explicitly configured (not localhost), use it directly.
-  if (fromEnv && !fromEnv.includes('localhost') && !fromEnv.includes('127.0.0.1')) {
-    return fromEnv
+function resolveApiBaseUrl(): string {
+  const fromApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim()
+  const fromBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim()
+
+  if (fromApiUrl) {
+    return normalizeApiOrigin(fromApiUrl)
+  }
+  if (fromBaseUrl) {
+    return normalizeApiOrigin(fromBaseUrl)
   }
 
   if (typeof window !== 'undefined') {
-    const { hostname, protocol } = window.location
-    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1'
-
-    // When opened from another device via LAN IP, target the API on the same host.
-    if (!isLocalHost) {
-      return `${protocol}//${hostname}:${API_PORT}`
+    const { hostname, origin } = window.location
+    const isLocalDev = hostname === 'localhost' || hostname === '127.0.0.1'
+    // Production / Tailscale / LAN UI: same public host (API via reverse proxy at /api/*).
+    if (!isLocalDev) {
+      return origin
     }
   }
 
-  return fromEnv || `http://localhost:${API_PORT}`
+  return LOCAL_API_BASE
 }
 
 const API_BASE_URL = resolveApiBaseUrl()
-
 
 const TOKEN_KEY = 'device-contract-auth-token'
 

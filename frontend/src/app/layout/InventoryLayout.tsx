@@ -10,7 +10,7 @@ import clsx from "clsx";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export function InventoryLayout() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isDe = language === "de";
   const location = useLocation();
 

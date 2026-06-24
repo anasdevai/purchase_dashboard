@@ -3,6 +3,7 @@ export type RepairOrderStatus =
   | 'WorkPending'
   | 'SentToRepairCompany'
   | 'AppointmentScheduled'
+  | 'SparePartArrived'
   | 'Completed'
   | 'Cancelled'
 

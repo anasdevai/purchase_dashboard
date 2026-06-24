@@ -29,7 +29,8 @@ export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, 
       invoices: { select: { id: true, invoiceNumber: true, pdfPath: true } },
       history: { orderBy: { createdAt: "asc" } },
       assignedEmployee: { select: { id: true, name: true, email: true } },
-      customer: true
+      customer: true,
+      repairCompany: { select: { name: true, contactInfo: true, notes: true } },
     }
   });
 

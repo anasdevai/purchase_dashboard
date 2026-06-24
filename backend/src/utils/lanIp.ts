@@ -66,7 +66,7 @@ export const getLocalIpAddress = (): string => {
  */
 export const getSignatureUrl = (origin: string | undefined, token: string): string => {
   const lanIp = getLocalIpAddress();
-  const baseOrigin = origin || env.FRONTEND_URL;
+  const baseOrigin = origin || env.frontendUrl || "http://localhost:5173";
 
   try {
     const url = new URL(baseOrigin);

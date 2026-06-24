@@ -787,6 +787,7 @@ export const en: TranslationSchema = {
       WorkPending: 'Work Pending',
       SentToRepairCompany: 'Sent to Repair Company',
       AppointmentScheduled: 'Appointment Scheduled',
+      SparePartArrived: 'Spare Part Arrived',
       Completed: 'Completed',
       Cancelled: 'Cancelled',
     },

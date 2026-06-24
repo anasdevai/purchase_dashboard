@@ -16,7 +16,7 @@ import type { InventoryOrder, Supplier, SparePart } from "../../types/inventory"
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function OrdersPage() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
 

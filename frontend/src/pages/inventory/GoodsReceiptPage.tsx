@@ -20,7 +20,7 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 type SubTab = "book" | "history";
 
 export default function GoodsReceiptPage() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
 
