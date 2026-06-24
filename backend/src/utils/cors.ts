@@ -10,3 +10,7 @@ export const isCorsOriginAllowed = (origin: string | undefined) => {
   if (env.CORS_ALLOW_LAN && LAN_FRONTEND_ORIGIN.test(origin)) return true;
   return false;
 };
+
+export const getConfiguredCorsOrigins = () => {
+  return env.corsOrigins;
+};

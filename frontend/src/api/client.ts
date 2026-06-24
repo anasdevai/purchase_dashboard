@@ -29,6 +29,7 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl()
 
+
 const TOKEN_KEY = 'device-contract-auth-token'
 
 export type AuthUser = {
