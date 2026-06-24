@@ -50,9 +50,9 @@ const localizations = {
 };
 
 export function EmailLogsPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
+  const isDe = language === "de";
   const loc = isDe ? localizations.de : localizations.en;
 
   const [logs, setLogs] = useState<EmailLog[]>([]);
@@ -259,7 +259,7 @@ export function EmailLogsPage() {
                 onClick={() => setSelectedLog(null)}
                 className="btn btn-outline border border-slate-200 hover:bg-slate-50 h-10 px-5 text-sm font-semibold text-slate-700"
               >
-                Schließen / Close
+                {isDe ? "Schließen" : "Close"}
               </button>
             </div>
           </div>

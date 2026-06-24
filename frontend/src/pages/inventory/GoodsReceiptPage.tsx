@@ -20,7 +20,8 @@ import { useLanguage } from "../../i18n/LanguageProvider";
 type SubTab = "book" | "history";
 
 export default function GoodsReceiptPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
 
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("book");
@@ -136,13 +137,13 @@ export default function GoodsReceiptPage() {
     }
 
     confirm({
-      title: t.pages.settings === "Einstellungen" ? "Wareneingang buchen?" : "Confirm Goods Receipt?",
+      title: isDe ? "Wareneingang buchen?" : "Confirm Goods Receipt?",
       message:
-        t.pages.settings === "Einstellungen"
+        isDe
           ? "Der Bestand der Teile wird erhöht und die Bestellung aktualisiert."
           : "This will increment the stock of selected parts and reconcile the purchase order status.",
-      confirmLabel: t.pages.settings === "Einstellungen" ? "Buchen" : "Book Receipt",
-      cancelLabel: t.pages.settings === "Einstellungen" ? "Abbrechen" : "Cancel",
+      confirmLabel: isDe ? "Buchen" : "Book Receipt",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "primary",
       onConfirm: async () => {
         try {
@@ -200,7 +201,7 @@ export default function GoodsReceiptPage() {
           }`}
         >
           <PlusSquare className="h-4 w-4" />
-          <span>{t.pages.settings === "Einstellungen" ? "Einbuchen" : "Book Delivery"}</span>
+          <span>{isDe ? "Einbuchen" : "Book Delivery"}</span>
         </button>
         <button
           onClick={() => setActiveSubTab("history")}
@@ -211,7 +212,7 @@ export default function GoodsReceiptPage() {
           }`}
         >
           <History className="h-4 w-4" />
-          <span>{t.pages.settings === "Einstellungen" ? "Protokolle" : "Receipts Log"}</span>
+          <span>{isDe ? "Protokolle" : "Receipts Log"}</span>
         </button>
       </div>
 
@@ -221,7 +222,7 @@ export default function GoodsReceiptPage() {
           <div className="card p-6 bg-white shadow-sm border border-slate-100 rounded-xl lg:col-span-2 space-y-6">
             <div>
               <h2 className="text-base font-bold text-slate-800">
-                {t.pages.settings === "Einstellungen" ? "Wareneingang erfassen" : "Record Incoming Delivery"}
+                {isDe ? "Wareneingang erfassen" : "Record Incoming Delivery"}
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Select an open purchase order and confirm the received quantities. Stock levels will update automatically.
@@ -230,7 +231,7 @@ export default function GoodsReceiptPage() {
 
             <div>
               <label className="label font-bold text-slate-700">
-                {t.pages.settings === "Einstellungen" ? "Offene Bestellung wählen" : "Select Pending Purchase Order"}{" "}
+                {isDe ? "Offene Bestellung wählen" : "Select Pending Purchase Order"}{" "}
                 <span className="text-red-500">*</span>
               </label>
               <select
@@ -322,7 +323,7 @@ export default function GoodsReceiptPage() {
 
                 <div>
                   <label className="label font-bold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Bemerkungen / Empfangsnotiz" : "Delivery Notes / Remarks"}
+                    {isDe ? "Bemerkungen / Empfangsnotiz" : "Delivery Notes / Remarks"}
                   </label>
                   <textarea
                     rows={2}
@@ -340,7 +341,7 @@ export default function GoodsReceiptPage() {
                   >
                     <Download className="h-4 w-4" />
                     <span>
-                      {t.pages.settings === "Einstellungen" ? "Wareneingang buchen" : "Book Goods Receipt"}
+                      {isDe ? "Wareneingang buchen" : "Book Goods Receipt"}
                     </span>
                   </button>
                 </div>

@@ -37,3 +37,4 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
     next(error instanceof HttpError ? error : new HttpError(401, "Invalid or expired token"));
   }
 };
+

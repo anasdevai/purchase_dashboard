@@ -86,7 +86,7 @@ function SidebarNavLink(props: {
 function SidebarNav(props: { onNavigate?: () => void }) {
   const navigate = useNavigate()
   const { logout, user } = useAuth()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { onNavigate } = props
 
   const [sparePartArrivedCount, setSparePartArrivedCount] = useState(0)
@@ -119,19 +119,19 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         { to: '/dashboard', label: t.nav.dashboard, icon: LayoutDashboard, testId: 'nav-dashboard' },
         {
           to: '/repair-requests',
-          label: t.pages.settings === 'Einstellungen' ? 'Online-Anfragen' : 'Website Requests',
+          label: language === 'de' ? 'Online-Anfragen' : 'Website Requests',
           icon: Inbox,
           testId: 'nav-repair-requests',
         },
         {
           to: '/customers',
-          label: t.pages.settings === 'Einstellungen' ? 'Kunden' : 'Customers',
+          label: language === 'de' ? 'Kunden' : 'Customers',
           icon: Users,
           testId: 'nav-customers',
         },
         {
           to: '/calendar',
-          label: t.pages.settings === 'Einstellungen' ? 'Kalender' : 'Calendar',
+          label: language === 'de' ? 'Kalender' : 'Calendar',
           icon: Calendar,
           testId: 'nav-calendar',
         },
@@ -216,11 +216,11 @@ function SidebarNav(props: { onNavigate?: () => void }) {
       ],
     },
     {
-      title: t.pages.settings === 'Einstellungen' ? 'Lagerverwaltung' : 'Inventory',
+      title: language === 'de' ? 'Lagerverwaltung' : 'Inventory',
       items: [
         {
           to: '/inventory',
-          label: t.pages.settings === 'Einstellungen' ? 'Lager' : 'Inventory',
+          label: language === 'de' ? 'Lager' : 'Inventory',
           icon: Package,
           testId: 'nav-inventory',
         },
@@ -253,7 +253,7 @@ function SidebarNav(props: { onNavigate?: () => void }) {
         },
         {
           to: '/email-logs',
-          label: t.pages.settings === 'Einstellungen' ? 'E-Mail-Protokolle' : 'Email Logs',
+          label: language === 'de' ? 'E-Mail-Protokolle' : 'Email Logs',
           icon: Mail,
           testId: 'nav-email-logs',
           end: true,

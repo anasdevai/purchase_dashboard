@@ -3,9 +3,9 @@
 
 // --- CONFIGURATION ---
 // Replace this with your actual Shop UUID from your Dashboard
-$shop_id = "change_this_to_your_actual_shop_uuid";
+$shop_id = "07e4dc10-abac-49f0-8a9a-5424fd174bb3";
 // Your active ngrok URL or local backend URL
-$api_url = "http://localhost:4000/api/public/widget/request";
+$api_url = "https://chaps-backslid-obedient.ngrok-free.dev/api/public/widget/request";
 
 $message = "";
 $message_class = "";

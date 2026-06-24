@@ -19,7 +19,8 @@ import type { Supplier } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function SuppliersPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,13 +119,13 @@ export default function SuppliersPage() {
 
   const handleDelete = (id: string, name: string) => {
     confirm({
-      title: t.pages.settings === "Einstellungen" ? "Lieferant löschen?" : "Delete Supplier?",
+      title: isDe ? "Lieferant löschen?" : "Delete Supplier?",
       message:
-        t.pages.settings === "Einstellungen"
+        isDe
           ? `Möchten Sie den Lieferanten "${name}" wirklich löschen?`
           : `Are you sure you want to permanently delete supplier "${name}"?`,
-      confirmLabel: t.pages.settings === "Einstellungen" ? "Löschen" : "Delete",
-      cancelLabel: t.pages.settings === "Einstellungen" ? "Abbrechen" : "Cancel",
+      confirmLabel: isDe ? "Löschen" : "Delete",
+      cancelLabel: isDe ? "Abbrechen" : "Cancel",
       variant: "danger",
       onConfirm: async () => {
         try {
@@ -155,7 +156,7 @@ export default function SuppliersPage() {
           <input
             type="text"
             placeholder={
-              t.pages.settings === "Einstellungen"
+              isDe
                 ? "Suchen nach Lieferant..."
                 : "Search suppliers by company or contact..."
             }
@@ -170,7 +171,7 @@ export default function SuppliersPage() {
         >
           <Plus className="h-4 w-4" />
           <span>
-            {t.pages.settings === "Einstellungen" ? "Lieferant hinzufügen" : "Add Supplier"}
+            {isDe ? "Lieferant hinzufügen" : "Add Supplier"}
           </span>
         </button>
       </div>
@@ -185,10 +186,10 @@ export default function SuppliersPage() {
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <Truck className="h-12 w-12 text-slate-300 mb-3" />
             <p className="font-semibold text-lg">
-              {t.pages.settings === "Einstellungen" ? "Keine Lieferanten gefunden" : "No Suppliers Found"}
+              {isDe ? "Keine Lieferanten gefunden" : "No Suppliers Found"}
             </p>
             <p className="text-sm">
-              {t.pages.settings === "Einstellungen" ? "Fügen Sie einen neuen Lieferanten hinzu." : "Add a supplier to get started."}
+              {isDe ? "Fügen Sie einen neuen Lieferanten hinzu." : "Add a supplier to get started."}
             </p>
           </div>
         ) : (
@@ -197,18 +198,18 @@ export default function SuppliersPage() {
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Firma / Kontakt" : "Company / Contact"}
+                    {isDe ? "Firma / Kontakt" : "Company / Contact"}
                   </th>
                   <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Telefon" : "Phone"}
+                    {isDe ? "Telefon" : "Phone"}
                   </th>
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Lieferzeit / Konditionen" : "Delivery / Terms"}
+                    {isDe ? "Lieferzeit / Konditionen" : "Delivery / Terms"}
                   </th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">
-                    {t.pages.settings === "Einstellungen" ? "Aktionen" : "Actions"}
+                    {isDe ? "Aktionen" : "Actions"}
                   </th>
                 </tr>
               </thead>
@@ -260,7 +261,7 @@ export default function SuppliersPage() {
                         {s.deliveryTime && (
                           <div className="text-xs flex items-center gap-1">
                             <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span>{s.deliveryTime} {t.pages.settings === "Einstellungen" ? "Tage" : "days"}</span>
+                            <span>{s.deliveryTime} {isDe ? "Tage" : "days"}</span>
                           </div>
                         )}
                         {s.paymentTerms && (
@@ -318,10 +319,10 @@ export default function SuppliersPage() {
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
                 {editingId
-                  ? t.pages.settings === "Einstellungen"
+                  ? isDe
                     ? "Lieferant bearbeiten"
                     : "Edit Supplier"
-                  : t.pages.settings === "Einstellungen"
+                  : isDe
                   ? "Lieferant hinzufügen"
                   : "Add Supplier"}
               </h3>
@@ -337,7 +338,7 @@ export default function SuppliersPage() {
             <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
                 <label className="label font-semibold text-slate-700">
-                  {t.pages.settings === "Einstellungen" ? "Firmenname" : "Company Name"} <span className="text-red-500">*</span>
+                  {isDe ? "Firmenname" : "Company Name"} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -349,10 +350,10 @@ export default function SuppliersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Ansprechpartner" : "Contact Person"}
+                    {isDe ? "Ansprechpartner" : "Contact Person"}
                   </label>
                   <input
                     type="text"
@@ -364,7 +365,7 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Telefonnummer" : "Phone Number"}
+                    {isDe ? "Telefonnummer" : "Phone Number"}
                   </label>
                   <input
                     type="tel"
@@ -401,10 +402,10 @@ export default function SuppliersPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Lieferzeit (Tage)" : "Delivery Time (Days)"}
+                    {isDe ? "Lieferzeit (Tage)" : "Delivery Time (Days)"}
                   </label>
                   <input
                     type="number"
@@ -419,7 +420,7 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Zahlungskonditionen" : "Payment Terms"}
+                    {isDe ? "Zahlungskonditionen" : "Payment Terms"}
                   </label>
                   <input
                     type="text"
@@ -440,7 +441,7 @@ export default function SuppliersPage() {
                   className="h-4.5 w-4.5 rounded border-slate-300 text-primary focus:ring-primary"
                 />
                 <label htmlFor="isActive" className="text-sm font-semibold text-slate-700 cursor-pointer">
-                  {t.pages.settings === "Einstellungen"
+                  {isDe
                     ? "Lieferant aktiv (wird in Auswahllisten angezeigt)"
                     : "Active (visible in selection dropdowns)"}
                 </label>
@@ -452,13 +453,13 @@ export default function SuppliersPage() {
                   onClick={() => setIsModalOpen(false)}
                   className="btn btn-outline border-slate-200 text-slate-600 h-10 px-4 text-sm font-semibold"
                 >
-                  {t.pages.settings === "Einstellungen" ? "Abbrechen" : "Cancel"}
+                  {isDe ? "Abbrechen" : "Cancel"}
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary h-10 px-4 text-sm font-semibold"
                 >
-                  {t.pages.settings === "Einstellungen" ? "Speichern" : "Save"}
+                  {isDe ? "Speichern" : "Save"}
                 </button>
               </div>
             </form>

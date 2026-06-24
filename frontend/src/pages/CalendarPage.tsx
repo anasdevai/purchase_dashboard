@@ -27,9 +27,9 @@ import { getFriendlyErrorMessage, logApiError } from "../utils/apiErrors";
 type ViewMode = "day" | "week" | "month" | "list";
 
 export function CalendarPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { confirm, showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
+  const isDe = language === "de";
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);

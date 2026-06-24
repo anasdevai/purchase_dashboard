@@ -71,9 +71,9 @@ export interface CustomerFormModalProps {
 }
 
 export function CustomerFormModal({ isOpen, onClose, onSave, customerId }: CustomerFormModalProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
+  const isDe = language === "de";
   const loc = isDe ? localizations.de : localizations.en;
 
   const [loading, setLoading] = useState(false);

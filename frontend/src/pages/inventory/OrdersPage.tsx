@@ -16,7 +16,8 @@ import type { InventoryOrder, Supplier, SparePart } from "../../types/inventory"
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function OrdersPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const { confirm, showToast } = useAppConfirm();
 
   const [orders, setOrders] = useState<InventoryOrder[]>([]);
@@ -123,13 +124,13 @@ export default function OrdersPage() {
 
   const handleCancelOrder = (id: string, orderNo: string) => {
     confirm({
-      title: t.pages.settings === "Einstellungen" ? "Bestellung stornieren?" : "Cancel Purchase Order?",
+      title: isDe ? "Bestellung stornieren?" : "Cancel Purchase Order?",
       message:
-        t.pages.settings === "Einstellungen"
+        isDe
           ? `Möchten Sie die Bestellung "${orderNo}" wirklich stornieren? Dies kann nicht rückgängig gemacht werden.`
           : `Are you sure you want to cancel purchase order "${orderNo}"? This action cannot be undone.`,
-      confirmLabel: t.pages.settings === "Einstellungen" ? "Ja, stornieren" : "Yes, Cancel Order",
-      cancelLabel: t.pages.settings === "Einstellungen" ? "Nein" : "No, Keep Order",
+      confirmLabel: isDe ? "Ja, stornieren" : "Yes, Cancel Order",
+      cancelLabel: isDe ? "Nein" : "No, Keep Order",
       variant: "danger",
       onConfirm: async () => {
         try {
@@ -193,7 +194,7 @@ export default function OrdersPage() {
           <input
             type="text"
             placeholder={
-              t.pages.settings === "Einstellungen"
+              isDe
                 ? "Suchen nach Bestellnummer oder Lieferant..."
                 : "Search by order # or supplier name..."
             }
@@ -209,7 +210,7 @@ export default function OrdersPage() {
           className="input h-10 w-full md:w-48 bg-white"
         >
           <option value="">
-            {t.pages.settings === "Einstellungen" ? "Alle Statusse" : "All Statuses"}
+            {isDe ? "Alle Statusse" : "All Statuses"}
           </option>
           <option value="Ordered">Ordered</option>
           <option value="Shipped">Shipped</option>
@@ -224,7 +225,7 @@ export default function OrdersPage() {
         >
           <Plus className="h-4 w-4" />
           <span>
-            {t.pages.settings === "Einstellungen" ? "Bestellung aufgeben" : "Place Purchase Order"}
+            {isDe ? "Bestellung aufgeben" : "Place Purchase Order"}
           </span>
         </button>
       </div>
@@ -239,10 +240,10 @@ export default function OrdersPage() {
           <div className="flex flex-col items-center justify-center py-12 text-slate-500">
             <ClipboardList className="h-12 w-12 text-slate-300 mb-3" />
             <p className="font-semibold text-lg">
-              {t.pages.settings === "Einstellungen" ? "Keine Bestellungen gefunden" : "No Orders Found"}
+              {isDe ? "Keine Bestellungen gefunden" : "No Orders Found"}
             </p>
             <p className="text-sm">
-              {t.pages.settings === "Einstellungen" ? "Legen Sie Ihre erste Lieferantenbestellung an." : "Compile a replenishment order to restock parts."}
+              {isDe ? "Legen Sie Ihre erste Lieferantenbestellung an." : "Compile a replenishment order to restock parts."}
             </p>
           </div>
         ) : (
@@ -252,20 +253,20 @@ export default function OrdersPage() {
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-400">
                   <th className="px-6 py-4 w-10"></th>
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Bestellnummer" : "Order Number"}
+                    {isDe ? "Bestellnummer" : "Order Number"}
                   </th>
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Lieferant" : "Supplier"}
+                    {isDe ? "Lieferant" : "Supplier"}
                   </th>
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Bestelldatum" : "Order Date"}
+                    {isDe ? "Bestelldatum" : "Order Date"}
                   </th>
                   <th className="px-6 py-4">
-                    {t.pages.settings === "Einstellungen" ? "Liefertermin (Soll)" : "Expected Delivery"}
+                    {isDe ? "Liefertermin (Soll)" : "Expected Delivery"}
                   </th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">
-                    {t.pages.settings === "Einstellungen" ? "Aktionen" : "Actions"}
+                    {isDe ? "Aktionen" : "Actions"}
                   </th>
                 </tr>
               </thead>
@@ -298,7 +299,7 @@ export default function OrdersPage() {
                       <td className="px-6 py-4">
                         <div className="font-mono font-black text-slate-900">{o.orderNumber}</div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
-                          {o.items?.length || 0} {t.pages.settings === "Einstellungen" ? "Positionen" : "Items"}{" "}
+                          {o.items?.length || 0} {isDe ? "Positionen" : "Items"}{" "}
                           ({itemQuantityTotal} Units)
                         </div>
                       </td>
@@ -411,7 +412,7 @@ export default function OrdersPage() {
           <div className="card w-full max-w-2xl shadow-2xl relative bg-white border border-slate-100">
             <div className="flex items-center justify-between border-b border-slate-150 px-5 py-4 bg-slate-50 rounded-t-xl">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                {t.pages.settings === "Einstellungen"
+                {isDe
                   ? "Lieferantenbestellung aufgeben"
                   : "Draft Purchase Order"}
               </h3>
@@ -428,7 +429,7 @@ export default function OrdersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Lieferant auswählen" : "Select Supplier"}{" "}
+                    {isDe ? "Lieferant auswählen" : "Select Supplier"}{" "}
                     <span className="text-red-500">*</span>
                   </label>
                   <select
@@ -448,7 +449,7 @@ export default function OrdersPage() {
 
                 <div>
                   <label className="label font-semibold text-slate-700">
-                    {t.pages.settings === "Einstellungen" ? "Soll-Lieferdatum" : "Expected Delivery Date"}
+                    {isDe ? "Soll-Lieferdatum" : "Expected Delivery Date"}
                   </label>
                   <input
                     type="date"
@@ -463,7 +464,7 @@ export default function OrdersPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="label font-bold text-slate-800 uppercase tracking-wide text-xs">
-                    {t.pages.settings === "Einstellungen" ? "Bestellpositionen" : "Order Items"}
+                    {isDe ? "Bestellpositionen" : "Order Items"}
                   </label>
                   <button
                     type="button"

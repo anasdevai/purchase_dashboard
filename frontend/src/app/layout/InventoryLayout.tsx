@@ -10,34 +10,35 @@ import clsx from "clsx";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export function InventoryLayout() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const location = useLocation();
 
   // Define tab navigation items
   const navItems = [
     {
       to: "/inventory/parts",
-      label: t.pages.settings === "Einstellungen" ? "Ersatzteile" : "Spare Parts",
+      label: isDe ? "Ersatzteile" : "Spare Parts",
       icon: Package,
     },
     {
       to: "/inventory/suppliers",
-      label: t.pages.settings === "Einstellungen" ? "Lieferanten" : "Suppliers",
+      label: isDe ? "Lieferanten" : "Suppliers",
       icon: Truck,
     },
     {
       to: "/inventory/orders",
-      label: t.pages.settings === "Einstellungen" ? "Bestellungen" : "Purchase Orders",
+      label: isDe ? "Bestellungen" : "Purchase Orders",
       icon: ClipboardList,
     },
     {
       to: "/inventory/receipts",
-      label: t.pages.settings === "Einstellungen" ? "Wareneingänge" : "Goods Receipts",
+      label: isDe ? "Wareneingänge" : "Goods Receipts",
       icon: Download,
     },
     {
       to: "/inventory/adjustments",
-      label: t.pages.settings === "Einstellungen" ? "Bestandshistorie" : "Stock Adjustments",
+      label: isDe ? "Bestandshistorie" : "Stock Adjustments",
       icon: History,
     },
   ];
@@ -61,10 +62,10 @@ export function InventoryLayout() {
       {/* Header Banner */}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold text-slate-900">
-          {t.pages.settings === "Einstellungen" ? "Lagerverwaltung" : "Inventory Management"}
+          {isDe ? "Lagerverwaltung" : "Inventory Management"}
         </h1>
         <p className="text-sm text-slate-500 max-w-3xl">
-          {t.pages.settings === "Einstellungen"
+          {isDe
             ? "Pflegen Sie Ersatzteilbestände, Lieferantendaten, automatisierte Bestellungen und prüfen Sie Wareneingänge auf Abweichungen."
             : "Centralized maintenance of spare parts, stock adjustments, suppliers, automatic and manual replenishment orders, and goods receipt tracking."}
         </p>

@@ -25,8 +25,8 @@ export function AppointmentFormModal({
   onClose,
   onSave,
 }: AppointmentFormModalProps) {
-  const { t } = useLanguage();
-  const isDe = t.pages.settings === "Einstellungen";
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
 
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("");

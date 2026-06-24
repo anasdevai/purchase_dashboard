@@ -54,9 +54,9 @@ export interface CustomerMergeModalProps {
 }
 
 export function CustomerMergeModal({ isOpen, onClose, onMerge }: CustomerMergeModalProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
+  const isDe = language === "de";
   const loc = isDe ? localizations.de : localizations.en;
 
   const [merging, setMerging] = useState(false);

@@ -72,9 +72,9 @@ const localizations = {
 };
 
 export function CustomersPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { confirm, showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
+  const isDe = language === "de";
   const loc = isDe ? localizations.de : localizations.en;
 
   const [customers, setCustomers] = useState<Customer[]>([]);

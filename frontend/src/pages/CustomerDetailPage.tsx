@@ -114,9 +114,9 @@ interface TimelineItem {
 export function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
-  const { t, formatDate, formatMoney } = useLanguage();
+  const { t, language, formatDate, formatMoney } = useLanguage();
   const { confirm, showToast } = useAppConfirm();
-  const isDe = t.pages.settings === "Einstellungen";
+  const isDe = language === "de";
   const loc = isDe ? localizations.de : localizations.en;
 
   const [customer, setCustomer] = useState<Customer | null>(null);

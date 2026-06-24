@@ -6,7 +6,8 @@ import type { StockAdjustment } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
 
 export default function StockAdjustmentsPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isDe = language === "de";
   const { showToast } = useAppConfirm();
   const [history, setHistory] = useState<StockAdjustment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,7 @@ export default function StockAdjustmentsPage() {
           <input
             type="text"
             placeholder={
-              t.pages.settings === "Einstellungen"
+              isDe
                 ? "Suchen nach Teil oder Grund..."
                 : "Search logs by part, SKU, or reason..."
             }

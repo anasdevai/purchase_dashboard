@@ -34,7 +34,8 @@ export const createSupplier = async (userId: string, input: Record<string, unkno
         email: parsed.email,
         website: parsed.website || null,
         deliveryTime: parsed.deliveryTime || null,
-        paymentTerms: parsed.paymentTerms || null
+        paymentTerms: parsed.paymentTerms || null,
+        isActive: parsed.isActive
       }
     });
   } catch (error) {
@@ -59,7 +60,8 @@ export const updateSupplier = async (id: string, userId: string, input: Record<s
         email: parsed.email,
         website: parsed.website,
         deliveryTime: parsed.deliveryTime,
-        paymentTerms: parsed.paymentTerms
+        paymentTerms: parsed.paymentTerms,
+        isActive: parsed.isActive
       }
     });
   } catch (error) {
