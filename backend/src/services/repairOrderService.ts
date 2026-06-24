@@ -14,6 +14,7 @@ import { getShopSettingsForUser, shopSettingsToPdf } from "./settingsService.js"
 import * as emailService from "./emailService.js";
 import { findOrCreateCustomerForRepair } from "./customerService.js";
 import { createPickupAppointmentFromOrder } from "./appointmentService.js";
+import { assertRepairCompanyAccess } from "./repairCompanyService.js";
 
 const toData = (input: Record<string, unknown>) => repairOrderSchema.parse(input);
 
@@ -44,6 +45,8 @@ export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, 
 export const createRepairOrder = async (userId: string, input: Record<string, unknown>) => {
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
+
+  await assertRepairCompanyAccess(orderData.repairCompanyId ?? undefined, userId);
 
   const customer = await findOrCreateCustomerForRepair(
     userId,
@@ -133,6 +136,8 @@ export const updateRepairOrder = async (id: string, userId: string, input: Recor
   const current = await getRepairOrderOrThrow(id, userId, isAdmin);
   const parsed = toData(input);
   const { repairOrderNumber: _ignored, ...orderData } = parsed;
+
+  await assertRepairCompanyAccess(orderData.repairCompanyId ?? undefined, userId);
 
   const customer = await findOrCreateCustomerForRepair(
     userId,
@@ -270,6 +275,13 @@ export const searchRepairOrders = async (userId: string, query: Record<string, u
   if (parsed.model) where.model = { contains: parsed.model, mode: "insensitive" };
   if (parsed.imeiOrSerial) where.imeiOrSerial = { contains: parsed.imeiOrSerial, mode: "insensitive" };
   if (parsed.status) where.status = parsed.status;
+  else if (parsed.filter === "active") {
+    where.status = {
+      in: ["Open", "WorkPending", "SentToRepairCompany", "AppointmentScheduled", "SparePartArrived"]
+    };
+  } else if (parsed.filter) {
+    where.status = parsed.filter;
+  }
 
   const page = parsed.page ?? 1;
   const limit = parsed.limit ?? 15;

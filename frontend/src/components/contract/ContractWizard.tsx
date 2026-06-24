@@ -17,6 +17,7 @@ import {
   type ContractDraftPayload,
 } from '../../api/contracts'
 import { useAppConfirm } from '../common/ConfirmDialogProvider'
+import { FormActionFooter } from '../common/FormActionFooter'
 import { useLanguage } from '../../i18n/LanguageProvider'
 import {
   getFriendlyErrorMessage,
@@ -1319,48 +1320,46 @@ export function ContractWizard(props: {
           </section>
         ) : null}
 
-        <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <FormActionFooter testId="contract-wizard-footer">
           <button
             type="button"
             data-testid="wizard-save-draft"
             disabled={isSubmitting}
             onClick={saveDraft}
-            className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+            className="btn btn-secondary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {w.saveDraft}
           </button>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            data-testid="wizard-back"
+            disabled={isSubmitting || step === 0}
+            onClick={() => setStep((current) => Math.max(0, current - 1))}
+            className="btn btn-secondary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {w.back}
+          </button>
+          {step < steps.length - 1 ? (
             <button
               type="button"
-              data-testid="wizard-back"
-              disabled={isSubmitting || step === 0}
-              onClick={() => setStep((current) => Math.max(0, current - 1))}
-              className="btn btn-secondary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+              data-testid="wizard-next"
+              disabled={isSubmitting}
+              onClick={goNext}
+              className="btn btn-primary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {w.back}
+              {w.next}
             </button>
-            {step < steps.length - 1 ? (
-              <button
-                type="button"
-                data-testid="wizard-next"
-                disabled={isSubmitting}
-                onClick={goNext}
-                className="btn btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {w.next}
-              </button>
-            ) : (
-              <button
-                type="submit"
-                data-testid="wizard-complete"
-                disabled={isSubmitting}
-                className="btn btn-primary w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? w.saving : w.completeAndPdf}
-              </button>
-            )}
-          </div>
-        </div>
+          ) : (
+            <button
+              type="submit"
+              data-testid="wizard-complete"
+              disabled={isSubmitting}
+              className="btn btn-primary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting ? w.saving : w.completeAndPdf}
+            </button>
+          )}
+        </FormActionFooter>
       </form>
     </div>
   )

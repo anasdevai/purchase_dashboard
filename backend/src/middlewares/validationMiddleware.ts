@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { ZodError, type AnyZodObject } from "zod";
+import { AUTH_ERROR_CODES } from "../constants/authErrorCodes.js";
+import { formatZodValidationResponse } from "../utils/zodErrors.js";
 
 export interface ValidationSchemas {
   body?: AnyZodObject;
@@ -35,8 +37,8 @@ export const validate = (schemas: ValidationSchemas) => {
     } catch (error) {
       if (error instanceof ZodError) {
         res.status(400).json({
-          message: "Validation failed",
-          errors: error.format()
+          code: AUTH_ERROR_CODES.VALIDATION_FAILED,
+          ...formatZodValidationResponse(error),
         });
         return;
       }

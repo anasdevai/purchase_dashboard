@@ -5,6 +5,7 @@ import { useAppConfirm } from "../common/ConfirmDialogProvider";
 import { createCustomer, updateCustomer, fetchCustomerDetail } from "../../api/customers";
 import type { CustomerPayload } from "../../types/customer";
 import { getFriendlyErrorMessage, logApiError } from "../../utils/apiErrors";
+import { ModalActionFooter, ModalActionFooterGroup } from "../common/FormActionFooter";
 
 const localizations = {
   de: {
@@ -233,7 +234,8 @@ export function CustomerFormModal({ isOpen, onClose, onSave, customerId }: Custo
             <span className="mt-3 text-sm text-slate-500 font-medium">{loc.loading}</span>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex-1 space-y-4 overflow-y-auto p-6">
             {/* Salutation, First Name, Last Name */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
               <div className="sm:col-span-1">
@@ -418,24 +420,27 @@ export function CustomerFormModal({ isOpen, onClose, onSave, customerId }: Custo
               />
             </div>
 
-            {/* Footer Buttons */}
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={saving}
-                className="btn btn-outline h-11 px-5 text-sm font-semibold border-slate-200 text-slate-700 hover:bg-slate-50"
-              >
-                {loc.cancel}
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="btn btn-primary h-11 px-5 text-sm font-semibold"
-              >
-                {saving ? loc.saving : loc.save}
-              </button>
             </div>
+
+            <ModalActionFooter>
+              <ModalActionFooterGroup>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={saving}
+                  className="btn btn-outline h-11 px-5 text-sm font-semibold border-slate-200 text-slate-700 hover:bg-slate-50"
+                >
+                  {loc.cancel}
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="btn btn-primary h-11 px-5 text-sm font-semibold"
+                >
+                  {saving ? loc.saving : loc.save}
+                </button>
+              </ModalActionFooterGroup>
+            </ModalActionFooter>
           </form>
         )}
       </div>

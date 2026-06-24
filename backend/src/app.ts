@@ -21,6 +21,8 @@ import { sparePartRouter } from "./routes/sparePartRoutes.js";
 import { inventoryOrderRouter } from "./routes/inventoryOrderRoutes.js";
 import { goodsReceiptRouter } from "./routes/goodsReceiptRoutes.js";
 import { publicWidgetRouter, repairRequestRouter } from "./routes/repairRequestRoutes.js";
+import { repairCompanyRouter } from "./routes/repairCompanyRoutes.js";
+import { ocrRouter } from "./routes/ocrRoutes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorMiddleware.js";
 import { apiLimiter } from "./middlewares/rateLimiters.js";
 
@@ -47,7 +49,15 @@ app.use(
       callback(null, isCorsOriginAllowed(origin));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+      "X-App-Language",
+      "x-app-language",
+    ],
     credentials: true
   })
 );
@@ -66,6 +76,8 @@ app.use("/api/auth", apiLimiter, authRouter);
 app.use("/api/contracts", apiLimiter, contractRouter);
 app.use("/api/dashboard", apiLimiter, dashboardRouter);
 app.use("/api/repair-orders", apiLimiter, repairOrderRouter);
+app.use("/api/repair-companies", apiLimiter, repairCompanyRouter);
+app.use("/api/ocr", apiLimiter, ocrRouter);
 app.use("/api/invoices", apiLimiter, invoiceRouter);
 app.use("/api/settings", apiLimiter, settingsRouter);
 app.use("/api/settings/email", apiLimiter, emailSettingsRouter);

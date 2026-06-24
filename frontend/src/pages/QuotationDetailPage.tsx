@@ -14,6 +14,8 @@ import {
 import { fetchEmployees, type Employee } from '../api/repairOrders'
 import { loadShopSettings, type ShopSettings, defaultShopSettings } from '../services/shopSettings'
 import { CustomerSearchInput } from '../components/repairOrders/CustomerSearchInput'
+import { PresetSelectField } from '../components/common/PresetSelectField'
+import { FormActionFooter } from '../components/common/FormActionFooter'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
@@ -587,79 +589,39 @@ export function QuotationDetailPage(props: { mode?: 'new' }) {
 
           <QuotationCard title={t.quotations.detail.deviceInfo}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label>
-                <span className="label">{t.quotations.detail.deviceType}</span>
-                <select
-                  className="input h-11"
-                  value={form.deviceType}
-                  onChange={(e) => setField('deviceType', e.target.value)}
-                >
-                  <option value="">-- Presets --</option>
-                  {DEVICE_TYPE_PRESETS.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="input h-11 mt-2"
-                  placeholder="Enter device type manually..."
-                  value={form.deviceType}
-                  onChange={(e) => setField('deviceType', e.target.value)}
-                />
-                {fieldErrors.deviceType && (
-                  <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.deviceType}</p>
-                )}
-              </label>
-
-              <label>
-                <span className="label">{t.quotations.detail.brand}</span>
-                <select
-                  className="input h-11"
-                  value={form.brand}
-                  onChange={(e) => setField('brand', e.target.value)}
-                >
-                  <option value="">-- Presets --</option>
-                  {BRAND_PRESETS.map((brand) => (
-                    <option key={brand} value={brand}>
-                      {brand}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="input h-11 mt-2"
-                  placeholder="Enter brand manually..."
-                  value={form.brand ?? ''}
-                  onChange={(e) => setField('brand', e.target.value)}
-                />
-              </label>
+              <PresetSelectField
+                testId="quotation-device-type"
+                label={t.quotations.detail.deviceType}
+                value={form.deviceType}
+                presets={DEVICE_TYPE_PRESETS}
+                presetLabels={t.contractWizard.options}
+                otherLabel={t.repairOrders.detail.otherOption}
+                customPlaceholder={t.repairOrders.detail.deviceTypeCustomPlaceholder}
+                error={fieldErrors.deviceType}
+                onChange={(value) => setField('deviceType', value)}
+              />
+              <PresetSelectField
+                testId="quotation-brand"
+                label={t.quotations.detail.brand}
+                value={form.brand ?? ''}
+                presets={BRAND_PRESETS}
+                otherLabel={t.repairOrders.detail.otherOption}
+                customPlaceholder={t.repairOrders.detail.brandCustomPlaceholder}
+                onChange={(value) => setField('brand', value)}
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label>
-                <span className="label">{t.quotations.detail.model}</span>
-                <select
-                  className="input h-11"
-                  value={form.model}
-                  onChange={(e) => setField('model', e.target.value)}
-                >
-                  <option value="">-- Presets --</option>
-                  {MODEL_PRESETS.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="input h-11 mt-2"
-                  placeholder="Enter model manually..."
-                  value={form.model}
-                  onChange={(e) => setField('model', e.target.value)}
-                />
-                {fieldErrors.model && (
-                  <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.model}</p>
-                )}
-              </label>
+              <PresetSelectField
+                testId="quotation-model"
+                label={t.quotations.detail.model}
+                value={form.model}
+                presets={MODEL_PRESETS}
+                otherLabel={t.repairOrders.detail.otherOption}
+                customPlaceholder={t.repairOrders.detail.modelCustomPlaceholder}
+                error={fieldErrors.model}
+                onChange={(value) => setField('model', value)}
+              />
 
               <Field
                 label={t.quotations.detail.imeiOrSerial}
@@ -838,23 +800,25 @@ export function QuotationDetailPage(props: { mode?: 'new' }) {
           </QuotationCard>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2 text-sm text-slate-500">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            <span>{t.invoices.detail.pdfFooterNote}</span>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              type="submit"
-              data-testid="quotation-save"
-              className="btn btn-primary h-11 px-5"
-              disabled={saving}
-            >
-              <Save className="h-4 w-4" />
-              {saving ? t.quotations.detail.saving : t.quotations.detail.saveQuotation}
-            </button>
-          </div>
-        </div>
+        <FormActionFooter
+          testId="quotation-form-footer"
+          note={
+            <div className="flex items-start gap-2">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+              <span>{t.invoices.detail.pdfFooterNote}</span>
+            </div>
+          }
+        >
+          <button
+            type="submit"
+            data-testid="quotation-save"
+            className="btn btn-primary h-11 px-5"
+            disabled={saving}
+          >
+            <Save className="h-4 w-4" />
+            {saving ? t.quotations.detail.saving : t.quotations.detail.saveQuotation}
+          </button>
+        </FormActionFooter>
       </form>
     </div>
   )

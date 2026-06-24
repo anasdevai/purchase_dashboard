@@ -68,26 +68,52 @@ async function readError(response: Response) {
   const t = getActiveTranslations()
   let rawMessage: string | undefined
   let errorCode: string | undefined
+  let details: unknown
 
   try {
     const body = (await response.json()) as {
       message?: string
       code?: string
-      errors?: { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
+      errors?:
+        | Array<{ field: string; message: string }>
+        | { fieldErrors?: Record<string, string[]>; formErrors?: string[] }
+      fieldErrors?: Record<string, string[]>
+      formErrors?: string[]
     }
     errorCode = body.code
-    const fieldMessages = body.errors?.fieldErrors
-      ? Object.entries(body.errors.fieldErrors).flatMap(([field, messages]) =>
-          messages.map((message) => `${field}: ${message}`),
+    details = body.errors ?? body.fieldErrors ?? body.formErrors
+
+    const flattenedFieldErrors =
+      body.fieldErrors ??
+      (Array.isArray(body.errors)
+        ? Object.fromEntries(
+            body.errors.map((entry) => [entry.field, [entry.message]] as const),
+          )
+        : undefined)
+
+    const fieldMessages = flattenedFieldErrors
+      ? Object.entries(flattenedFieldErrors).flatMap(([field, messages]) =>
+          (messages ?? []).map((message) => `${field}: ${message}`),
         )
-      : []
-    const formMessages = body.errors?.formErrors ?? []
-    const details = [...formMessages, ...fieldMessages]
+      : Array.isArray(body.errors)
+        ? body.errors.map((entry) => `${entry.field}: ${entry.message}`)
+        : []
+
+    const formMessages = body.formErrors ?? []
+    const detailMessages = [...formMessages, ...fieldMessages]
     rawMessage =
-      details.length > 0
-        ? `${body.message ?? ''} (${details.join('; ')})`.trim()
+      detailMessages.length > 0
+        ? `${body.message ?? ''} (${detailMessages.join('; ')})`.trim()
         : body.message
-    console.error('[API error]', response.status, response.url, errorCode, rawMessage ?? body)
+
+    console.error('[API error]', response.status, response.url, {
+      code: errorCode,
+      message: body.message,
+      errors: body.errors,
+      fieldErrors: flattenedFieldErrors,
+      formErrors: body.formErrors,
+      rawMessage,
+    })
   } catch {
     console.error('[API error]', response.status, response.url)
   }
@@ -99,7 +125,7 @@ async function readError(response: Response) {
     t,
     resolvedCode,
   )
-  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode)
+  return new ApiError(message, response.status, rawMessage, userFacing, resolvedCode, details)
 }
 
 export async function apiRequest<T>(

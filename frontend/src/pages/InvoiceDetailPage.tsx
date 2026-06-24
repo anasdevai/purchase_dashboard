@@ -29,6 +29,7 @@ import {
 import { fetchEmployees, type Employee } from '../api/repairOrders'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
+import { FormActionFooter } from '../components/common/FormActionFooter'
 import { useLanguage } from '../i18n/LanguageProvider'
 import {
   defaultShopSettings,
@@ -981,92 +982,95 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
           </InvoiceCard>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2 text-sm text-slate-500">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-            <span>{t.invoices.detail.pdfFooterNote}</span>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
+        <FormActionFooter
+          testId="invoice-form-footer"
+          tall
+          note={
+            <div className="flex items-start gap-2">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+              <span>{t.invoices.detail.pdfFooterNote}</span>
+            </div>
+          }
+        >
+          <button
+            type="submit"
+            data-testid="invoice-save"
+            className="btn btn-primary h-11 px-5"
+            disabled={saving}
+          >
+            <Save className="h-4 w-4" />
+            {saving ? t.invoices.detail.saving : t.invoices.detail.saveInvoice}
+          </button>
+          {invoice ? (
             <button
-              type="submit"
-              data-testid="invoice-save"
+              type="button"
+              data-testid="invoice-generate-pdf"
               className="btn btn-primary h-11 px-5"
+              onClick={handleGeneratePdf}
               disabled={saving}
             >
-              <Save className="h-4 w-4" />
-              {saving ? t.invoices.detail.saving : t.invoices.detail.saveInvoice}
+              <FileText className="h-4 w-4" />
+              {t.invoices.detail.generatePdf}
             </button>
-            {invoice ? (
+          ) : null}
+          {invoice ? (
+            <>
               <button
                 type="button"
-                data-testid="invoice-generate-pdf"
+                data-testid="invoice-open-pdf"
                 className="btn btn-primary h-11 px-5"
-                onClick={handleGeneratePdf}
-                disabled={saving}
+                disabled={saving || downloadingPdf}
+                onClick={async () => {
+                  setDownloadingPdf(true)
+                  try {
+                    await openInvoicePdf(invoice.id, language)
+                  } catch (err) {
+                    logApiError('invoice pdf open', err)
+                    showToast('error', getFriendlyErrorMessage(err, 'pdf', t))
+                  } finally {
+                    setDownloadingPdf(false)
+                  }
+                }}
               >
-                <FileText className="h-4 w-4" />
-                {t.invoices.detail.generatePdf}
+                <ExternalLink className="h-4 w-4" />
+                {t.invoices.detail.openPdf}
               </button>
-            ) : null}
-            {invoice ? (
-              <>
-                <button
-                  type="button"
-                  data-testid="invoice-open-pdf"
-                  className="btn btn-primary h-11 px-5"
-                  disabled={saving || downloadingPdf}
-                  onClick={async () => {
-                    setDownloadingPdf(true)
-                    try {
-                      await openInvoicePdf(invoice.id, language)
-                    } catch (err) {
-                      logApiError('invoice pdf open', err)
-                      showToast('error', getFriendlyErrorMessage(err, 'pdf', t))
-                    } finally {
-                      setDownloadingPdf(false)
-                    }
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  {t.invoices.detail.openPdf}
-                </button>
-                <button
-                  type="button"
-                  data-testid="invoice-download-pdf"
-                  className="btn btn-primary h-11 px-5"
-                  disabled={saving || downloadingPdf}
-                  onClick={async () => {
-                    setDownloadingPdf(true)
-                    try {
-                      await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
-                      showToast('success', t.common.toasts.pdfDownloaded)
-                    } catch (err) {
-                      logApiError('invoice pdf download', err)
-                      showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
-                    } finally {
-                      setDownloadingPdf(false)
-                    }
-                  }}
-                >
-                  <Download className="h-4 w-4" />
-                  {t.invoices.detail.downloadPdf}
-                </button>
-              </>
-            ) : null}
-            {resolveCustomerEmail() ? (
               <button
                 type="button"
-                data-testid="invoice-send-email"
-                className="btn btn-secondary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={handleSendEmail}
-                disabled={saving || sendingEmail}
+                data-testid="invoice-download-pdf"
+                className="btn btn-primary h-11 px-5"
+                disabled={saving || downloadingPdf}
+                onClick={async () => {
+                  setDownloadingPdf(true)
+                  try {
+                    await downloadInvoicePdf(invoice.id, `${invoice.invoiceNumber}.pdf`, language)
+                    showToast('success', t.common.toasts.pdfDownloaded)
+                  } catch (err) {
+                    logApiError('invoice pdf download', err)
+                    showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                  } finally {
+                    setDownloadingPdf(false)
+                  }
+                }}
               >
-                <Mail className="h-4 w-4" />
-                {sendingEmail ? t.common.pleaseWait : t.invoices.detail.sendEmailBtn}
+                <Download className="h-4 w-4" />
+                {t.invoices.detail.downloadPdf}
               </button>
-            ) : null}
-          </div>
-        </div>
+            </>
+          ) : null}
+          {resolveCustomerEmail() ? (
+            <button
+              type="button"
+              data-testid="invoice-send-email"
+              className="btn btn-secondary h-11 px-5 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleSendEmail}
+              disabled={saving || sendingEmail}
+            >
+              <Mail className="h-4 w-4" />
+              {sendingEmail ? t.common.pleaseWait : t.invoices.detail.sendEmailBtn}
+            </button>
+          ) : null}
+        </FormActionFooter>
       </form>
     </div>
   )

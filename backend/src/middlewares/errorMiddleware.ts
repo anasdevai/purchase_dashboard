@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { AUTH_ERROR_CODES } from "../constants/authErrorCodes.js";
 import { HttpError } from "../utils/httpError.js";
+import { formatZodValidationResponse } from "../utils/zodErrors.js";
 import fs from "node:fs";
 
 const readHttpErrorCode = (error: HttpError): string | undefined => {
@@ -22,9 +23,8 @@ export const notFoundHandler = (req: Request, _res: Response, next: NextFunction
 export const errorHandler = (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof ZodError) {
     return res.status(400).json({
-      message: "Validation failed",
       code: AUTH_ERROR_CODES.VALIDATION_FAILED,
-      errors: error.flatten()
+      ...formatZodValidationResponse(error),
     });
   }
 

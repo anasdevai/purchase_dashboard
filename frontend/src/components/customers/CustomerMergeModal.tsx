@@ -323,7 +323,7 @@ export function CustomerMergeModal({ isOpen, onClose, onMerge }: CustomerMergeMo
         </div>
 
         {/* Footer Buttons */}
-        <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+        <div className="modal-action-footer flex shrink-0 flex-col gap-2 border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}

@@ -39,6 +39,10 @@ export async function fetchRepairOrder(id: string) {
 }
 
 export async function saveRepairOrder(payload: RepairOrderPayload, id?: string) {
+  if (import.meta.env.DEV) {
+    console.log('[saveRepairOrder] payload', payload)
+  }
+
   const response = await apiRequest<RepairOrderResponse>(
     id ? `/api/repair-orders/${id}` : '/api/repair-orders',
     {

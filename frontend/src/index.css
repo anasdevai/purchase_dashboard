@@ -91,4 +91,44 @@
   .label {
     @apply mb-1.5 block text-xs font-medium text-slate-600;
   }
+
+  .form-action-footer-spacer {
+    height: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .form-action-footer-spacer {
+      height: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .form-action-footer-spacer-tall {
+      height: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  .form-action-footer-spacer-tall {
+    height: calc(16rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .form-action-footer-actions {
+    @apply flex w-full shrink-0 flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end;
+  }
+
+  .form-action-footer-actions .btn,
+  .form-action-footer-actions a.btn {
+    @apply w-full sm:w-auto;
+  }
+
+  .modal-action-footer {
+    @apply sm:flex-row sm:items-center sm:justify-end;
+  }
+
+  .modal-action-footer-group {
+    @apply flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end;
+  }
+
+  .modal-action-footer .btn,
+  .modal-action-footer-group .btn {
+    @apply w-full sm:w-auto;
+  }
 }

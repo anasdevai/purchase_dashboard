@@ -7,6 +7,7 @@ import type { Customer } from "../../types/customer";
 import type { RepairOrder } from "../../types/repairOrder";
 import type { AppointmentStatus, AppointmentSource } from "../../types/appointment";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import { ModalActionFooter, ModalActionFooterGroup } from "../common/FormActionFooter";
 
 interface AppointmentFormModalProps {
   isOpen: boolean;
@@ -258,7 +259,8 @@ export function AppointmentFormModal({
         </div>
 
         {/* Form body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {error && (
             <div className="p-3 bg-red-50 text-red-600 text-xs rounded-lg font-semibold">
               {error}
@@ -478,23 +480,22 @@ export function AppointmentFormModal({
             />
           </div>
 
-          {/* Footer Actions */}
-          <div className="flex items-center justify-between border-t border-slate-100 pt-4 mt-6">
-            <div>
-              {appointmentId && selectedCustomer?.email && (
-                <button
-                  type="button"
-                  onClick={handleSendReminder}
-                  disabled={loading}
-                  className="btn btn-outline text-slate-600 text-xs px-3 py-2 border-slate-200 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
-                  {isDe ? "Kunde erinnern" : "Send Reminder"}
-                </button>
-              )}
-            </div>
+          </div>
 
-            <div className="flex items-center gap-2">
+          <ModalActionFooter className="gap-3 bg-white">
+            {appointmentId && selectedCustomer?.email ? (
+              <button
+                type="button"
+                onClick={handleSendReminder}
+                disabled={loading}
+                className="btn btn-outline w-full text-slate-600 text-xs px-3 py-2 border-slate-200 hover:bg-slate-50 disabled:opacity-50 sm:mr-auto sm:w-auto"
+              >
+                <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
+                {isDe ? "Kunde erinnern" : "Send Reminder"}
+              </button>
+            ) : null}
+
+            <ModalActionFooterGroup>
               <button
                 type="button"
                 onClick={onClose}
@@ -509,9 +510,8 @@ export function AppointmentFormModal({
               >
                 {loading ? (isDe ? "Wird gespeichert..." : "Saving...") : (isDe ? "Speichern" : "Save")}
               </button>
-            </div>
-          </div>
-
+            </ModalActionFooterGroup>
+          </ModalActionFooter>
         </form>
       </div>
     </div>

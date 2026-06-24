@@ -1,6 +1,11 @@
 import { z } from "zod";
 
+/** Must match `RepairOrderStatus` in prisma/schema.prisma */
 export const repairOrderStatuses = [
+  "Open",
+  "WorkPending",
+  "SentToRepairCompany",
+  "AppointmentScheduled",
   "New",
   "Received",
   "InDiagnosis",
@@ -60,6 +65,11 @@ const optionalMoney = z.preprocess(
     .refine((val) => val === undefined || Number.isFinite(val), "Invalid amount")
 );
 
+const optionalUuid = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? undefined : value),
+  z.string().uuid().optional().nullable()
+);
+
 export const repairOrderSchema = z.object({
   repairOrderNumber: optionalText,
   customerName: requiredText(150),
@@ -70,7 +80,7 @@ export const repairOrderSchema = z.object({
   ),
   customerAddress: optionalText,
   deviceType: requiredText(100),
-  brand: requiredText(100),
+  brand: optionalText,
   model: requiredText(150),
   imeiOrSerial: optionalText,
   passwordPin: optionalText,
@@ -83,7 +93,7 @@ export const repairOrderSchema = z.object({
   ),
   requiredSpareParts: optionalText,
   sparePartStatus: z.enum(sparePartStatuses).optional(),
-  visibleDamage: requiredText(2000),
+  visibleDamage: optionalText,
   technicianNotes: optionalText,
   estimatedPrice: optionalMoney,
   discountPercent: z.preprocess(
@@ -94,9 +104,13 @@ export const repairOrderSchema = z.object({
   paymentMethod: z.enum(repairPaymentMethods).optional(),
   expectedCompletionDate: optionalDate,
   status: z.enum(repairOrderStatuses).optional(),
-  assignedEmployeeId: z.string().uuid().optional().nullable(),
-  customerId: z.string().uuid().optional().nullable()
+  repairCompanyId: optionalUuid,
+  repairCompanyNotes: optionalText,
+  assignedEmployeeId: optionalUuid,
+  customerId: optionalUuid
 });
+
+export const repairOrderListFilters = ["active", ...repairOrderStatuses] as const;
 
 export const searchRepairOrdersSchema = z.object({
   q: optionalText,
@@ -106,6 +120,7 @@ export const searchRepairOrdersSchema = z.object({
   model: optionalText,
   imeiOrSerial: optionalText,
   status: z.enum(repairOrderStatuses).optional(),
+  filter: z.enum(repairOrderListFilters).optional(),
   page: z.preprocess(
     (value) => (value === "" || value === undefined || value === null ? undefined : value),
     z.coerce.number().int().positive().default(1)

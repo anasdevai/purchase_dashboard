@@ -16,7 +16,8 @@ import { fetchRepairCompanies } from '../api/repairCompanies'
 import { RepairCompanyFields } from '../components/repairOrders/RepairCompanyFields'
 import { RepairOrderOcrScan } from '../components/repairOrders/RepairOrderOcrScan'
 import { RepairOrderStatusSelect } from '../components/repairOrders/RepairOrderStatusSelect'
-import { FloatingSelect } from '../components/common/FloatingSelect'
+import { PresetSelectField } from '../components/common/PresetSelectField'
+import { FormActionFooter } from '../components/common/FormActionFooter'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import type { TranslationSchema } from '../i18n/types'
@@ -637,6 +638,10 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
     setFieldErrors({})
     setSaving(true)
 
+    if (import.meta.env.DEV) {
+      console.log('[RepairOrderDetailPage] submit payload', validation.payload)
+    }
+
     try {
       const saved = await saveRepairOrder(validation.payload!, repairOrderId)
       const next = applyRepairOrderToForm(saved, t.repairOrders.accessories)
@@ -1150,69 +1155,13 @@ export function RepairOrderDetailPage(props: { mode?: 'new' }) {
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <button type="submit" data-testid="repair-order-save" className="btn btn-primary w-full sm:w-auto" disabled={saving}>
+        <FormActionFooter testId="repair-order-form-footer">
+          <button type="submit" data-testid="repair-order-save" className="btn btn-primary h-11 px-5" disabled={saving}>
             <Save className="h-4 w-4" />
             {saving ? t.repairOrders.detail.saving : t.repairOrders.detail.saveRepairOrder}
           </button>
-        </div>
+        </FormActionFooter>
       </form>
-    </div>
-  )
-}
-
-function PresetSelectField(props: {
-  testId?: string
-  label: string
-  value: string
-  presets: readonly string[]
-  presetLabels?: Partial<Record<string, string>>
-  otherLabel: string
-  customPlaceholder: string
-  error?: string
-  onChange: (value: string) => void
-}) {
-  const preset = (props.presets as readonly string[]).includes(props.value) ? props.value : 'Other'
-
-  return (
-    <div>
-      <label className="label">{props.label}</label>
-      <FloatingSelect
-        testId={props.testId}
-        value={preset}
-        options={[
-          ...(props.presets as readonly string[])
-            .filter((option) => option !== 'Other')
-            .map((option) => ({
-              value: option,
-              label: props.presetLabels?.[option] ?? option,
-            })),
-          { value: 'Other', label: props.otherLabel },
-        ]}
-        onChange={(nextPreset) => {
-          const isCustomCurrently = preset === 'Other'
-
-          if (nextPreset === 'Other' && !isCustomCurrently) {
-            props.onChange('')
-          } else if (nextPreset !== 'Other') {
-            props.onChange(nextPreset)
-          }
-        }}
-      />
-      {preset === 'Other' ? (
-        <input
-          className="input mt-2"
-          data-testid={props.testId ? `${props.testId}-custom` : undefined}
-          placeholder={props.customPlaceholder}
-          value={props.value}
-          onChange={(event) => props.onChange(event.target.value)}
-        />
-      ) : null}
-      {props.error ? (
-        <p className="mt-1 text-xs font-medium text-red-600" data-testid={props.testId ? `${props.testId}-error` : undefined}>
-          {props.error}
-        </p>
-      ) : null}
     </div>
   )
 }

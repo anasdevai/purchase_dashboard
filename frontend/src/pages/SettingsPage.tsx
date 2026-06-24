@@ -3,6 +3,7 @@ import { Info, Save, Shield, Upload, X, Smartphone } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
+import { FormActionFooter } from '../components/common/FormActionFooter'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import {
@@ -875,15 +876,17 @@ export function SettingsPage() {
             <p>{t.settings.infoBanner}</p>
           </div>
 
-          <button
-            type="submit"
-            data-testid="settings-save"
-            disabled={saving}
-            className="btn btn-primary h-12 min-w-[220px] px-6 text-sm font-semibold disabled:opacity-60"
-          >
-            <Save className="h-4 w-4" />
-            {t.settings.save}
-          </button>
+          <FormActionFooter testId="settings-form-footer">
+            <button
+              type="submit"
+              data-testid="settings-save"
+              disabled={saving}
+              className="btn btn-primary h-12 min-w-0 px-6 text-sm font-semibold disabled:opacity-60 sm:min-w-[220px]"
+            >
+              <Save className="h-4 w-4" />
+              {t.settings.save}
+            </button>
+          </FormActionFooter>
         </form>
       )}
 

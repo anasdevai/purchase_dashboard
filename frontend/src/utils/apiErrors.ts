@@ -52,6 +52,7 @@ export function logApiError(context: string, error: unknown) {
       code: error.code,
       rawMessage: error.rawMessage,
       message: error.message,
+      details: error.details,
     })
     return
   }
@@ -140,6 +141,10 @@ export function getFriendlyErrorMessage(
     }
 
     return error.message
+  }
+
+  if (error instanceof ApiError && error.status === 400 && error.rawMessage) {
+    return error.rawMessage
   }
 
   const messages = t.common.friendlyErrors

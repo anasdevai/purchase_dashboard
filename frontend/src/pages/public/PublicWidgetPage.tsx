@@ -278,9 +278,8 @@ export default function PublicWidgetPage() {
 
   return (
     <div style={customStyle} className="min-h-screen bg-slate-50 py-10 px-4 sm:px-6 lg:px-8 text-slate-700">
-      <div className="max-w-3xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100">
-        
-        {/* Header Branding */}
+      <div className="mx-auto flex max-h-[calc(100dvh-5rem)] max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl">
+        <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-6 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-3">
             {settings.widgetShowLogo && settings.logoDataUrl ? (
@@ -766,21 +765,22 @@ export default function PublicWidgetPage() {
             </div>
           )}
         </div>
+        </div>
 
         {/* Wizard Footer Controls */}
         {step <= 5 && (
-          <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <div className="modal-action-footer shrink-0 flex flex-col gap-3 border-t border-slate-100 bg-slate-50/95 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
             {step > 1 ? (
               <button
                 type="button"
                 onClick={() => setStep(step - 1)}
-                className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 bg-white rounded-xl text-sm font-semibold hover:bg-slate-100 hover:border-slate-300 transition-all"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold transition-all hover:border-slate-300 hover:bg-slate-100 sm:w-auto"
               >
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="h-4 w-4" />
                 Back
               </button>
             ) : (
-              <div />
+              <div className="hidden sm:block" />
             )}
 
             {step < 5 ? (
@@ -788,29 +788,29 @@ export default function PublicWidgetPage() {
                 type="button"
                 disabled={nextDisabled()}
                 onClick={() => setStep(step + 1)}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all sm:ml-auto sm:w-auto"
                 style={{
                   backgroundColor: nextDisabled() ? '#cbd5e1' : 'var(--primary)',
-                  cursor: nextDisabled() ? 'not-allowed' : 'pointer'
+                  cursor: nextDisabled() ? 'not-allowed' : 'pointer',
                 }}
               >
                 Next
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
               <button
                 type="submit"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="flex items-center gap-1.5 px-6 py-2 rounded-xl text-sm font-bold text-white shadow-md transition-all"
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all sm:ml-auto sm:w-auto"
                 style={{
                   backgroundColor: 'var(--primary)',
                   opacity: submitting ? 0.7 : 1,
-                  cursor: submitting ? 'wait' : 'pointer'
+                  cursor: submitting ? 'wait' : 'pointer',
                 }}
               >
                 {submitting ? 'Submitting...' : 'Submit Request'}
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="h-4 w-4" />
               </button>
             )}
           </div>
