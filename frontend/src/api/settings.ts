@@ -13,6 +13,9 @@ export type ShopSettingsPayload = {
   ownerName?: string
   vatNumber: string
   companyRegistrationNumber: string
+  companyRegisterCourt: string
+  gln: string
+  gisaNumber: string
   taxNumber: string
   accountHolder: string
   iban: string
@@ -45,6 +48,9 @@ function mapSettings(settings: ShopSettingsPayload) {
     ownerName: settings.ownerName ?? '',
     vatNumber: settings.vatNumber ?? '',
     companyRegistrationNumber: settings.companyRegistrationNumber ?? '',
+    companyRegisterCourt: settings.companyRegisterCourt ?? '',
+    gln: settings.gln ?? '',
+    gisaNumber: settings.gisaNumber ?? '',
     taxNumber: settings.taxNumber ?? '',
     accountHolder: settings.accountHolder ?? '',
     iban: settings.iban ?? '',

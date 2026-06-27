@@ -10,6 +10,7 @@ type InvoiceListResponse = { invoices: Invoice[] }
 type NextInvoiceNumberResponse = { invoiceNumber: string }
 type InvoicePrefillResponse = {
   suggestedInvoiceNumber: string
+  repairOrderNumber?: string
   draft: InvoicePayload
 }
 

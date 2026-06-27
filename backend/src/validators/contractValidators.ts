@@ -36,6 +36,17 @@ export const paymentStatuses = ["Paid", "Pending", "Partial payment"] as const;
 const optionalText = z
   .preprocess((value) => (value === "" ? undefined : value), z.string().trim().max(1000).optional());
 
+/**
+ * A confirmation checkbox that must be explicitly ticked (true) to complete a
+ * contract. Produces a clear, human-readable message instead of Zod's default
+ * "Invalid literal value, expected true".
+ */
+const requiredConfirmation = (message: string) =>
+  z.preprocess(
+    (value) => (value === undefined || value === null ? false : value),
+    z.coerce.boolean().refine((value) => value === true, { message })
+  );
+
 const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) =>
   z.preprocess(
     (value) => (value === "" || value === undefined || value === null ? undefined : value),
@@ -142,12 +153,21 @@ export const completeContractSchema = draftContractSchema
     paymentMethod: z.enum(paymentMethods),
     paymentStatus: z.enum(paymentStatuses).optional(),
     notes: optionalText,
-    ownershipConfirmed: z.literal(true),
-    notStolenConfirmed: z.literal(true),
-    icloudRemoved: z.literal(true),
-    googleLockRemoved: z.literal(true),
-    otherLockRemoved: z.literal(true),
-    factoryResetConfirmed: z.literal(true)
+    // Universal legal/safety confirmations required for every purchase.
+    ownershipConfirmed: requiredConfirmation(
+      "Please confirm the seller is the legal owner of the device."
+    ),
+    notStolenConfirmed: requiredConfirmation(
+      "Please confirm the device is not stolen."
+    ),
+    factoryResetConfirmed: requiredConfirmation(
+      "Please confirm the device has been factory reset."
+    ),
+    // Lock-removal confirmations are platform-specific (iCloud for Apple,
+    // Google lock for Android, etc.) so they are optional, not all mandatory.
+    icloudRemoved: z.coerce.boolean().optional(),
+    googleLockRemoved: z.coerce.boolean().optional(),
+    otherLockRemoved: z.coerce.boolean().optional()
   });
 
 export const searchContractsSchema = z.object({

@@ -69,6 +69,22 @@ export function RepairCompanyFields(props: {
         {selectedCompany ? (
           <div className="rounded-lg border border-white bg-white/80 px-4 py-3 text-sm text-slate-700">
             <div className="font-semibold text-slate-900">{selectedCompany.name}</div>
+            {selectedCompany.contactPerson ? (
+              <div className="mt-1 text-slate-600">{selectedCompany.contactPerson}</div>
+            ) : null}
+            {[selectedCompany.phone, selectedCompany.email].filter(Boolean).length > 0 ? (
+              <div className="mt-1 text-slate-600">
+                {[selectedCompany.phone, selectedCompany.email].filter(Boolean).join(' · ')}
+              </div>
+            ) : null}
+            {[selectedCompany.address, selectedCompany.city, selectedCompany.country].filter(Boolean)
+              .length > 0 ? (
+              <div className="mt-1 text-slate-600">
+                {[selectedCompany.address, selectedCompany.city, selectedCompany.country]
+                  .filter(Boolean)
+                  .join(', ')}
+              </div>
+            ) : null}
             {selectedCompany.contactInfo ? (
               <div className="mt-1 text-slate-600">{selectedCompany.contactInfo}</div>
             ) : null}

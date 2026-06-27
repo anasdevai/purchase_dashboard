@@ -4,6 +4,7 @@ import { z } from "zod";
 export const repairOrderStatuses = [
   "Open",
   "WorkPending",
+  "WaitingForCustomerFeedback",
   "SentToRepairCompany",
   "AppointmentScheduled",
   "New",

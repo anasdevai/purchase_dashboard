@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { useAuth } from '../auth/AuthContext'
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { FormActionFooter } from '../components/common/FormActionFooter'
+import { RepairCompaniesCard } from '../components/settings/RepairCompaniesCard'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
 import {
@@ -297,6 +298,9 @@ export function SettingsPage() {
       website: values.website.trim(),
       vatNumber: values.vatNumber.trim(),
       companyRegistrationNumber: values.companyRegistrationNumber.trim(),
+      companyRegisterCourt: values.companyRegisterCourt.trim(),
+      gln: values.gln.trim(),
+      gisaNumber: values.gisaNumber.trim(),
       taxNumber: values.taxNumber.trim(),
       accountHolder: values.accountHolder.trim(),
       iban: values.iban.trim(),
@@ -692,6 +696,39 @@ export function SettingsPage() {
                 </div>
 
                 <div>
+                  <FieldLabel
+                    label={t.settings.companyRegisterCourt}
+                    optional
+                    optionalText={t.settings.optional}
+                  />
+                  <input
+                    className="input h-11"
+                    placeholder={t.settings.companyRegisterCourtPlaceholder}
+                    {...register('companyRegisterCourt')}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div>
+                    <FieldLabel label={t.settings.gln} optional optionalText={t.settings.optional} />
+                    <input
+                      className="input h-11"
+                      placeholder={t.settings.glnPlaceholder}
+                      {...register('gln')}
+                    />
+                  </div>
+
+                  <div>
+                    <FieldLabel label={t.settings.gisaNumber} optional optionalText={t.settings.optional} />
+                    <input
+                      className="input h-11"
+                      placeholder={t.settings.gisaNumberPlaceholder}
+                      {...register('gisaNumber')}
+                    />
+                  </div>
+                </div>
+
+                <div>
                   <FieldLabel label={t.settings.taxNumber} optional optionalText={t.settings.optional} />
                   <input
                     className="input h-11"
@@ -888,6 +925,12 @@ export function SettingsPage() {
             </button>
           </FormActionFooter>
         </form>
+      )}
+
+      {activeTab === 'shop' && (
+        <div className="mt-5">
+          <RepairCompaniesCard />
+        </div>
       )}
 
       {activeTab === 'email' && (

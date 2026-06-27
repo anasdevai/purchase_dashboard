@@ -1,5 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
-import { getActiveTranslations } from '../i18n/active'
+import { getActiveTranslations, readStoredLanguage } from '../i18n/active'
 import { ApiError } from '../utils/apiErrors'
 import type { RepairOrderListFilter } from '../constants/repairOrderStatuses'
 import type { RepairOrder, RepairOrderPayload, RepairOrderStatus } from '../types/repairOrder'
@@ -77,7 +77,8 @@ export async function deleteRepairOrder(id: string) {
 }
 
 export async function generateRepairOrderPdf(id: string) {
-  const response = await apiRequest<RepairOrderResponse>(`/api/repair-orders/${id}/pdf`, {
+  const lang = readStoredLanguage()
+  const response = await apiRequest<RepairOrderResponse>(`/api/repair-orders/${id}/pdf?lang=${lang}`, {
     method: 'POST',
   })
   return response.repairOrder
@@ -85,8 +86,12 @@ export async function generateRepairOrderPdf(id: string) {
 
 export async function fetchRepairOrderPdfBlob(id: string) {
   const token = getToken()
-  const response = await fetch(`${getApiBaseUrl()}/api/repair-orders/${id}/pdf`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const lang = readStoredLanguage()
+  const response = await fetch(`${getApiBaseUrl()}/api/repair-orders/${id}/pdf?lang=${lang}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-App-Language': lang,
+    },
   })
 
   if (!response.ok) {

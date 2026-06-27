@@ -12,6 +12,7 @@ import { ensureDirectory, getContractStorageDir } from "../utils/paths.js";
 import { generateContractNumber } from "./numberingService.js";
 import { generateContractPdf } from "./pdfService.js";
 import { getShopSettingsForUser, shopSettingsToPdf, getDefaultVatPercent } from "./settingsService.js";
+import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
 
 const includeFiles = {
   files: true,
@@ -317,7 +318,8 @@ const extractCompletionInput = (input: Record<string, unknown>) => {
 export const completeContract = async (
   id: string,
   userId: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  language: InvoicePdfLanguage = "de"
 ) => {
   const existing = await getContractOrThrow(id, userId);
 
@@ -365,7 +367,8 @@ export const completeContract = async (
       netPrice,
       vatAmount
     },
-    pdfShopSettings
+    pdfShopSettings,
+    language
   );
 
   return prisma.contract.update({
@@ -375,7 +378,12 @@ export const completeContract = async (
   });
 };
 
-export const generatePdfForContract = async (id: string, userId: string, isAdmin = false) => {
+export const generatePdfForContract = async (
+  id: string,
+  userId: string,
+  isAdmin = false,
+  language: InvoicePdfLanguage = "de"
+) => {
   const contract = await getContractOrThrow(id, userId, isAdmin);
   const shopSettings = await getShopSettingsForUser(contract.userId);
   const employee = await prisma.user.findUnique({
@@ -392,7 +400,8 @@ export const generatePdfForContract = async (id: string, userId: string, isAdmin
       netPrice,
       vatAmount: grossPrice - netPrice
     },
-    shopSettingsToPdf(shopSettings)
+    shopSettingsToPdf(shopSettings),
+    language
   );
 
   return prisma.contract.update({

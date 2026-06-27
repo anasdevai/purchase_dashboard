@@ -1,4 +1,4 @@
-import { getActiveTranslations } from '../i18n/active'
+import { getActiveTranslations, readStoredLanguage } from '../i18n/active'
 import { ApiError, resolveApiErrorMessage } from '../utils/apiErrors'
 import { isAuthErrorCode } from '../utils/authErrorCodes'
 
@@ -136,6 +136,11 @@ export async function apiRequest<T>(
 
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
+  }
+
+  // Let the backend generate PDFs/documents in the currently selected UI language.
+  if (!headers.has('X-App-Language')) {
+    headers.set('X-App-Language', readStoredLanguage())
   }
 
   if (options.auth !== false) {

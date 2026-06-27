@@ -59,6 +59,20 @@ export const getGoogleAuthUrl = async (req: Request, res: Response) => {
   res.json({ url });
 };
 
+/**
+ * Builds a safe absolute redirect back to the frontend calendar page. Using the
+ * URL constructor guarantees a well-formed URL even if env.frontendUrl is
+ * unexpected, avoiding malformed targets like "host,http/calendar".
+ */
+const buildCalendarRedirect = (params: Record<string, string>): string => {
+  const base = env.frontendUrl || "http://localhost:5173";
+  const target = new URL("/calendar", base);
+  for (const [key, value] of Object.entries(params)) {
+    target.searchParams.set(key, value);
+  }
+  return target.toString();
+};
+
 export const googleCallback = async (req: Request, res: Response) => {
   const code = req.query.code ? String(req.query.code) : undefined;
   const state = req.query.state ? String(req.query.state) : undefined;
@@ -67,9 +81,17 @@ export const googleCallback = async (req: Request, res: Response) => {
     return res.status(400).send("Auth code or state is missing");
   }
 
-  await googleCalendarService.handleOAuthCallback(state, code);
-
-  res.redirect(`${env.frontendUrl}/calendar?google_connected=true`);
+  try {
+    await googleCalendarService.handleOAuthCallback(state, code);
+    const redirectUrl = buildCalendarRedirect({ google_connected: "true" });
+    console.log(`[google-oauth] Callback success, redirecting to: ${redirectUrl}`);
+    return res.redirect(redirectUrl);
+  } catch (err) {
+    console.error("[google-oauth] Callback failed:", err);
+    const redirectUrl = buildCalendarRedirect({ google_connected: "false", error: "oauth_failed" });
+    console.log(`[google-oauth] Redirecting after failure to: ${redirectUrl}`);
+    return res.redirect(redirectUrl);
+  }
 };
 
 export const getGoogleStatus = async (req: Request, res: Response) => {

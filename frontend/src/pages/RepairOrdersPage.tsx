@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Download, Eye, Search, Trash2 } from 'lucide-react'
+import { Download, Eye, FileText, Search, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import {
@@ -150,7 +150,7 @@ export function RepairOrdersPage() {
             </div>
           </div>
 
-          <div className="table-scroll mt-4">
+          <div className="table-scroll mt-4 hidden lg:block">
             <table data-testid="repair-orders-table" className="w-full min-w-[1100px]">
               <thead>
                 <tr className="text-left text-xs font-semibold text-slate-500">
@@ -258,6 +258,127 @@ export function RepairOrdersPage() {
                 ) : null}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 space-y-3 lg:hidden" data-testid="repair-orders-cards">
+            {repairOrders.map((order) => {
+              const device = [order.brand, order.model].filter(Boolean).join(' ') || order.deviceType
+              const repairSummary = [device, order.problemDescription].filter(Boolean).join(' / ')
+              const existingInvoice = order.invoices?.[0]
+              const invoiceTo = existingInvoice
+                ? `/invoices/${existingInvoice.id}`
+                : `/invoices/new?repairOrderId=${order.id}`
+
+              return (
+                <div
+                  key={order.id}
+                  data-testid={`repair-order-card-${order.id}`}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/repair-orders/${order.id}`}
+                        className="text-sm font-semibold text-primary hover:underline"
+                      >
+                        {order.repairOrderNumber}
+                      </Link>
+                      <div className="mt-0.5 truncate text-base font-semibold text-slate-900">
+                        {order.customerName}
+                      </div>
+                    </div>
+                    <RepairOrderStatusSelect
+                      testId={`repair-order-card-status-${order.id}`}
+                      className="w-[8.5rem] shrink-0"
+                      size="sm"
+                      value={order.status}
+                      disabled={updatingStatusId === order.id}
+                      onChange={(nextStatus) => handleStatusChange(order, nextStatus)}
+                    />
+                  </div>
+
+                  <dl className="mt-3 space-y-1.5 text-sm">
+                    <div className="flex gap-2">
+                      <dt className="w-24 shrink-0 text-slate-500">{t.repairOrders.table.device}</dt>
+                      <dd className="min-w-0 flex-1 font-medium text-slate-800">{repairSummary || t.common.dash}</dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="w-24 shrink-0 text-slate-500">{t.repairOrders.table.phone}</dt>
+                      <dd className="min-w-0 flex-1 font-medium text-slate-800">
+                        {order.customerPhone ? (
+                          <a href={`tel:${order.customerPhone}`} className="text-primary hover:underline">
+                            {order.customerPhone}
+                          </a>
+                        ) : (
+                          t.common.dash
+                        )}
+                      </dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="w-24 shrink-0 text-slate-500">{t.repairOrders.table.date}</dt>
+                      <dd className="min-w-0 flex-1 font-medium text-slate-800">
+                        {formatDate(order.createdAt.slice(0, 10))}
+                      </dd>
+                    </div>
+                    {order.repairCompany?.name ? (
+                      <div className="flex gap-2">
+                        <dt className="w-24 shrink-0 text-slate-500">{t.repairOrders.table.repairCompany}</dt>
+                        <dd className="min-w-0 flex-1 font-medium text-slate-800">{order.repairCompany.name}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
+                    <Link
+                      to={`/repair-orders/${order.id}`}
+                      data-testid={`repair-order-card-view-${order.id}`}
+                      className="btn btn-secondary gap-1.5 px-3 py-2 text-sm"
+                    >
+                      <Eye className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t.table.view}</span>
+                    </Link>
+                    <Link
+                      to={invoiceTo}
+                      data-testid={`repair-order-card-invoice-${order.id}`}
+                      className="btn btn-primary gap-1.5 px-3 py-2 text-sm"
+                    >
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t.repairOrders.detail.createInvoice}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn btn-secondary gap-1.5 px-3 py-2 text-sm"
+                      onClick={async () => {
+                        try {
+                          await downloadRepairOrderPdf(order.id, `${order.repairOrderNumber}.pdf`)
+                          showToast('success', t.common.toasts.pdfDownloaded)
+                        } catch (err) {
+                          logApiError('repair order pdf download', err)
+                          showToast('error', getFriendlyErrorMessage(err, 'pdfDownload', t))
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t.table.download}</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingId === order.id}
+                      className="btn gap-1.5 border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60"
+                      onClick={() => handleDelete(order)}
+                    >
+                      <Trash2 className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t.table.delete}</span>
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+            {repairOrders.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-500">
+                {t.repairOrders.noResults}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

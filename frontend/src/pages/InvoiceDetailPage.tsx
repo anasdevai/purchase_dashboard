@@ -63,7 +63,9 @@ type InvoiceForm = Omit<InvoicePayload, 'items'> & {
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-const INVOICE_NUMBER_PATTERN = /^INV-\d+$/
+// Flexible manual invoice numbers: uppercase letters, digits, hyphens and slashes
+// (e.g. INV-0001, INV-003, RE-50141, RE-2026-001). Empty is allowed (auto-generated on save).
+const INVOICE_NUMBER_PATTERN = /^[A-Z0-9][A-Z0-9/-]*$/
 
 function createEmptyForm(shopSettings: ShopSettings): InvoiceForm {
   const d = new Date()
@@ -163,6 +165,7 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
   const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultShopSettings())
   const [form, setForm] = useState<InvoiceForm>(() => createEmptyForm(defaultShopSettings()))
   const [invoice, setInvoice] = useState<Invoice | null>(null)
+  const [linkedRepairOrderNumber, setLinkedRepairOrderNumber] = useState<string | null>(null)
   const [loading, setLoading] = useState(Boolean(invoiceId))
   const [saving, setSaving] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -260,32 +263,41 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
     if (!user?.id) return
     let alive = true
     loadShopSettings(user.id).then((settings) => {
-      if (!alive) return
-      setShopSettings(settings)
-      if (!invoiceId) {
-        setForm(createEmptyForm(settings))
-      }
+      if (alive) setShopSettings(settings)
     })
     return () => {
       alive = false
     }
-  }, [user?.id, invoiceId])
+  }, [user?.id])
 
   useEffect(() => {
     if (invoiceId || !user?.id) return
 
     let alive = true
 
-    const loadSuggestedNumber = async () => {
+    const initializeNewInvoice = async () => {
+      // Load shop settings first so the default VAT (and any prefilled line items)
+      // are built on top of the correct settings. Doing this sequentially avoids a
+      // race where a late shop-settings load resets the prefilled form.
+      const settings = await loadShopSettings(user.id)
+      if (!alive) return
+
       try {
         if (repairOrderIdFromQuery) {
           const prefill = await fetchInvoicePrefillFromRepairOrder(repairOrderIdFromQuery)
           if (!alive) return
 
-          setForm((current) => ({
-            ...current,
+          const prefilledItems = prefill.draft.items.map((item) => ({
+            description: item.description,
+            quantity: String(item.quantity),
+            unitPrice: String(item.unitPrice),
+            vatPercent: String(item.vatPercent),
+          }))
+
+          setForm({
+            ...createEmptyForm(settings),
             repairOrderId: prefill.draft.repairOrderId,
-            customerName: prefill.draft.customerName,
+            customerName: prefill.draft.customerName ?? '',
             customerAddress: prefill.draft.customerAddress ?? '',
             customerPhone: prefill.draft.customerPhone ?? '',
             customerEmail: prefill.draft.customerEmail ?? '',
@@ -293,22 +305,20 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
             repairSummary: prefill.draft.repairSummary ?? '',
             paymentStatus: prefill.draft.paymentStatus ?? 'Open',
             invoiceNumber: prefill.suggestedInvoiceNumber,
-            items: prefill.draft.items.map((item) => ({
-              description: item.description,
-              quantity: String(item.quantity),
-              unitPrice: String(item.unitPrice),
-              vatPercent: String(item.vatPercent),
-            })),
-          }))
+            items: prefilledItems.length ? prefilledItems : [makeEmptyInvoiceItem(settings)],
+          })
+          setLinkedRepairOrderNumber(prefill.repairOrderNumber ?? null)
           return
         }
 
         const nextNumber = await fetchNextInvoiceNumber()
         if (!alive) return
-        setForm((current) => ({ ...current, invoiceNumber: nextNumber }))
+        setForm({ ...createEmptyForm(settings), invoiceNumber: nextNumber })
       } catch (err) {
         logApiError('invoice number suggestion', err)
         if (!alive) return
+
+        // An invoice already exists for this repair order: jump straight to it.
         if (
           repairOrderIdFromQuery &&
           err instanceof ApiError &&
@@ -319,11 +329,15 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
           typeof (err.details as { invoiceId?: unknown }).invoiceId === 'string'
         ) {
           navigate(`/invoices/${(err.details as { invoiceId: string }).invoiceId}`, { replace: true })
+          return
         }
+
+        // Keep a usable empty form even if number/prefill lookup failed.
+        setForm(createEmptyForm(settings))
       }
     }
 
-    void loadSuggestedNumber()
+    void initializeNewInvoice()
 
     return () => {
       alive = false
@@ -571,6 +585,18 @@ export function InvoiceDetailPage(props: { mode?: 'new' }) {
               >
                 {interpolate(t.invoices.detail.viewRepairOrder, {
                   repairOrderNumber: invoice.repairOrder.repairOrderNumber,
+                })}
+              </Link>
+            </div>
+          ) : !invoice && linkedRepairOrderNumber && form.repairOrderId ? (
+            <div className="mt-2 text-sm text-slate-600" data-testid="invoice-source-repair-order">
+              <span className="font-medium">{t.invoices.detail.sourceRepairOrder}: </span>
+              <Link
+                to={`/repair-orders/${form.repairOrderId}`}
+                className="font-semibold text-primary hover:underline"
+              >
+                {interpolate(t.invoices.detail.viewRepairOrder, {
+                  repairOrderNumber: linkedRepairOrderNumber,
                 })}
               </Link>
             </div>

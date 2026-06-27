@@ -33,7 +33,11 @@ export type InvoicePdfLabels = {
   bank: string;
   uid: string;
   companyRegistration: string;
+  companyRegisterCourt: string;
+  gln: string;
+  gisaNumber: string;
   taxNumber: string;
+  companyDetailsTitle: string;
   phone: string;
   signatureRole: string;
   serviceDate: string;
@@ -76,7 +80,11 @@ const labels: Record<InvoicePdfLanguage, InvoicePdfLabels> = {
     bank: "Bank",
     uid: "UID",
     companyRegistration: "Firmenbuchnummer",
+    companyRegisterCourt: "Firmenbuchgericht",
+    gln: "GLN",
+    gisaNumber: "GISA-Zahl",
     taxNumber: "Steuernummer",
+    companyDetailsTitle: "Firmendaten",
     phone: "Tel.",
     signatureRole: "Geschäftsführung",
     serviceDate: "Leistungsdatum",
@@ -117,7 +125,11 @@ const labels: Record<InvoicePdfLanguage, InvoicePdfLabels> = {
     bank: "Bank",
     uid: "VAT ID",
     companyRegistration: "Company registration no.",
+    companyRegisterCourt: "Register court",
+    gln: "GLN",
+    gisaNumber: "GISA no.",
     taxNumber: "Tax number",
+    companyDetailsTitle: "Company details",
     phone: "Tel.",
     signatureRole: "Management",
     serviceDate: "Service Date",
@@ -181,7 +193,8 @@ export const resolveInvoicePdfLanguage = (...candidates: unknown[]): InvoicePdfL
     if (!raw) continue;
     return parseInvoicePdfLanguage(raw);
   }
-  return "en";
+  // No language candidate provided at all -> default to German.
+  return "de";
 };
 
 export const translateInvoicePaymentStatus = (

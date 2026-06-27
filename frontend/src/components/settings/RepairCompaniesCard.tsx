@@ -15,7 +15,12 @@ type CompanyForm = RepairCompanyPayload & { id?: string }
 
 const emptyForm = (): CompanyForm => ({
   name: '',
-  contactInfo: '',
+  contactPerson: '',
+  phone: '',
+  email: '',
+  address: '',
+  city: '',
+  country: '',
   notes: '',
 })
 
@@ -59,7 +64,12 @@ export function RepairCompaniesCard() {
     try {
       const payload: RepairCompanyPayload = {
         name: form.name.trim(),
-        contactInfo: form.contactInfo?.trim() || undefined,
+        contactPerson: form.contactPerson?.trim() || undefined,
+        phone: form.phone?.trim() || undefined,
+        email: form.email?.trim() || undefined,
+        address: form.address?.trim() || undefined,
+        city: form.city?.trim() || undefined,
+        country: form.country?.trim() || undefined,
         notes: form.notes?.trim() || undefined,
       }
 
@@ -88,7 +98,12 @@ export function RepairCompaniesCard() {
     setForm({
       id: company.id,
       name: company.name,
-      contactInfo: company.contactInfo ?? '',
+      contactPerson: company.contactPerson ?? '',
+      phone: company.phone ?? '',
+      email: company.email ?? '',
+      address: company.address ?? '',
+      city: company.city ?? '',
+      country: company.country ?? '',
       notes: company.notes ?? '',
     })
   }
@@ -133,16 +148,76 @@ export function RepairCompaniesCard() {
                 onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
               />
             </label>
-            <label className="sm:col-span-2">
+            <label>
               <span className="mb-1.5 block text-xs font-medium text-slate-600">
-                {t.settings.repairCompanies.contactInfo}
+                {t.settings.repairCompanies.contactPerson}
               </span>
               <input
                 className="input"
-                placeholder={t.settings.repairCompanies.contactInfoPlaceholder}
-                value={form.contactInfo ?? ''}
+                placeholder={t.settings.repairCompanies.contactPersonPlaceholder}
+                value={form.contactPerson ?? ''}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, contactInfo: event.target.value }))
+                  setForm((current) => ({ ...current, contactPerson: event.target.value }))
+                }
+              />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                {t.settings.repairCompanies.phone}
+              </span>
+              <input
+                className="input"
+                placeholder={t.settings.repairCompanies.phonePlaceholder}
+                value={form.phone ?? ''}
+                onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
+              />
+            </label>
+            <label className="sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                {t.settings.repairCompanies.email}
+              </span>
+              <input
+                className="input"
+                type="email"
+                placeholder={t.settings.repairCompanies.emailPlaceholder}
+                value={form.email ?? ''}
+                onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+              />
+            </label>
+            <label className="sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                {t.settings.repairCompanies.address}
+              </span>
+              <input
+                className="input"
+                placeholder={t.settings.repairCompanies.addressPlaceholder}
+                value={form.address ?? ''}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, address: event.target.value }))
+                }
+              />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                {t.settings.repairCompanies.city}
+              </span>
+              <input
+                className="input"
+                placeholder={t.settings.repairCompanies.cityPlaceholder}
+                value={form.city ?? ''}
+                onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
+              />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                {t.settings.repairCompanies.country}
+              </span>
+              <input
+                className="input"
+                placeholder={t.settings.repairCompanies.countryPlaceholder}
+                value={form.country ?? ''}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, country: event.target.value }))
                 }
               />
             </label>
@@ -190,6 +265,19 @@ export function RepairCompaniesCard() {
               >
                 <div className="min-w-0">
                   <div className="font-semibold text-slate-900">{company.name}</div>
+                  {company.contactPerson ? (
+                    <div className="mt-1 text-sm text-slate-600">{company.contactPerson}</div>
+                  ) : null}
+                  {[company.phone, company.email].filter(Boolean).length > 0 ? (
+                    <div className="mt-1 text-sm text-slate-600">
+                      {[company.phone, company.email].filter(Boolean).join(' · ')}
+                    </div>
+                  ) : null}
+                  {[company.address, company.city, company.country].filter(Boolean).length > 0 ? (
+                    <div className="mt-1 text-sm text-slate-600">
+                      {[company.address, company.city, company.country].filter(Boolean).join(', ')}
+                    </div>
+                  ) : null}
                   {company.contactInfo ? (
                     <div className="mt-1 text-sm text-slate-600">{company.contactInfo}</div>
                   ) : null}

@@ -8,9 +8,11 @@ import { HttpError } from "../utils/httpError.js";
 import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { getSignatureUrl } from "../utils/lanIp.js";
 import { toAbsolutePath } from "../utils/paths.js";
+import { invoicePdfLanguageFromRequest } from "../utils/invoicePdfLanguage.js";
 
 const paramId = (req: Request) => String(req.params.id);
 const userId = (req: Request) => req.user!.id;
+const pdfLanguage = (req: Request) => invoicePdfLanguageFromRequest(req);
 
 const enrichContract = (req: Request, contract: Record<string, unknown> | null) => {
   if (!contract) return contract;
@@ -68,7 +70,12 @@ export const uploadSignature = async (req: Request, res: Response) => {
 };
 
 export const complete = async (req: Request, res: Response) => {
-  const contract = await contractService.completeContract(paramId(req), userId(req), req.body);
+  const contract = await contractService.completeContract(
+    paramId(req),
+    userId(req),
+    req.body,
+    pdfLanguage(req)
+  );
   respondWithContract(req, res, contract as Record<string, unknown>);
 };
 
@@ -171,7 +178,7 @@ export const openPdf = async (req: Request, res: Response) => {
   );
 
   if (!contract.pdfPath || !fs.existsSync(toAbsolutePath(contract.pdfPath))) {
-    contract = await contractService.generatePdfForContract(paramId(req), userId(req), req.user?.role === "admin");
+    contract = await contractService.generatePdfForContract(paramId(req), userId(req), req.user?.role === "admin", pdfLanguage(req));
   }
   if (!contract.pdfPath) throw new HttpError(500, "Contract PDF generation failed");
   res.sendFile(toAbsolutePath(contract.pdfPath));
@@ -185,7 +192,7 @@ export const downloadPdf = async (req: Request, res: Response) => {
   );
 
   if (!contract.pdfPath || !fs.existsSync(toAbsolutePath(contract.pdfPath))) {
-    contract = await contractService.generatePdfForContract(paramId(req), userId(req), req.user?.role === "admin");
+    contract = await contractService.generatePdfForContract(paramId(req), userId(req), req.user?.role === "admin", pdfLanguage(req));
   }
   if (!contract.pdfPath) throw new HttpError(500, "Contract PDF generation failed");
   res.download(toAbsolutePath(contract.pdfPath), `${contract.contractNumber}.pdf`);

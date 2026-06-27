@@ -10,7 +10,9 @@ export const invoiceRouter = Router();
 invoiceRouter.use(requireAuth);
 
 invoiceRouter.get("/search", validate({ query: searchInvoicesSchema }), asyncHandler(invoiceController.search));
+invoiceRouter.get("/next-number", asyncHandler(invoiceController.getNextNumber));
 invoiceRouter.post("/", validate({ body: invoiceSchema }), asyncHandler(invoiceController.create));
+invoiceRouter.get("/prefill-from-repair-order/:repairOrderId", asyncHandler(invoiceController.prefillFromRepairOrder));
 invoiceRouter.post("/from-repair-order/:repairOrderId", asyncHandler(invoiceController.createFromRepairOrder));
 invoiceRouter.get("/:id", asyncHandler(invoiceController.get));
 invoiceRouter.patch("/:id", validate({ body: invoiceSchema.partial() }), asyncHandler(invoiceController.update));

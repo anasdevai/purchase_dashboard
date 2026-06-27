@@ -7,6 +7,8 @@ export function repairOrderStatusColors(status: RepairOrderStatus | null | undef
       return 'bg-sky-50 text-sky-700 border-sky-200'
     case 'WorkPending':
       return 'bg-amber-50 text-amber-700 border-amber-200'
+    case 'WaitingForCustomerFeedback':
+      return 'bg-violet-50 text-violet-700 border-violet-200'
     case 'SentToRepairCompany':
       return 'bg-indigo-50 text-indigo-700 border-indigo-200'
     case 'AppointmentScheduled':

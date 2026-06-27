@@ -1,6 +1,12 @@
 export type RepairCompany = {
   id: string
   name: string
+  contactPerson?: string | null
+  phone?: string | null
+  email?: string | null
+  address?: string | null
+  city?: string | null
+  country?: string | null
   contactInfo?: string | null
   notes?: string | null
   createdAt: string
@@ -9,6 +15,11 @@ export type RepairCompany = {
 
 export type RepairCompanyPayload = {
   name: string
-  contactInfo?: string
+  contactPerson?: string
+  phone?: string
+  email?: string
+  address?: string
+  city?: string
+  country?: string
   notes?: string
 }

@@ -20,6 +20,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().optional(),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   GEMINI_API_KEY: z.string().default(""),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
   SHOP_NAME: z.string().min(1).default("Sceleria"),
   SHOP_ADDRESS: z.string().min(1).default("Your shop address"),
@@ -39,6 +41,38 @@ const parsed = envSchema.parse(process.env);
 
 const isProduction = parsed.NODE_ENV === "production";
 
+/** Split a possibly comma-separated env value into trimmed, non-empty entries. */
+const splitList = (value: string | undefined): string[] =>
+  (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+/**
+ * Returns a single, valid base URL from an env value that may accidentally be a
+ * comma-separated list (e.g. the CORS origins). Prefers https, ensures a
+ * protocol is present, and strips any trailing slash so callers can safely
+ * append paths without producing malformed URLs like "host,http/...".
+ */
+const normalizeBaseUrl = (value: string | undefined): string => {
+  const candidates = splitList(value);
+  if (candidates.length === 0) return "";
+
+  const preferred =
+    candidates.find((entry) => /^https:\/\//i.test(entry)) ??
+    candidates.find((entry) => /^https?:\/\//i.test(entry)) ??
+    candidates[0];
+
+  const withProtocol = /^https?:\/\//i.test(preferred) ? preferred : `https://${preferred}`;
+
+  try {
+    const url = new URL(withProtocol);
+    return `${url.origin}${url.pathname}`.replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+};
+
 const defaultCorsOrigins = isProduction
   ? parsed.FRONTEND_URL ?? ""
   : "http://localhost:5173,http://127.0.0.1:5173";
@@ -51,19 +85,20 @@ const corsOrigins = allowedOriginsStr
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-if (parsed.FRONTEND_URL && !corsOrigins.includes(parsed.FRONTEND_URL)) {
-  corsOrigins.push(parsed.FRONTEND_URL);
+// FRONTEND_URL may itself be a comma-separated list; add each entry to CORS.
+for (const origin of splitList(parsed.FRONTEND_URL)) {
+  if (!corsOrigins.includes(origin)) {
+    corsOrigins.push(origin);
+  }
 }
 
 const frontendUrl =
-  parsed.FRONTEND_URL ??
+  normalizeBaseUrl(parsed.FRONTEND_URL) ||
   (isProduction ? "" : "http://localhost:5173");
 
 const googleRedirectUri =
-  parsed.GOOGLE_REDIRECT_URI ??
-  (frontendUrl
-    ? `${frontendUrl.replace(/\/+$/, "")}/api/appointments/google/callback`
-    : "");
+  normalizeBaseUrl(parsed.GOOGLE_REDIRECT_URI) ||
+  (frontendUrl ? `${frontendUrl}/api/appointments/google/callback` : "");
 
 export const env = {
   ...parsed,

@@ -524,6 +524,12 @@ export type TranslationSchema = {
     vatNumberPlaceholder: string
     companyRegistrationNumber: string
     companyRegistrationPlaceholder: string
+    companyRegisterCourt: string
+    companyRegisterCourtPlaceholder: string
+    gln: string
+    glnPlaceholder: string
+    gisaNumber: string
+    gisaNumberPlaceholder: string
     taxNumber: string
     taxNumberPlaceholder: string
     optional: string
@@ -569,6 +575,18 @@ export type TranslationSchema = {
       saveCompany: string
       companyName: string
       companyNamePlaceholder: string
+      contactPerson: string
+      contactPersonPlaceholder: string
+      phone: string
+      phonePlaceholder: string
+      email: string
+      emailPlaceholder: string
+      address: string
+      addressPlaceholder: string
+      city: string
+      cityPlaceholder: string
+      country: string
+      countryPlaceholder: string
       contactInfo: string
       contactInfoPlaceholder: string
       companyNotes: string
@@ -779,6 +797,7 @@ export type TranslationSchema = {
     statuses: {
       Open: string
       WorkPending: string
+      WaitingForCustomerFeedback: string
       SentToRepairCompany: string
       AppointmentScheduled: string
       SparePartArrived: string

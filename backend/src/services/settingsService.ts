@@ -15,6 +15,9 @@ type ShopSettingsRecord = {
   ownerName: string;
   vatNumber: string;
   companyRegistrationNumber: string;
+  companyRegisterCourt: string;
+  gln: string;
+  gisaNumber: string;
   taxNumber: string;
   accountHolder: string;
   iban: string;
@@ -42,6 +45,9 @@ const emptySettings = (): ShopSettingsRecord => ({
   ownerName: "",
   vatNumber: "",
   companyRegistrationNumber: "",
+  companyRegisterCourt: "",
+  gln: "",
+  gisaNumber: "",
   taxNumber: "",
   accountHolder: "",
   iban: "",
@@ -143,6 +149,9 @@ const toResponse = (settings: ShopSettingsRecord) => {
     ownerName: enriched.ownerName,
     vatNumber: enriched.vatNumber,
     companyRegistrationNumber: enriched.companyRegistrationNumber,
+    companyRegisterCourt: enriched.companyRegisterCourt,
+    gln: enriched.gln,
+    gisaNumber: enriched.gisaNumber,
     taxNumber: enriched.taxNumber,
     accountHolder: enriched.accountHolder,
     iban: enriched.iban,
@@ -188,6 +197,9 @@ export const shopSettingsInputToPdf = (input: ShopSettingsInput): PdfShopSetting
       ownerName: input.ownerName ?? "",
       vatNumber: input.vatNumber ?? "",
       companyRegistrationNumber: input.companyRegistrationNumber ?? "",
+      companyRegisterCourt: input.companyRegisterCourt ?? "",
+      gln: input.gln ?? "",
+      gisaNumber: input.gisaNumber ?? "",
       taxNumber: input.taxNumber ?? "",
       accountHolder: input.accountHolder ?? "",
       iban: input.iban ?? "",
@@ -209,6 +221,9 @@ export const shopSettingsToPdf = (settings: ReturnType<typeof toResponse>): PdfS
   website: settings.website,
   vatNumber: settings.vatNumber,
   companyRegistrationNumber: settings.companyRegistrationNumber,
+  companyRegisterCourt: settings.companyRegisterCourt,
+  gln: settings.gln,
+  gisaNumber: settings.gisaNumber,
   taxNumber: settings.taxNumber,
   accountHolder: settings.accountHolder,
   iban: settings.iban,
@@ -253,6 +268,9 @@ export const saveShopSettingsForUser = async (userId: string, input: Record<stri
       ownerName: data.ownerName ?? "",
       vatNumber: data.vatNumber,
       companyRegistrationNumber: data.companyRegistrationNumber,
+      companyRegisterCourt: data.companyRegisterCourt,
+      gln: data.gln,
+      gisaNumber: data.gisaNumber,
       taxNumber: data.taxNumber,
       accountHolder: data.accountHolder,
       iban: data.iban,
@@ -279,6 +297,9 @@ export const saveShopSettingsForUser = async (userId: string, input: Record<stri
       ownerName: data.ownerName ?? "",
       vatNumber: data.vatNumber,
       companyRegistrationNumber: data.companyRegistrationNumber,
+      companyRegisterCourt: data.companyRegisterCourt,
+      gln: data.gln,
+      gisaNumber: data.gisaNumber,
       taxNumber: data.taxNumber,
       accountHolder: data.accountHolder,
       iban: data.iban,

@@ -5,9 +5,11 @@ import * as repairOrderService from "../services/repairOrderService.js";
 import { HttpError } from "../utils/httpError.js";
 import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { toAbsolutePath } from "../utils/paths.js";
+import { invoicePdfLanguageFromRequest } from "../utils/invoicePdfLanguage.js";
 
 const paramId = (req: Request) => String(req.params.id);
 const userId = (req: Request) => req.user!.id;
+const pdfLanguage = (req: Request) => invoicePdfLanguageFromRequest(req);
 
 export const create = async (req: Request, res: Response) => {
   const repairOrder = await repairOrderService.createRepairOrder(userId(req), req.body);
@@ -74,7 +76,8 @@ export const generatePdf = async (req: Request, res: Response) => {
   const repairOrder = await repairOrderService.generatePdfForRepairOrder(
     paramId(req),
     userId(req),
-    req.user?.role === "admin"
+    req.user?.role === "admin",
+    pdfLanguage(req)
   );
   res.json({ repairOrder });
 };
@@ -97,7 +100,7 @@ export const openPdf = async (req: Request, res: Response) => {
 
   let pdfPath = repairOrder.pdfPath;
   if (!pdfPath || !fs.existsSync(toAbsolutePath(pdfPath))) {
-    pdfPath = (await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req), req.user?.role === "admin")).pdfPath;
+    pdfPath = (await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req), req.user?.role === "admin", pdfLanguage(req))).pdfPath;
   }
   if (!pdfPath) throw new HttpError(500, "Repair order PDF generation failed");
   res.sendFile(toAbsolutePath(pdfPath));
@@ -112,7 +115,7 @@ export const downloadPdf = async (req: Request, res: Response) => {
 
   let pdfPath = repairOrder.pdfPath;
   if (!pdfPath || !fs.existsSync(toAbsolutePath(pdfPath))) {
-    pdfPath = (await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req), req.user?.role === "admin")).pdfPath;
+    pdfPath = (await repairOrderService.generatePdfForRepairOrder(paramId(req), userId(req), req.user?.role === "admin", pdfLanguage(req))).pdfPath;
   }
   if (!pdfPath) throw new HttpError(500, "Repair order PDF generation failed");
   res.download(toAbsolutePath(pdfPath), `${repairOrder.repairOrderNumber}.pdf`);
@@ -138,7 +141,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   }
 
   if (!repairOrder.pdfPath) {
-    await repairOrderService.generatePdfForRepairOrder(id, uid, isAdmin);
+    await repairOrderService.generatePdfForRepairOrder(id, uid, isAdmin, pdfLanguage(req));
     repairOrder = await repairOrderService.getRepairOrderOrThrow(id, uid, isAdmin);
   }
 

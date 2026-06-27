@@ -174,10 +174,15 @@ const buildRepairOrderInvoiceDraft = async (userId: string, repairOrderId: strin
 
   const deviceSummary = [repairOrder.deviceType, repairOrder.brand, repairOrder.model]
     .filter(Boolean)
-    .join(" ");
+    .join(" ")
+    .trim();
+
+  const repairSummary = repairOrder.problemDescription?.trim() || repairOrder.diagnosis?.trim() || "";
 
   const shopSettings = await getShopSettingsForUser(userId);
   const defaultVatPercent = Math.round(getDefaultVatPercent(shopSettings));
+
+  const lineDescription = repairSummary || deviceSummary || "Repair service";
 
   const items: Array<{
     description: string;
@@ -186,7 +191,7 @@ const buildRepairOrderInvoiceDraft = async (userId: string, repairOrderId: strin
     vatPercent: number;
   }> = [
     {
-      description: repairOrder.problemDescription || "Repair service",
+      description: lineDescription,
       quantity: 1,
       unitPrice: repairOrder.estimatedPrice
         ? Math.round(Number(repairOrder.estimatedPrice.toString()))
@@ -220,14 +225,15 @@ const buildRepairOrderInvoiceDraft = async (userId: string, repairOrderId: strin
 
   return {
     suggestedInvoiceNumber: await generateInvoiceNumber(userId),
+    repairOrderNumber: repairOrder.repairOrderNumber,
     draft: {
       repairOrderId: repairOrder.id,
       customerName: repairOrder.customerName,
-      customerAddress: repairOrder.customerAddress,
-      customerPhone: repairOrder.customerPhone,
+      customerAddress: repairOrder.customerAddress ?? undefined,
+      customerPhone: repairOrder.customerPhone ?? undefined,
       customerEmail: repairOrder.customerEmail || repairOrder.customer?.email || undefined,
-      deviceSummary,
-      repairSummary: repairOrder.problemDescription,
+      deviceSummary: deviceSummary || undefined,
+      repairSummary: repairSummary || undefined,
       paymentStatus: "Open" as const,
       items
     }

@@ -121,6 +121,17 @@ const WARRANTY_OPTIONS = ['AppleCare+', 'Manufacturer warranty', 'None'] as cons
 const requiredFileFields: FileField[] = ['id_front', 'device_front', 'device_back']
 const maxDocumentUploadMb = 20
 
+/**
+ * Confirmations that must be ticked for every contract. Lock-removal
+ * confirmations (iCloud/Google/other) are platform-specific and optional, so
+ * they are intentionally excluded here and on the backend.
+ */
+const requiredConfirmationFields = [
+  'ownershipConfirmed',
+  'notStolenConfirmed',
+  'factoryResetConfirmed',
+] as const satisfies ReadonlyArray<keyof FormValues>
+
 const stepFields: Record<number, Array<keyof FormValues>> = {
   0: [
     'customerFirstName',
@@ -221,6 +232,7 @@ export function ContractWizard(props: {
   const [shopkeeperSignatureDataUrl, setShopkeeperSignatureDataUrl] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmationAttempted, setConfirmationAttempted] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [signatureMethod, setSignatureMethod] = useState<'onsite' | 'qr'>('onsite')
   const [qrToken, setQrToken] = useState<string | null>(props.initialContract?.signatureToken ?? null)
@@ -552,6 +564,15 @@ export function ContractWizard(props: {
       return false
     }
 
+    if (step === 2) {
+      const missingConfirmations = requiredConfirmationFields.filter((name) => !getValues(name))
+      if (missingConfirmations.length > 0) {
+        setConfirmationAttempted(true)
+        setError(w.errors.confirmationsRequired)
+        return false
+      }
+    }
+
     if (step === 3) {
       const missingFiles = requiredFileFields.filter((field) => !hasRequiredFile(field))
       if (missingFiles.length > 0) {
@@ -627,6 +648,14 @@ export function ContractWizard(props: {
     if (!formValues.imei?.trim() || !formValues.serialNumber?.trim()) {
       setError(w.imeiOrSerialRequired)
       setStep(1)
+      return
+    }
+
+    const missingConfirmations = requiredConfirmationFields.filter((name) => !formValues[name])
+    if (missingConfirmations.length > 0) {
+      setConfirmationAttempted(true)
+      setError(w.errors.confirmationsRequired)
+      setStep(2)
       return
     }
 
@@ -1048,52 +1077,6 @@ export function ContractWizard(props: {
               />
               {w.purchaseReceiptAvailable}
             </label>
-            <Field label={w.notes} error={errors.notes?.message} wide>
-              <textarea className="input min-h-20 py-2" placeholder={w.notesPlaceholder} {...register('notes')} />
-            </Field>
-            <Field label={w.osVersion} error={errors.osVersion?.message}>
-              <input className="input" placeholder={w.osVersionPlaceholder} {...register('osVersion')} />
-            </Field>
-            <SelectField
-              label={w.icloudStatus}
-              options={ICLOUD_STATUSES}
-              optionLabels={w.options}
-              register={register('icloudStatus', { required: w.icloudStatusRequired })}
-            />
-            <SelectField
-              label={w.mdmStatus}
-              options={MDM_STATUSES}
-              optionLabels={w.options}
-              register={register('mdmStatus')}
-            />
-            <SelectField
-              label={w.warranty}
-              options={WARRANTY_OPTIONS}
-              optionLabels={w.options}
-              register={register('warranty')}
-            />
-            <Field label={w.purchaseReceiptAvailable}>
-              <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300 text-primary"
-                  checked={Boolean(values.purchaseReceiptAvailable)}
-                  onChange={(event) => {
-                    setValue('purchaseReceiptAvailable', event.target.checked, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }}
-                />
-                {w.purchaseReceiptAvailable}
-              </label>
-            </Field>
-            <SelectField
-              label={w.paymentStatus}
-              options={PAYMENT_STATUSES}
-              optionLabels={w.options}
-              register={register('paymentStatus')}
-            />
             <Field label={w.damageNotes} error={errors.damageNotes?.message} wide>
               <textarea className="input min-h-20 py-2" placeholder={w.damageNotesPlaceholder} {...register('damageNotes')} />
             </Field>
@@ -1111,23 +1094,42 @@ export function ContractWizard(props: {
             <div className="md:col-span-2 text-xs font-semibold text-slate-700">
               {w.ownershipConfirmations}
             </div>
-            {confirmationFields.map(([name, label]) => (
-              <label key={name} className="flex items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
-                <input
-                  type="checkbox"
-                  data-testid={`wizard-confirm-${name}`}
-                  className="h-4 w-4 rounded border-slate-300 text-primary"
-                  checked={Boolean(values[name])}
-                  onChange={(event) => {
-                    setValue(name, event.target.checked, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }}
-                />
-                {label}
-              </label>
-            ))}
+            {confirmationFields.map(([name, label]) => {
+              const isRequired = (requiredConfirmationFields as readonly string[]).includes(name)
+              const isMissing = confirmationAttempted && isRequired && !values[name]
+              return (
+                <label
+                  key={name}
+                  className={clsx(
+                    'flex items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium text-slate-700',
+                    isMissing ? 'border-red-400 bg-red-50' : 'border-slate-200',
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    data-testid={`wizard-confirm-${name}`}
+                    className="h-4 w-4 rounded border-slate-300 text-primary"
+                    checked={Boolean(values[name])}
+                    onChange={(event) => {
+                      setValue(name, event.target.checked, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }}
+                  />
+                  <span>
+                    {label}
+                    {isRequired ? <span className="ml-1 text-red-500">*</span> : null}
+                  </span>
+                </label>
+              )
+            })}
+            {confirmationAttempted &&
+            requiredConfirmationFields.some((name) => !values[name]) ? (
+              <p className="md:col-span-2 text-xs font-medium text-red-600">
+                {w.errors.confirmationsRequired}
+              </p>
+            ) : null}
           </section>
         ) : null}
 

@@ -48,7 +48,10 @@ const invoiceNumberSchema = z.preprocess(
     .trim()
     .min(1)
     .max(50)
-    .regex(/^INV-\d+$/, "Invoice number must match format INV-0001")
+    .regex(
+      /^[A-Z0-9][A-Z0-9/-]*$/,
+      "Invoice number may only contain uppercase letters, numbers, hyphens and slashes (e.g. INV-0001, RE-50141)"
+    )
     .optional()
 );
 

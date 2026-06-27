@@ -8,6 +8,9 @@ export type PdfShopSettings = {
   website?: string;
   vatNumber?: string;
   companyRegistrationNumber?: string;
+  companyRegisterCourt?: string;
+  gln?: string;
+  gisaNumber?: string;
   taxNumber?: string;
   accountHolder?: string;
   iban?: string;
@@ -100,6 +103,12 @@ export type RepairOrderForPdf = {
   repairCompanyNotes: string | null;
   repairCompany: {
     name: string;
+    contactPerson?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    city?: string | null;
+    country?: string | null;
     contactInfo: string | null;
     notes: string | null;
   } | null;

@@ -32,6 +32,7 @@ enum ContractFileType {
 enum RepairOrderStatus {
   Open
   WorkPending
+  WaitingForCustomerFeedback
   SentToRepairCompany
   AppointmentScheduled
   New
@@ -122,6 +123,9 @@ model ShopSettings {
   ownerName                 String   @default("") @map("owner_name")
   vatNumber                 String   @default("") @map("vat_number")
   companyRegistrationNumber String   @default("") @map("company_registration_number")
+  companyRegisterCourt      String   @default("") @map("company_register_court")
+  gln                       String   @default("") @map("gln")
+  gisaNumber                String   @default("") @map("gisa_number")
   taxNumber                 String   @default("") @map("tax_number")
   accountHolder             String   @default("") @map("account_holder")
   iban                      String   @default("") @map("iban")
@@ -224,15 +228,21 @@ model ContractFile {
 }
 
 model RepairCompany {
-  id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  name        String
-  contactInfo String?       @map("contact_info")
-  notes       String?
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  repairOrders RepairOrder[]
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  name          String
+  contactPerson String?       @map("contact_person")
+  phone         String?       @map("phone")
+  email         String?       @map("email")
+  address       String?       @map("address")
+  city          String?       @map("city")
+  country       String?       @map("country")
+  contactInfo   String?       @map("contact_info")
+  notes         String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repairOrders  RepairOrder[]
 
   @@unique([userId, name])
   @@index([userId])

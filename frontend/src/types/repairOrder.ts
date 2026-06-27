@@ -1,6 +1,7 @@
 export type RepairOrderStatus =
   | 'Open'
   | 'WorkPending'
+  | 'WaitingForCustomerFeedback'
   | 'SentToRepairCompany'
   | 'AppointmentScheduled'
   | 'SparePartArrived'

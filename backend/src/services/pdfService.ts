@@ -42,13 +42,14 @@ export const generateQuotationPdf = async (
 
 export const generateContractPdf = async (
   contract: ContractForPdf,
-  shopSettings?: PdfShopSettings
+  shopSettings?: PdfShopSettings,
+  language: InvoicePdfLanguage = "de"
 ) => {
   const storageDir = getContractStorageDir(contract.userId, contract.contractNumber);
   await ensureDirectory(storageDir);
 
   const absolutePdfPath = `${storageDir}/contract.pdf`;
-  const html = renderContractHtml(contract, shopSettings);
+  const html = renderContractHtml(contract, shopSettings, language);
   await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
 
   return toRelativeStoragePath(absolutePdfPath);
@@ -56,13 +57,14 @@ export const generateContractPdf = async (
 
 export const generateRepairOrderPdf = async (
   repairOrder: RepairOrderForPdf,
-  shopSettings?: PdfShopSettings
+  shopSettings?: PdfShopSettings,
+  language: InvoicePdfLanguage = "de"
 ) => {
   const storageDir = getRepairOrderStorageDir(repairOrder.userId, repairOrder.repairOrderNumber);
   await ensureDirectory(storageDir);
 
   const absolutePdfPath = `${storageDir}/repair-order.pdf`;
-  const html = renderRepairOrderHtml(repairOrder, shopSettings);
+  const html = renderRepairOrderHtml(repairOrder, shopSettings, language);
   await renderHtmlToPdf(html, absolutePdfPath, { fullBleed: true });
 
   return toRelativeStoragePath(absolutePdfPath);

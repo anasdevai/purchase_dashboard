@@ -16,6 +16,12 @@ export const createRepairCompany = async (userId: string, input: Record<string, 
       data: {
         userId,
         name: parsed.name,
+        contactPerson: parsed.contactPerson,
+        phone: parsed.phone,
+        email: parsed.email,
+        address: parsed.address,
+        city: parsed.city,
+        country: parsed.country,
         contactInfo: parsed.contactInfo,
         notes: parsed.notes
       }
@@ -45,6 +51,12 @@ export const updateRepairCompany = async (
       where: { id },
       data: {
         name: parsed.name,
+        contactPerson: parsed.contactPerson,
+        phone: parsed.phone,
+        email: parsed.email,
+        address: parsed.address,
+        city: parsed.city,
+        country: parsed.country,
         contactInfo: parsed.contactInfo,
         notes: parsed.notes
       }

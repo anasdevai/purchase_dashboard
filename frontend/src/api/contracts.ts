@@ -1,4 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
+import { readStoredLanguage } from '../i18n/active'
 import { ApiError } from '../utils/apiErrors'
 import { shopSettingsForPdf, type ShopSettings } from '../services/shopSettings'
 import type { ApiContract, Contract, ContractStatus } from '../types/contract'
@@ -254,15 +255,22 @@ export async function cancelContract(id: string) {
 
 export function getPdfUrl(id: string, download = false) {
   const token = getToken()
+  const lang = readStoredLanguage()
   const suffix = download ? '/download' : ''
-  const query = token ? `?token=${encodeURIComponent(token)}` : ''
-  return `${getApiBaseUrl()}/api/contracts/${id}/pdf${suffix}${query}`
+  const params = new URLSearchParams()
+  if (token) params.set('token', token)
+  params.set('lang', lang)
+  return `${getApiBaseUrl()}/api/contracts/${id}/pdf${suffix}?${params.toString()}`
 }
 
 export async function fetchPdfBlob(id: string) {
   const token = getToken()
-  const response = await fetch(`${getApiBaseUrl()}/api/contracts/${id}/pdf`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const lang = readStoredLanguage()
+  const response = await fetch(`${getApiBaseUrl()}/api/contracts/${id}/pdf?lang=${lang}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-App-Language': lang,
+    },
   })
 
   if (!response.ok) {

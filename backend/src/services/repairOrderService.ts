@@ -5,6 +5,7 @@ import { HttpError } from "../utils/httpError.js";
 import { ensureDirectory, getRepairOrderStorageDir } from "../utils/paths.js";
 import { generateRepairOrderNumber } from "./numberingService.js";
 import { generateRepairOrderPdf } from "./pdfService.js";
+import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
 import {
   repairOrderSchema,
   repairOrderStatusSchema,
@@ -31,7 +32,19 @@ export const getRepairOrderOrThrow = async (idOrNumber: string, userId: string, 
       history: { orderBy: { createdAt: "asc" } },
       assignedEmployee: { select: { id: true, name: true, email: true } },
       customer: true,
-      repairCompany: { select: { name: true, contactInfo: true, notes: true } },
+      repairCompany: {
+        select: {
+          name: true,
+          contactPerson: true,
+          phone: true,
+          email: true,
+          address: true,
+          city: true,
+          country: true,
+          contactInfo: true,
+          notes: true,
+        },
+      },
     }
   });
 
@@ -229,10 +242,15 @@ export const addHistoryComment = async (
   });
 };
 
-export const generatePdfForRepairOrder = async (id: string, userId: string, isAdmin = false) => {
+export const generatePdfForRepairOrder = async (
+  id: string,
+  userId: string,
+  isAdmin = false,
+  language: InvoicePdfLanguage = "de"
+) => {
   const repairOrder = await getRepairOrderOrThrow(id, userId, isAdmin);
   const shopSettings = await getShopSettingsForUser(repairOrder.userId);
-  const pdfPath = await generateRepairOrderPdf(repairOrder, shopSettingsToPdf(shopSettings));
+  const pdfPath = await generateRepairOrderPdf(repairOrder, shopSettingsToPdf(shopSettings), language);
 
   return prisma.repairOrder.update({
     where: { id },
@@ -277,7 +295,14 @@ export const searchRepairOrders = async (userId: string, query: Record<string, u
   if (parsed.status) where.status = parsed.status;
   else if (parsed.filter === "active") {
     where.status = {
-      in: ["Open", "WorkPending", "SentToRepairCompany", "AppointmentScheduled", "SparePartArrived"]
+      in: [
+        "Open",
+        "WorkPending",
+        "WaitingForCustomerFeedback",
+        "SentToRepairCompany",
+        "AppointmentScheduled",
+        "SparePartArrived"
+      ]
     };
   } else if (parsed.filter) {
     where.status = parsed.filter;

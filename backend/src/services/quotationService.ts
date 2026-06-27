@@ -5,6 +5,7 @@ import { HttpError } from "../utils/httpError.js";
 import { ensureDirectory, getQuotationStorageDir } from "../utils/paths.js";
 import { generateQuotationNumber } from "./numberingService.js";
 import { generateQuotationPdf, generateRepairOrderPdf } from "./pdfService.js";
+import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
 import {
   quotationSchema,
   quotationStatusSchema,
@@ -62,10 +63,14 @@ export const getQuotationOrThrow = async (idOrNumber: string, userId: string, is
   return quotation;
 };
 
-const attachQuotationPdf = async (id: string, userId: string) => {
+const attachQuotationPdf = async (
+  id: string,
+  userId: string,
+  language: InvoicePdfLanguage = "de"
+) => {
   const quotation = await getQuotationOrThrow(id, userId);
   const shopSettings = await getShopSettingsForUser(userId);
-  const pdfPath = await generateQuotationPdf(quotation as any, shopSettingsToPdf(shopSettings));
+  const pdfPath = await generateQuotationPdf(quotation as any, shopSettingsToPdf(shopSettings), language);
 
   return prisma.quotation.update({
     where: { id },
@@ -74,7 +79,11 @@ const attachQuotationPdf = async (id: string, userId: string) => {
   });
 };
 
-export const createQuotation = async (userId: string, input: Record<string, unknown>) => {
+export const createQuotation = async (
+  userId: string,
+  input: Record<string, unknown>,
+  language: InvoicePdfLanguage = "de"
+) => {
   const parsed = toData(input);
   const { quotationNumber: _ignored, items, ...quotationData } = parsed;
 
@@ -120,7 +129,7 @@ export const createQuotation = async (userId: string, input: Record<string, unkn
       await ensureDirectory(getQuotationStorageDir(userId, quotation.quotationNumber));
 
       try {
-        return await attachQuotationPdf(quotation.id, userId);
+        return await attachQuotationPdf(quotation.id, userId, language);
       } catch (pdfErr) {
         console.error("[quotation] Failed to generate PDF for new quotation, rolling back:", pdfErr);
         await prisma.quotation.delete({ where: { id: quotation.id } }).catch(() => {});
@@ -134,7 +143,7 @@ export const createQuotation = async (userId: string, input: Record<string, unkn
   throw new HttpError(500, "Unable to generate quotation number");
 };
 
-export const updateQuotation = async (id: string, userId: string, input: Record<string, unknown>, isAdmin = false) => {
+export const updateQuotation = async (id: string, userId: string, input: Record<string, unknown>, isAdmin = false, language: InvoicePdfLanguage = "de") => {
   await getQuotationOrThrow(id, userId, isAdmin);
   const parsed = toData(input);
   const { quotationNumber: _ignored, items, ...quotationData } = parsed;
@@ -177,10 +186,10 @@ export const updateQuotation = async (id: string, userId: string, input: Record<
     });
   });
 
-  return attachQuotationPdf(id, userId);
+  return attachQuotationPdf(id, userId, language);
 };
 
-export const updateQuotationStatus = async (id: string, userId: string, input: Record<string, unknown>, isAdmin = false) => {
+export const updateQuotationStatus = async (id: string, userId: string, input: Record<string, unknown>, isAdmin = false, language: InvoicePdfLanguage = "de") => {
   await getQuotationOrThrow(id, userId, isAdmin);
   const parsed = quotationStatusSchema.parse(input);
 
@@ -192,18 +201,18 @@ export const updateQuotationStatus = async (id: string, userId: string, input: R
 
   // Regenerate PDF with new status
   try {
-    return await attachQuotationPdf(id, userId);
+    return await attachQuotationPdf(id, userId, language);
   } catch (err) {
     console.error("[quotation] PDF regeneration failed on status change:", err);
     return updated;
   }
 };
 
-export const generatePdfForQuotation = async (id: string, userId: string, isAdmin = false) => {
-  return attachQuotationPdf(id, userId);
+export const generatePdfForQuotation = async (id: string, userId: string, isAdmin = false, language: InvoicePdfLanguage = "de") => {
+  return attachQuotationPdf(id, userId, language);
 };
 
-export const copyQuotation = async (id: string, userId: string) => {
+export const copyQuotation = async (id: string, userId: string, language: InvoicePdfLanguage = "de") => {
   const current = await getQuotationOrThrow(id, userId);
 
   const items = current.items.map((item) => ({
@@ -217,25 +226,29 @@ export const copyQuotation = async (id: string, userId: string) => {
   const validUntilDate = new Date();
   validUntilDate.setDate(validUntilDate.getDate() + 14);
 
-  return createQuotation(userId, {
-    validUntilDate,
-    status: "Draft",
-    employeeId: current.employeeId,
-    customerId: current.customerId,
-    customerName: current.customerName,
-    customerPhone: current.customerPhone,
-    customerEmail: current.customerEmail,
-    customerAddress: current.customerAddress,
-    deviceType: current.deviceType,
-    brand: current.brand,
-    model: current.model,
-    imeiOrSerial: current.imeiOrSerial,
-    notes: current.notes ? `Cloned from ${current.quotationNumber}. ${current.notes}` : `Cloned from ${current.quotationNumber}`,
-    items
-  });
+  return createQuotation(
+    userId,
+    {
+      validUntilDate,
+      status: "Draft",
+      employeeId: current.employeeId,
+      customerId: current.customerId,
+      customerName: current.customerName,
+      customerPhone: current.customerPhone,
+      customerEmail: current.customerEmail,
+      customerAddress: current.customerAddress,
+      deviceType: current.deviceType,
+      brand: current.brand,
+      model: current.model,
+      imeiOrSerial: current.imeiOrSerial,
+      notes: current.notes ? `Cloned from ${current.quotationNumber}. ${current.notes}` : `Cloned from ${current.quotationNumber}`,
+      items
+    },
+    language
+  );
 };
 
-export const convertToRepairOrder = async (id: string, userId: string) => {
+export const convertToRepairOrder = async (id: string, userId: string, language: InvoicePdfLanguage = "de") => {
   const quotation = await getQuotationOrThrow(id, userId);
 
   // Check if repair order already exists
@@ -312,7 +325,7 @@ export const convertToRepairOrder = async (id: string, userId: string) => {
       // Auto-trigger PDF generation for Repair Order
       try {
         const shopSettings = await getShopSettingsForUser(userId);
-        const roPdfPath = await generateRepairOrderPdf(repairOrder as any, shopSettingsToPdf(shopSettings));
+        const roPdfPath = await generateRepairOrderPdf(repairOrder as any, shopSettingsToPdf(shopSettings), language);
         await prisma.repairOrder.update({
           where: { id: repairOrder.id },
           data: { pdfPath: roPdfPath }
@@ -323,7 +336,7 @@ export const convertToRepairOrder = async (id: string, userId: string) => {
 
       // Re-trigger Quotation PDF update to show new status
       try {
-        await attachQuotationPdf(quotation.id, userId);
+        await attachQuotationPdf(quotation.id, userId, language);
       } catch (pdfErr) {
         console.error("[quotation] Failed to regenerate Quotation PDF:", pdfErr);
       }

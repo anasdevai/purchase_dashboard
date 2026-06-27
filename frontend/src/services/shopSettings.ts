@@ -19,6 +19,9 @@ export type ShopSettings = {
   ownerName: string
   vatNumber: string
   companyRegistrationNumber: string
+  companyRegisterCourt: string
+  gln: string
+  gisaNumber: string
   taxNumber: string
   accountHolder: string
   iban: string
@@ -82,6 +85,9 @@ export const defaultShopSettings = (): ShopSettings => ({
   ownerName: '',
   vatNumber: '',
   companyRegistrationNumber: '',
+  companyRegisterCourt: '',
+  gln: '',
+  gisaNumber: '',
   taxNumber: '',
   accountHolder: '',
   iban: '',
@@ -204,6 +210,9 @@ export function shopSettingsForPdf(settings: ShopSettings): ShopSettingsPayload 
     ownerName: settings.ownerName.trim() || undefined,
     vatNumber: settings.vatNumber.trim(),
     companyRegistrationNumber: settings.companyRegistrationNumber.trim(),
+    companyRegisterCourt: settings.companyRegisterCourt.trim(),
+    gln: settings.gln.trim(),
+    gisaNumber: settings.gisaNumber.trim(),
     taxNumber: settings.taxNumber.trim(),
     accountHolder: settings.accountHolder.trim(),
     iban: settings.iban.trim(),

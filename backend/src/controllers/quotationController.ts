@@ -5,12 +5,14 @@ import * as emailService from "../services/emailService.js";
 import { HttpError } from "../utils/httpError.js";
 import { readOptionalToEmail, resolveCustomerEmail } from "../utils/customerEmail.js";
 import { toAbsolutePath } from "../utils/paths.js";
+import { invoicePdfLanguageFromRequest } from "../utils/invoicePdfLanguage.js";
 
 const paramId = (req: Request) => String(req.params.id);
 const userId = (req: Request) => req.user!.id;
+const pdfLanguage = (req: Request) => invoicePdfLanguageFromRequest(req);
 
 export const create = async (req: Request, res: Response) => {
-  const quotation = await quotationService.createQuotation(userId(req), req.body);
+  const quotation = await quotationService.createQuotation(userId(req), req.body, pdfLanguage(req));
   res.status(201).json({ quotation });
 };
 
@@ -19,7 +21,8 @@ export const update = async (req: Request, res: Response) => {
     paramId(req),
     userId(req),
     req.body,
-    req.user?.role === "admin"
+    req.user?.role === "admin",
+    pdfLanguage(req)
   );
   res.json({ quotation });
 };
@@ -29,7 +32,8 @@ export const updateStatus = async (req: Request, res: Response) => {
     paramId(req),
     userId(req),
     req.body,
-    req.user?.role === "admin"
+    req.user?.role === "admin",
+    pdfLanguage(req)
   );
   res.json({ quotation });
 };
@@ -52,7 +56,8 @@ export const generatePdf = async (req: Request, res: Response) => {
   const quotation = await quotationService.generatePdfForQuotation(
     paramId(req),
     userId(req),
-    req.user?.role === "admin"
+    req.user?.role === "admin",
+    pdfLanguage(req)
   );
   res.json({ quotation });
 };
@@ -74,7 +79,7 @@ export const openPdf = async (req: Request, res: Response) => {
   );
 
   if (!quotation.pdfPath || !fs.existsSync(toAbsolutePath(quotation.pdfPath))) {
-    quotation = await quotationService.generatePdfForQuotation(paramId(req), userId(req), req.user?.role === "admin");
+    quotation = await quotationService.generatePdfForQuotation(paramId(req), userId(req), req.user?.role === "admin", pdfLanguage(req));
   }
   if (!quotation.pdfPath) throw new HttpError(500, "Quotation PDF generation failed");
   res.sendFile(toAbsolutePath(quotation.pdfPath));
@@ -88,7 +93,7 @@ export const downloadPdf = async (req: Request, res: Response) => {
   );
 
   if (!quotation.pdfPath || !fs.existsSync(toAbsolutePath(quotation.pdfPath))) {
-    quotation = await quotationService.generatePdfForQuotation(paramId(req), userId(req), req.user?.role === "admin");
+    quotation = await quotationService.generatePdfForQuotation(paramId(req), userId(req), req.user?.role === "admin", pdfLanguage(req));
   }
   if (!quotation.pdfPath) throw new HttpError(500, "Quotation PDF generation failed");
   res.download(toAbsolutePath(quotation.pdfPath), `${quotation.quotationNumber}.pdf`);
@@ -114,7 +119,7 @@ export const sendEmail = async (req: Request, res: Response) => {
   }
 
   if (!quotation.pdfPath) {
-    quotation = await quotationService.generatePdfForQuotation(id, uid, isAdmin);
+    quotation = await quotationService.generatePdfForQuotation(id, uid, isAdmin, pdfLanguage(req));
   }
 
   if (!quotation.pdfPath) {
@@ -130,18 +135,18 @@ export const sendEmail = async (req: Request, res: Response) => {
   );
 
   if (quotation.status === "Draft") {
-    await quotationService.updateQuotationStatus(id, uid, { status: "Sent" }, isAdmin);
+    await quotationService.updateQuotationStatus(id, uid, { status: "Sent" }, isAdmin, pdfLanguage(req));
   }
 
   res.json({ success: true });
 };
 
 export const copy = async (req: Request, res: Response) => {
-  const quotation = await quotationService.copyQuotation(paramId(req), userId(req));
+  const quotation = await quotationService.copyQuotation(paramId(req), userId(req), pdfLanguage(req));
   res.status(201).json({ quotation });
 };
 
 export const convertToRepairOrder = async (req: Request, res: Response) => {
-  const repairOrder = await quotationService.convertToRepairOrder(paramId(req), userId(req));
+  const repairOrder = await quotationService.convertToRepairOrder(paramId(req), userId(req), pdfLanguage(req));
   res.status(201).json({ repairOrder });
 };

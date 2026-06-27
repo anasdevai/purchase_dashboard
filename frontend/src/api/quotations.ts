@@ -1,5 +1,5 @@
 import { apiRequest, getApiBaseUrl, getToken } from './client'
-import { getActiveTranslations } from '../i18n/active'
+import { getActiveTranslations, readStoredLanguage } from '../i18n/active'
 import { ApiError } from '../utils/apiErrors'
 import type { Quotation, QuotationPayload, QuotationStatus } from '../types/quotation'
 import type { RepairOrder } from '../types/repairOrder'
@@ -67,7 +67,8 @@ export async function deleteQuotation(id: string) {
 }
 
 export async function generateQuotationPdf(id: string) {
-  const response = await apiRequest<QuotationResponse>(`/api/quotations/${id}/pdf`, {
+  const lang = readStoredLanguage()
+  const response = await apiRequest<QuotationResponse>(`/api/quotations/${id}/pdf?lang=${lang}`, {
     method: 'POST',
   })
   return response.quotation
@@ -75,8 +76,12 @@ export async function generateQuotationPdf(id: string) {
 
 export async function fetchQuotationPdfBlob(id: string) {
   const token = getToken()
-  const response = await fetch(`${getApiBaseUrl()}/api/quotations/${id}/pdf`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  const lang = readStoredLanguage()
+  const response = await fetch(`${getApiBaseUrl()}/api/quotations/${id}/pdf?lang=${lang}`, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-App-Language': lang,
+    },
   })
 
   if (!response.ok) {
