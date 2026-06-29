@@ -7,6 +7,7 @@ import { generateRepairOrderNumber } from "./numberingService.js";
 import { generateRepairOrderPdf } from "./pdfService.js";
 import type { InvoicePdfLanguage } from "../pdf/i18n/invoicePdfI18n.js";
 import {
+  activeRepairOrderStatuses,
   repairOrderSchema,
   repairOrderStatusSchema,
   searchRepairOrdersSchema
@@ -294,16 +295,7 @@ export const searchRepairOrders = async (userId: string, query: Record<string, u
   if (parsed.imeiOrSerial) where.imeiOrSerial = { contains: parsed.imeiOrSerial, mode: "insensitive" };
   if (parsed.status) where.status = parsed.status;
   else if (parsed.filter === "active") {
-    where.status = {
-      in: [
-        "Open",
-        "WorkPending",
-        "WaitingForCustomerFeedback",
-        "SentToRepairCompany",
-        "AppointmentScheduled",
-        "SparePartArrived"
-      ]
-    };
+    where.status = { in: [...activeRepairOrderStatuses] };
   } else if (parsed.filter) {
     where.status = parsed.filter;
   }

@@ -71,8 +71,35 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+// Dev-only diagnostics: count how often each dashboard endpoint is hit so we
+// can confirm the frontend fires each one only once per load. Purely additive
+// logging — it does not alter any request handling.
+if (process.env.NODE_ENV !== "production") {
+  const dashboardEndpoints = [
+    "/api/dashboard",
+    "/api/appointments",
+    "/api/repair-orders",
+    "/api/inventory/parts",
+    "/api/quotations"
+  ];
+  const dashboardHits = new Map<string, number>();
+  app.use((req, _res, next) => {
+    if (req.method === "GET") {
+      const matched = dashboardEndpoints.find((p) => req.path.startsWith(p));
+      if (matched) {
+        const count = (dashboardHits.get(matched) ?? 0) + 1;
+        dashboardHits.set(matched, count);
+        console.log(`[dashboard-api] ${req.method} ${req.originalUrl} — hit #${count} for ${matched}`);
+      }
+    }
+    next();
+  });
+}
+
 // Apply rate limiting and routes
-app.use("/api/auth", apiLimiter, authRouter);
+// Auth routes apply their own per-endpoint limiters (see authRoutes.ts), so the
+// shared apiLimiter is intentionally NOT mounted here to avoid double-limiting.
+app.use("/api/auth", authRouter);
 app.use("/api/contracts", apiLimiter, contractRouter);
 app.use("/api/dashboard", apiLimiter, dashboardRouter);
 app.use("/api/repair-orders", apiLimiter, repairOrderRouter);

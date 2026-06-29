@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,11 +17,11 @@
 
   body,
   #root {
-    background-color: rgb(245, 245, 245);
+    @apply bg-app-bg;
   }
 
   body {
-    @apply text-slate-700;
+    @apply font-sans text-slate-900 antialiased;
     overflow-x: hidden;
   }
 }
@@ -44,7 +45,7 @@
 
 @layer components {
   .card {
-    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+    @apply rounded-dashboard-card border border-black/10 bg-white shadow-sm;
   }
 
   .card-header {

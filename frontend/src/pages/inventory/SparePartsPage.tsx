@@ -16,6 +16,7 @@ import { useAppConfirm } from "../../components/common/ConfirmDialogProvider";
 import * as api from "../../api/inventory";
 import type { SparePart, Supplier } from "../../types/inventory";
 import { useLanguage } from "../../i18n/LanguageProvider";
+import { getDeviceCategoryImage } from "../../utils/categoryImageMap";
 
 const SPARE_PART_CATEGORIES = [
   "Display",
@@ -385,13 +386,22 @@ export default function SparePartsPage() {
                       }`}
                     >
                       <td className="px-6 py-4">
-                        <div className="font-mono text-xs text-slate-400 font-bold">{p.itemNumber}</div>
-                        <div className="font-bold text-slate-800">{p.name}</div>
-                        {p.supplier && (
-                          <div className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded inline-block font-bold mt-1 uppercase">
-                            {p.supplier.companyName}
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={getDeviceCategoryImage(p.name, p.compatibility, p.category)}
+                            alt=""
+                            className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-mono text-xs text-slate-400 font-bold">{p.itemNumber}</div>
+                            <div className="font-bold text-slate-800">{p.name}</div>
+                            {p.supplier && (
+                              <div className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded inline-block font-bold mt-1 uppercase">
+                                {p.supplier.companyName}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-xs bg-slate-100 text-slate-600 rounded px-2 py-1 font-semibold uppercase">

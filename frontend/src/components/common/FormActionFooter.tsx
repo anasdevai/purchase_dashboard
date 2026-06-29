@@ -82,9 +82,9 @@ export function FormActionFooter({ children, note, className, testId, tall = fal
         data-testid={testId}
         aria-hidden={hidden}
         className={clsx(
-          'form-action-footer fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] backdrop-blur-sm',
+          'form-action-footer fixed bottom-0 left-rail right-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-4px_12px_rgba(15,23,42,0.08)] backdrop-blur-sm',
           'pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-3',
-          'transition-transform duration-200 ease-out lg:left-sidebar',
+          'transition-transform duration-200 ease-out',
           hidden && 'pointer-events-none translate-y-full',
           className,
         )}

@@ -4,11 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { fetchCurrentUser, login, logout as clearAuthToken, signup } from '../api/auth'
-import { getToken, type AuthUser } from '../api/client'
+import { clearToken, getToken, type AuthUser } from '../api/client'
 import { clearUserLocalData } from '../services/shopSettings'
 
 type AuthContextValue = {
@@ -25,24 +26,51 @@ export function AuthProvider(props: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Guards against duplicate effect runs (React StrictMode/dev double-invoke,
+  // Vite HMR remounts) and overlapping manual logout calls.
+  const didInitRef = useRef(false)
+  const isLoggingOutRef = useRef(false)
+
+  // Clears auth state locally only (no backend call). Used when the session is
+  // already gone/invalid, so there is nothing to log out on the server.
+  const clearLocalAuth = useCallback((previousUserId?: string) => {
+    sessionStorage.removeItem('is_logged_in')
+    sessionStorage.removeItem('last_active_time')
+    clearToken()
+    clearUserLocalData(previousUserId)
+    setUser(null)
+  }, [])
+
   const handleLogout = useCallback(() => {
+    if (isLoggingOutRef.current) return
+    isLoggingOutRef.current = true
+
     const previousUserId = user?.id
     sessionStorage.removeItem('is_logged_in')
     sessionStorage.removeItem('last_active_time')
-    clearAuthToken().catch((err) => console.error('Error during token clear:', err))
+    clearAuthToken()
+      .catch((err) => console.error('Error during token clear:', err))
+      .finally(() => {
+        isLoggingOutRef.current = false
+      })
     clearUserLocalData(previousUserId)
     setUser(null)
   }, [user?.id])
 
   useEffect(() => {
+    // StrictMode/dev invokes effects twice and HMR can remount the provider.
+    // Without this guard, loadUser (and previously a backend logout) would fire
+    // repeatedly and exhaust the shared /api/auth rate limit (429).
+    if (didInitRef.current) return
+    didInitRef.current = true
+
     let alive = true
 
     async function loadUser() {
       const isLoggedInSession = sessionStorage.getItem('is_logged_in') === 'true'
       if (!isLoggedInSession || !getToken()) {
-        try {
-          await clearAuthToken()
-        } catch {}
+        // No active session/token: just clear locally. Do NOT POST /auth/logout.
+        clearToken()
         if (alive) setIsLoading(false)
         return
       }
@@ -51,11 +79,11 @@ export function AuthProvider(props: { children: ReactNode }) {
         const currentUser = await fetchCurrentUser()
         if (alive) setUser(currentUser)
       } catch {
-        try {
-          await clearAuthToken()
-        } catch {}
-        clearUserLocalData()
-        if (alive) setUser(null)
+        // /auth/me failed (e.g. invalid/expired token -> 401/403). The token is
+        // already unusable, so clear local state only instead of calling the
+        // backend logout endpoint (which would just 401 and burn rate limit).
+        if (alive) clearLocalAuth()
+        else clearToken()
       } finally {
         if (alive) setIsLoading(false)
       }
@@ -65,7 +93,7 @@ export function AuthProvider(props: { children: ReactNode }) {
     return () => {
       alive = false
     }
-  }, [])
+  }, [clearLocalAuth])
 
   const handleLogin = useCallback(async (email: string, password: string) => {
     const loggedInUser = await login(email, password)

@@ -12,15 +12,49 @@ type LayoutContextValue = {
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
+  /** Desktop expand/collapse state for the navigation rail. */
+  sidebarExpanded: boolean
+  setSidebarExpanded: (expanded: boolean) => void
+  toggleSidebarExpanded: () => void
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null)
 
+const EXPANDED_STORAGE_KEY = 'sidebar:expanded'
+
+function readStoredExpanded(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem(EXPANDED_STORAGE_KEY) === 'true'
+}
+
+function persistExpanded(expanded: boolean) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(EXPANDED_STORAGE_KEY, String(expanded))
+  } catch {
+    /* ignore storage errors (e.g. private mode) */
+  }
+}
+
 export function LayoutProvider(props: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarExpanded, setSidebarExpandedState] = useState<boolean>(readStoredExpanded)
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((open) => !open)
+  }, [])
+
+  const setSidebarExpanded = useCallback((expanded: boolean) => {
+    setSidebarExpandedState(expanded)
+    persistExpanded(expanded)
+  }, [])
+
+  const toggleSidebarExpanded = useCallback(() => {
+    setSidebarExpandedState((prev) => {
+      const next = !prev
+      persistExpanded(next)
+      return next
+    })
   }, [])
 
   useEffect(() => {
@@ -54,8 +88,15 @@ export function LayoutProvider(props: { children: ReactNode }) {
   }, [sidebarOpen])
 
   const value = useMemo(
-    () => ({ sidebarOpen, setSidebarOpen, toggleSidebar }),
-    [sidebarOpen, toggleSidebar],
+    () => ({
+      sidebarOpen,
+      setSidebarOpen,
+      toggleSidebar,
+      sidebarExpanded,
+      setSidebarExpanded,
+      toggleSidebarExpanded,
+    }),
+    [sidebarOpen, toggleSidebar, sidebarExpanded, setSidebarExpanded, toggleSidebarExpanded],
   )
 
   return (

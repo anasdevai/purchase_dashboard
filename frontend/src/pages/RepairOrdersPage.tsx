@@ -16,6 +16,7 @@ import {
 import { useAppConfirm } from '../components/common/ConfirmDialogProvider'
 import { useLanguage } from '../i18n/LanguageProvider'
 import { getFriendlyErrorMessage, logApiError } from '../utils/apiErrors'
+import { getDeviceCategoryImage } from '../utils/categoryImageMap'
 import type { RepairOrder, RepairOrderStatus } from '../types/repairOrder'
 
 function filterLabel(filter: RepairOrderListFilter, t: ReturnType<typeof useLanguage>['t']) {
@@ -175,7 +176,14 @@ export function RepairOrdersPage() {
                     <td className="py-3 pr-4">{order.customerName}</td>
                     <td className="whitespace-nowrap py-3 pr-4">{order.customerPhone}</td>
                     <td className="py-3 pr-4">
-                      {[order.brand, order.model].filter(Boolean).join(' ') || order.deviceType}
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={getDeviceCategoryImage(order.brand, order.model, order.deviceType)}
+                          alt=""
+                          className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                        />
+                        <span>{[order.brand, order.model].filter(Boolean).join(' ') || order.deviceType}</span>
+                      </div>
                     </td>
                     <td className="whitespace-nowrap py-3 pr-4">
                       {formatMoney(Number(order.estimatedPrice ?? 0))}
@@ -300,7 +308,14 @@ export function RepairOrdersPage() {
                   <dl className="mt-3 space-y-1.5 text-sm">
                     <div className="flex gap-2">
                       <dt className="w-24 shrink-0 text-slate-500">{t.repairOrders.table.device}</dt>
-                      <dd className="min-w-0 flex-1 font-medium text-slate-800">{repairSummary || t.common.dash}</dd>
+                      <dd className="flex min-w-0 flex-1 items-center gap-2 font-medium text-slate-800">
+                        <img
+                          src={getDeviceCategoryImage(order.brand, order.model, order.deviceType)}
+                          alt=""
+                          className="h-8 w-8 shrink-0 rounded-lg object-cover"
+                        />
+                        <span className="min-w-0 truncate">{repairSummary || t.common.dash}</span>
+                      </dd>
                     </div>
                     <div className="flex gap-2">
                       <dt className="w-24 shrink-0 text-slate-500">{t.repairOrders.table.phone}</dt>

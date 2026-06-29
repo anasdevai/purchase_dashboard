@@ -19,6 +19,20 @@ export const repairOrderStatuses = [
   "Cancelled"
 ] as const;
 
+/**
+ * Statuses considered "active" (in-progress) for the repair order list.
+ * Every value here must be a member of `repairOrderStatuses` / the Prisma
+ * `RepairOrderStatus` enum, so it is always safe to pass into Prisma queries.
+ */
+export const activeRepairOrderStatuses = [
+  "Open",
+  "WorkPending",
+  "WaitingForCustomerFeedback",
+  "SentToRepairCompany",
+  "AppointmentScheduled",
+  "SparePartArrived"
+] as const satisfies readonly (typeof repairOrderStatuses)[number][];
+
 export const issueCategoryValues = [
   "Display",
   "Battery",

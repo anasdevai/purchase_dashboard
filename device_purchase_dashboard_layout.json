@@ -1,0 +1,49 @@
+{
+  "dashboard": {
+    "nodeId": "165:994",
+    "name": "Device purchase New Admin Overview Dashboard Tab icons",
+    "frame": {
+      "width": 1255,
+      "height": 1040,
+      "background": "#FEFEFE"
+    },
+    "layout": {
+      "sidebar": {
+        "width": 103,
+        "height": 1040
+      },
+      "topbar": {
+        "width": 1088.99,
+        "height": 37.99
+      },
+      "mainContent": {
+        "width": 685
+      },
+      "rightPanel": {
+        "width": 385
+      }
+    },
+    "globalSizes": {
+      "cardBorderRadius": 18,
+      "smallButtonRadius": 8,
+      "pillRadius": 23,
+      "sidebarIconSize": 24,
+      "topbarIconSize": 20,
+      "statsIconSize": 18,
+      "workflowIconSize": 26,
+      "tableImageSize": {
+        "width": 49,
+        "height": 33
+      },
+      "partsImageSize": {
+        "width": 49,
+        "height": 33
+      },
+      "contactButtonSize": {
+        "width": 34,
+        "height": 34
+      }
+    },
+    "note": "This is the downloadable layout specification extracted from the Figma dashboard. If you need every node (200+ components with all x/y positions and properties), I can generate the complete export as well."
+  }
+}
